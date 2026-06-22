@@ -86,15 +86,18 @@ jobs:
             build/cookbook.pdf
             build/cookbook.epub
 
+      # Pages deploy is opt-in: set repository variable ENABLE_PAGES=true once you've
+      # enabled Pages (Settings → Pages → Source: GitHub Actions). This keeps the build
+      # and Release green on private/free repos where Pages isn't available.
       - name: Upload Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_PAGES == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: build
 
   deploy-pages:
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_PAGES == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

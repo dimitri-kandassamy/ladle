@@ -16,7 +16,7 @@ reflowable, validated **EPUB**, published automatically on every change.
 | **Design** | OFL fonts (Playfair Display + Bitter), CSS in `assets/css/`, Jinja templates in `templates/` |
 | **Art** | original illustrations in `assets/illustrations/` (SVG placeholders ship; real art is hand-generated from the prompts in [`ILLUSTRATIONS.md`](ILLUSTRATIONS.md)) |
 | **Build** | `tools/` (Python + Node), orchestrated by the `Makefile` |
-| **CI** | `.github/workflows/build.yml` → validate, build, GitHub Release + Pages |
+| **CI** | `.github/workflows/build.yml` → validate, build, GitHub Release; Pages deploy is opt-in (set repo variable `ENABLE_PAGES=true`) |
 
 ## Build it locally
 
