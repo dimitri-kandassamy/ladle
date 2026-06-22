@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dimitri-kandassamy/community-cookbook/schema/recipe.schema.json",
+  "title": "Recipe front matter",
+  "description": "Contract for the YAML front matter of every recipes/*.md file.",
+  "type": "object",
+  "required": ["title", "category", "servings", "credits"],
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "URL-safe id; defaults to the filename stem."
+    },
+    "category": {
+      "type": "string",
+      "enum": ["Savory", "Desserts", "Beverages"]
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "servings": { "type": "string", "minLength": 1 },
+    "credits": {
+      "type": "string",
+      "description": "Recipe source / attribution shown in the footer.",
+      "minLength": 1
+    },
+    "attribution": {
+      "type": "string",
+      "default": "",
+      "description": "Optional 'Based on a recipe by …' line."
+    },
+    "story": {
+      "type": "string",
+      "default": "",
+      "description": "Optional narrative. When non-empty, the recipe gets a full story page; otherwise a compact opener."
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "org": { "type": "string" }
+      },
+      "description": "Optional story byline (RECIPE BY …)."
+    },
+    "headshot": {
+      "type": "string",
+      "default": "",
+      "description": "Optional path to a portrait; rendered as a circular crop on the story page."
+    },
+    "illustration": {
+      "type": "string",
+      "description": "Path to the hero food illustration (placeholder accepted)."
+    },
+    "license": {
+      "type": "string",
+      "default": "CC-BY-SA-4.0",
+      "description": "Per-recipe content license; inherits book.yaml content_license when omitted."
+    },
+    "draft": { "type": "boolean", "default": false }
+  }
+}

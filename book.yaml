@@ -1,0 +1,41 @@
+# The Community Cookbook — book-level configuration.
+# This single file drives titles, palette, fonts, and recipe ordering for both
+# the PDF and EPUB builds. Edit here, then run `make all`.
+
+title: The Community Cookbook
+subtitle: Stories & food from people who love to cook
+volume: "1.0"
+language: en
+producer: dimitri-kandassamy
+rights: "© 2026 The Community Cookbook contributors"
+content_license: CC-BY-SA-4.0
+repo_url: https://github.com/dimitri-kandassamy/community-cookbook
+
+# Design tokens — reverse-engineered palette from the reference art direction.
+palette:
+  navy: "#16203a"
+  cream: "#faefdb"
+  ink: "#3c3c3c"        # soft charcoal (primary text), measured from the reference
+  ink_deep: "#231f20"   # warm near-black (ingredients, footer)
+  rule: "#c9bfa6"
+
+# Free OFL substitutes for the reference's commercial type.
+# display ~ FreightBigPro Black (Didone)   body ~ Sentinel (Clarendon slab)
+fonts:
+  display: "Playfair Display"
+  body: "Bitter"
+
+# Section order. Recipes are grouped by their `category` frontmatter and
+# appear in this order; within a section they follow `order` (below) then
+# fall back to alphabetical by title.
+sections:
+  - Savory
+  - Desserts
+  - Beverages
+
+# Optional explicit recipe ordering by slug. Slugs not listed sort alphabetically
+# within their category section.
+order: []
+
+# Front matter content page.
+introduction: content/introduction.md
