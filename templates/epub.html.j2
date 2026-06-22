@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="{{ book.language }}">
+<head>
+<meta charset="utf-8">
+<title>{{ book.title }}</title>
+</head>
+<body>
+
+<section class="intro" id="introduction">
+  <h1>{{ intro.title }}</h1>
+  {% if intro.from_name %}<p class="byline">From {{ intro.from_name }}{% if intro.from_org %} ({{ intro.from_org }}){% endif %}</p>{% endif %}
+  {% for p in intro.body_html %}<p>{{ p }}</p>{% endfor %}
+</section>
+
+{% for r in recipes %}
+<section class="recipe" id="{{ r.slug }}">
+  <h1>{{ r.title }}</h1>
+  <p class="byline">Recipe {{ 'by ' + r.author.name + (' (' + r.author.org + ')' if r.author.org else '') if (r.has_story and r.author.name) else 'from ' + r.credits }}</p>
+  {% if r.has_story %}{% for p in r.story_html %}<p>{{ p }}</p>{% endfor %}{% endif %}
+  {% if r.illustration_url %}<figure class="hero"><img src="{{ r.illustration_url }}" alt="{{ r.title }}"></figure>{% endif %}
+
+  <h2>Ingredients</h2>
+  {% for g in r.ingredient_groups %}
+  {% if g.label %}<h3>{{ g.label }}</h3>{% endif %}
+  <ul>{% for item in g.lines %}<li>{{ item }}</li>{% endfor %}</ul>
+  {% endfor %}
+  <p class="yields"><strong>Yields:</strong> {{ r.servings }}</p>
+
+  <h2>Directions</h2>
+  <ol>{% for step in r.directions %}<li>{{ step }}</li>{% endfor %}</ol>
+
+  {% if r.notes_html %}
+  <h2>Notes</h2>
+  {% for p in r.notes_html %}<p>{{ p }}</p>{% endfor %}
+  {% endif %}
+
+  {% if r.attribution %}<p class="attribution">{{ r.attribution }}</p>{% endif %}
+</section>
+{% endfor %}
+
+</body>
+</html>

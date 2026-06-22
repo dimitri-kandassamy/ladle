@@ -1,0 +1,283 @@
+/* Paged (PDF) layout for The Community Cookbook.
+   Strategy: one .page element == exactly one printed sheet (full-bleed, fixed
+   height), with furniture absolutely positioned inside it. Paged.js puts each
+   .page on its own sheet. @font-face + :root overrides are injected by
+   build_html.py ahead of this file. */
+
+@page {
+  size: 6.75in 9.5in;
+  margin: 0;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; color: var(--ink); }
+
+.page {
+  position: relative;
+  width: 6.75in;
+  height: 9.5in;
+  overflow: hidden;
+  background: var(--cream);
+  break-after: page;
+}
+.page:last-child { break-after: auto; }
+
+/* Cream pages: a transparent paper-grain texture over a faint warm vignette, for
+   a premium printed-paper feel. Painted as the page background (not an overlay)
+   so absolutely-positioned furniture keeps its positioning. The first background
+   paper grain. Cream uses a full-page texture baked from an SVG feTurbulence
+   filter (tools/bake_paper.py) — soft and non-repeating, grain already composited
+   in, so it's just a cover background. Navy tiles a stronger noise tile (multiply),
+   which reads well on the dark colour. */
+.page.cream {
+  background: url(../illustrations/patterns/paper-cream.jpg) center / cover no-repeat;
+}
+
+/* Navy pages (cover, endpapers, colophon) with the line-art pattern over a
+   stronger paper grain. */
+.page.navy {
+  background-color: var(--navy);
+  background-image: url(../illustrations/patterns/paper-tile-navy.png);
+  background-repeat: repeat;
+  background-size: 1.5in 1.5in;
+  background-blend-mode: multiply;
+  color: var(--cream);
+}
+.page.navy .pattern {
+  position: absolute;
+  inset: 0;
+  background: url(../illustrations/patterns/endpaper.svg) center / cover no-repeat;
+  opacity: 0.9;
+}
+
+/* ---- Running footer (cream pages) -------------------------------------- */
+.footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.42in;
+  text-align: center;
+  color: var(--ink-deep);
+}
+.footer .attribution {
+  font-family: var(--body);
+  font-style: italic;
+  font-size: 8pt;
+  margin-bottom: 4pt;
+  color: #6b6655;
+}
+.footer .mark {
+  font-family: var(--body);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 6.5pt;
+  font-weight: 600;
+}
+.footer .mark .the { font-style: italic; text-transform: none; letter-spacing: 0; }
+
+/* ---- Cover ------------------------------------------------------------- */
+.page.cover .pattern {
+  background-image: url(../illustrations/patterns/cover.svg);
+  opacity: 1;
+}
+.cover .panel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 3.7in;
+  padding: 0.5in 0.45in;
+  text-align: center;
+  background: rgba(18, 26, 47, 0.86);
+  border: 1px solid rgba(201, 191, 166, 0.25);
+}
+.cover .title { color: var(--cream); font-size: 40pt; }
+.cover .title .article { display: block; font-size: 30pt; margin-bottom: 2pt; }
+.cover .subtitle {
+  margin-top: 0.28in;
+  color: var(--cream);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 8pt;
+  line-height: 1.8;
+  font-family: var(--body);
+  font-weight: 600;
+}
+.cover .volume {
+  margin-top: 0.22in;
+  color: var(--cream);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 14pt;
+}
+
+/* ---- Introduction ------------------------------------------------------ */
+.intro .inner { padding: 1.0in 0.95in 0; text-align: center; }
+.intro .title { font-size: 44pt; margin: 0; }
+.intro .from {
+  margin: 0.18in 0 0.1in;
+}
+.intro hr.rule { margin: 0.28in 0 0.3in; }
+.intro .prose { text-align: left; }
+
+/* ---- Recipe story page / compact opener -------------------------------- */
+.recipe-head .inner { padding: 0.9in 0.81in 0; }   /* 0.81in margins match the original */
+.recipe-head .title { font-size: 38pt; margin: 0 0 0.12in; text-align: center; }
+.recipe-head .title.small { font-size: 32pt; }
+.recipe-head .recipe-by { text-align: center; margin-bottom: 0.06in; }
+.recipe-head .recipe-by .label { display: block; margin-bottom: 4pt; font-size: 7pt; }
+/* Full content-width hairline rule, as in the original (369pt / 5.12in). */
+.recipe-head hr.rule { width: 100%; margin: 0.22in auto 0.26in; }
+.recipe-head .story { text-align: left; }
+
+.story { position: relative; }
+.story .headshot {
+  float: left;
+  width: 0.82in;
+  height: 0.82in;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0.06in 0.18in 0.06in 0;
+  background: #d9cfb4;
+}
+.story .prose::after { content: ""; display: block; clear: both; }
+
+.hero {
+  position: absolute;
+  left: 50%;
+  bottom: 0.95in;
+  transform: translateX(-50%);
+  width: 5.0in;
+  max-height: 3.9in;
+  object-fit: contain;
+}
+
+/* Opener pages (recipe without a story) have no body text, so the hero sits
+   large and centred in the space below the title instead of at the foot. */
+.opener .hero {
+  top: 56%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: 5.3in;
+  max-height: 4.8in;
+}
+
+/* ---- Recipe method page ------------------------------------------------ */
+.method .inner {
+  padding: 0.85in 0.9in 0.95in 0.8in;
+  height: 100%;
+}
+.method .columns {
+  display: flex;
+  gap: 0.34in;
+  height: 100%;
+}
+.method .col { flex: 1; min-width: 0; }
+.method .col.directions { flex: 1.8; }   /* directions ~2x ingredients, as in the original */
+/* Hairline vertical divider between the columns (original: 0.25pt #3c3c3c). */
+.method .col.ingredients {
+  border-left: 0.5pt solid var(--ink);
+  padding-left: 0.34in;
+}
+.method h2.label { margin: 0 0 0.18in; font-size: 9pt; }
+
+.steps { counter-reset: step; list-style: none; margin: 0; padding: 0; }
+.steps li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 0.32in;
+  margin-bottom: 0.13in;
+  font-family: var(--body);
+  font-size: 9.5pt;
+  line-height: 1.42;
+  color: var(--ink);
+}
+.steps li::before {
+  content: counter(step) ".";
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+  font-style: italic;
+}
+
+.ing-group { margin-bottom: 0.16in; }
+.ing-group .group-label {
+  font-family: var(--body);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 6.5pt;
+  font-weight: 700;
+  margin-bottom: 6pt;
+}
+.ing-list { list-style: none; margin: 0; padding: 0; }
+.ing-list li {
+  font-family: var(--body);
+  font-style: italic;
+  font-size: 9pt;
+  line-height: 1.32;
+  margin-bottom: 7pt;
+  color: var(--ink-deep);
+}
+.serves {
+  margin-top: 0.1in;
+  font-family: var(--body);
+  font-size: 9.4pt;
+}
+.serves .label { display: block; margin-bottom: 3pt; }
+.serves .value { font-style: italic; }
+
+.notes { margin-top: 0.18in; }
+.notes .prose { font-size: 9.2pt; }
+
+/* Vertical rotated sidebar on the outer (right) edge. */
+.sidebar {
+  position: absolute;
+  right: 0.26in;
+  top: 0.85in;
+  bottom: 1.1in;
+  width: 0.5in;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  text-align: left;
+}
+.sidebar .s-title {
+  font-family: var(--display);
+  font-weight: 800;
+  font-style: italic;
+  font-size: 13pt;
+  color: var(--ink);
+}
+.sidebar .s-by {
+  font-family: var(--body);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 7pt;
+  font-weight: 600;
+  color: var(--ink-deep);
+  margin-top: 0.18in;
+}
+.method .columns { padding-right: 0.5in; }
+
+/* spot illustration tucked at the foot of the directions column */
+.method .spot {
+  display: block;
+  width: 1.7in;
+  margin-top: 0.2in;
+}
+
+/* ---- Colophon (back) --------------------------------------------------- */
+.colophon .inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9in 1in;
+  text-align: center;
+  color: var(--cream);
+}
+.colophon .producer { text-transform: uppercase; letter-spacing: 0.2em; font-size: 9pt; }
+.colophon .producer .name { display: block; font-size: 16pt; margin-top: 8pt; letter-spacing: 0.16em; }
+.colophon .copyright { font-family: var(--body); font-style: italic; font-size: 8pt; opacity: 0.85; }

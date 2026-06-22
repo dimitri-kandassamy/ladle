@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="{{ book.language }}">
+<head>
+<meta charset="utf-8">
+<title>{{ book.title }}</title>
+<style>
+{{ font_face_css }}
+:root {
+  --navy: {{ book.palette.navy }};
+  --cream: {{ book.palette.cream }};
+  --ink: {{ book.palette.ink }};
+  --ink-deep: {{ book.palette.ink_deep }};
+  --rule: {{ book.palette.rule }};
+  --display: "{{ book.fonts.display }}", Georgia, serif;
+  --body: "{{ book.fonts.body }}", Georgia, serif;
+}
+</style>
+{% for href in css_links %}<link rel="stylesheet" href="{{ href }}">
+{% endfor %}
+</head>
+<body>
+
+{# ---------- macros ---------- #}
+{% macro footer(attribution="") -%}
+<div class="footer">
+  {% if attribution %}<div class="attribution">{{ attribution }}</div>{% endif %}
+  <div class="mark"><span class="the">{{ book.title_article }}</span> {{ book.title_rest|upper }}</div>
+</div>
+{%- endmacro %}
+
+{# Ingredients column body, shared by the story method page and the single page. #}
+{% macro ingredients_col(r) -%}
+<h2 class="label">Ingredients</h2>
+{% for g in r.ingredient_groups %}
+<div class="ing-group">
+  {% if g.label %}<div class="group-label">{{ g.label }}</div>{% endif %}
+  <ul class="ing-list">
+    {% for item in g.lines %}<li>{{ item }}</li>{% endfor %}
+  </ul>
+</div>
+{% endfor %}
+<div class="serves">
+  <span class="label">Yields</span>
+  <span class="value">{{ r.servings }}</span>
+</div>
+{% if r.notes_html %}
+<div class="notes">
+  <h2 class="label">Notes</h2>
+  <div class="prose">{% for p in r.notes_html %}<p>{{ p }}</p>{% endfor %}</div>
+</div>
+{% endif %}
+{%- endmacro %}
+
+{# Full story page — used only when a recipe has a story to tell. #}
+{% macro story_page(r) -%}
+<section class="page cream recipe-head story">
+  <div class="inner">
+    <h1 class="display title {{ 'small' if r.title|length > 22 else '' }}">{{ r.title }}</h1>
+    <div class="recipe-by">
+      <span class="label">Recipe {{ 'by' if r.author.name else 'from' }}</span>
+      <span class="byline">
+        {% if r.author.name %}<span class="name">{{ r.author.name }}</span>{% if r.author.org %} <span class="org">({{ r.author.org }})</span>{% endif %}
+        {% else %}<span class="name">{{ r.credits }}</span>{% endif %}
+      </span>
+    </div>
+    <hr class="rule">
+    <div class="story">
+      {% if r.headshot_url %}<img class="headshot" src="{{ r.headshot_url }}" alt="">{% endif %}
+      <div class="prose">
+        {% for p in r.story_html %}<p>{{ p }}</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+  {% if r.illustration_url %}<img class="hero" src="{{ r.illustration_url }}" alt="">{% endif %}
+  {{ footer(r.attribution) }}
+</section>
+{%- endmacro %}
+
+{# Opener page for a recipe without a story: centred title + byline + a large
+   centred hero illustration. The directions/ingredients live on the method page. #}
+{% macro opener_page(r) -%}
+<section class="page cream recipe-head opener">
+  <div class="inner">
+    <h1 class="display title {{ 'small' if r.title|length > 22 else '' }}">{{ r.title }}</h1>
+    <div class="recipe-by">
+      <span class="label">Recipe from</span>
+      <span class="byline"><span class="name">{{ r.credits }}</span></span>
+    </div>
+    <hr class="rule">
+  </div>
+  {% if r.illustration_url %}<img class="hero" src="{{ r.illustration_url }}" alt="">{% endif %}
+  {{ footer(r.attribution) }}
+</section>
+{%- endmacro %}
+
+{% macro method(r) -%}
+<section class="page cream method">
+  <div class="inner">
+    <div class="columns">
+      <div class="col directions">
+        <h2 class="label">Directions</h2>
+        <ol class="steps">
+          {% for step in r.directions %}<li>{{ step }}</li>{% endfor %}
+        </ol>
+      </div>
+      <div class="col ingredients">{{ ingredients_col(r) }}</div>
+    </div>
+  </div>
+  <div class="sidebar">
+    <span class="s-title">{{ r.title }}</span>
+    <span class="s-by">Recipe {{ 'by ' + r.author.name if (r.has_story and r.author.name) else 'from ' + r.credits }}</span>
+  </div>
+  {{ footer(r.attribution) }}
+</section>
+{%- endmacro %}
+
+{# ---------- pages ---------- #}
+
+<section class="page navy cover">
+  <div class="pattern"></div>
+  <div class="panel">
+    <div class="display title"><span class="article">{{ book.title_article }}</span>{{ book.title_rest }}</div>
+    <div class="subtitle">{{ book.subtitle }}</div>
+    <div class="volume">Volume {{ book.volume }}</div>
+  </div>
+</section>
+
+<section class="page navy endpaper"><div class="pattern"></div></section>
+
+<section class="page cream intro">
+  <div class="inner">
+    <h1 class="display title">{{ intro.title }}</h1>
+    {% if intro.from_name %}
+    <div class="from">
+      <span class="label">From</span><br>
+      <span class="byline"><span class="name">{{ intro.from_name }}</span>{% if intro.from_org %} <span class="org">({{ intro.from_org }})</span>{% endif %}</span>
+    </div>
+    {% endif %}
+    <hr class="rule">
+    <div class="prose">{% for p in intro.body_html %}<p>{{ p }}</p>{% endfor %}</div>
+  </div>
+  {{ footer() }}
+</section>
+
+{% for r in recipes %}
+{% if r.has_story %}{{ story_page(r) }}{% else %}{{ opener_page(r) }}{% endif %}
+{{ method(r) }}
+{% endfor %}
+
+<section class="page navy endpaper"><div class="pattern"></div></section>
+
+<section class="page navy colophon">
+  <div class="pattern"></div>
+  <div class="inner">
+    <div class="producer">Edited &amp; produced by<span class="name">{{ book.producer }}</span></div>
+    <div></div>
+    <div class="copyright">{{ book.rights }}</div>
+  </div>
+</section>
+
+</body>
+</html>
