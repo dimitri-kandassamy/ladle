@@ -1,0 +1,22 @@
+# Build outputs
+build/
+*.pdf
+*.epub
+!reference/**/*.pdf
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+
+# Tool caches
+.pagedjs/
+epubcheck*.zip
+tools/epubcheck/

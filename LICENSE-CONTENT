@@ -1,0 +1,23 @@
+Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+=======================================================================
+
+The *content* of this cookbook — the recipes, stories, introduction, and the
+original illustrations in `assets/illustrations/` — is licensed under the
+Creative Commons Attribution-ShareAlike 4.0 International License, unless a
+recipe's own `license:` front-matter field states otherwise.
+
+You are free to share and adapt this content for any purpose, even
+commercially, as long as you give appropriate credit and distribute your
+contributions under the same license.
+
+Full legal text: https://creativecommons.org/licenses/by-sa/4.0/legalcode
+Human-readable summary: https://creativecommons.org/licenses/by-sa/4.0/
+
+NOTE ON SCOPE
+-------------
+This license covers content only. The build tooling, templates, and stylesheets
+are licensed separately under Apache-2.0 — see LICENSE-CODE.
+
+This project is an *original* work. It is inspired by the art direction of
+"The Cloud Native Community Cookbook" (© Equinix, Inc.) but reproduces none of
+its text, recipes, photographs, illustrations, or fonts.
