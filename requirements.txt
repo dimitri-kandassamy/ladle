@@ -1,0 +1,6 @@
+# Python dependencies for building the cookbook.
+#   pip install -r requirements.txt
+Jinja2>=3.1
+PyYAML>=6.0
+Pillow>=9.4
+PyMuPDF>=1.27
