@@ -3,6 +3,7 @@ name: Build cookbook
 on:
   push:
     branches: [main]
+    tags: ["v*"]      # pushing a vX.Y tag cuts a versioned edition
   pull_request:
     branches: [main]
 
@@ -18,8 +19,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      is_release: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -76,12 +75,28 @@ jobs:
             build/cookbook.epub
             build/contact-sheet.png
 
-      - name: Publish Release
+      # Everyday builds on main update a single rolling "latest" release. It is
+      # not the repo's Latest badge (that's reserved for tagged editions); link to
+      # it with the stable URL .../releases/download/latest/cookbook.pdf
+      - name: Publish rolling build
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: Latest build
+          name: Latest build (rolling)
+          prerelease: true
+          make_latest: false
+          files: |
+            build/cookbook.pdf
+            build/cookbook.epub
+
+      # Pushing a vX.Y tag cuts a citeable, versioned edition (newest = Latest badge).
+      - name: Publish edition
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          make_latest: true
           files: |
             build/cookbook.pdf
             build/cookbook.epub

@@ -16,7 +16,7 @@ reflowable, validated **EPUB**, published automatically on every change.
 | **Design** | OFL fonts (Playfair Display + Bitter), CSS in `assets/css/`, Jinja templates in `templates/` |
 | **Art** | original illustrations in `assets/illustrations/` (SVG placeholders ship; real art is hand-generated from the prompts in [`ILLUSTRATIONS.md`](ILLUSTRATIONS.md)) |
 | **Build** | `tools/` (Python + Node), orchestrated by the `Makefile` |
-| **CI** | `.github/workflows/build.yml` → validate, build, GitHub Release; Pages deploy is opt-in (set repo variable `ENABLE_PAGES=true`) |
+| **CI** | `.github/workflows/build.yml` → validate + build; pushes to `main` refresh a rolling `latest` release; `v*` tags cut versioned editions; Pages deploy is opt-in (`ENABLE_PAGES=true`) |
 
 ## Build it locally
 
@@ -103,6 +103,19 @@ line-art pages stay procedural; `ILLUSTRATIONS.md` includes an optional prompt f
 recipes/*.md + book.yaml ──► tools/build_html.py ──► build/cookbook.html ──► Paged.js+Chrome ──► PDF
                                        └──────────► build/epub.html   ──► pandoc ─────────────► EPUB
 ```
+
+## Releases
+
+This is a living book, so git holds the meaningful history (the markdown source); the
+built PDF/EPUB are reproducible and aren't versioned per build. Instead:
+
+- Every push to `main` refreshes a single **rolling `latest`** release — the always-current
+  edition, at a stable URL: `…/releases/download/latest/cookbook.pdf` (and `.epub`).
+- To cut a **citeable edition**, bump `volume` in `book.yaml` and push a tag:
+  ```sh
+  git tag v1.0 && git push origin v1.0
+  ```
+  CI publishes a versioned release for it (the newest tagged edition gets the *Latest* badge).
 
 ## Licensing
 
