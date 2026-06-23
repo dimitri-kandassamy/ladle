@@ -48,9 +48,9 @@ h3 {
   margin: 0 0 1em;
 }
 
-/* Lists only ever appear inside a recipe (ingredients / directions); the print
-   build keeps its .recipe wrapper, but the EPUB flattens recipes to bare <h1>
-   chapters so pandoc can split one recipe per file. */
+/* In the EPUB, lists only ever appear inside a recipe (ingredients / directions),
+   so bare selectors are safe — the flat <h1> chapters have no .recipe wrapper to
+   scope to. (The print build uses entirely separate markup and CSS.) */
 ul { list-style: none; padding-left: 0; }
 ul li { font-style: italic; margin-bottom: 0.35em; }
 ol { padding-left: 1.3em; }
