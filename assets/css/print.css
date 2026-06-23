@@ -23,6 +23,12 @@ html, body { margin: 0; padding: 0; color: var(--ink); }
 }
 .page:last-child { break-after: auto; }
 
+/* PDF outline (viewer bookmarks): WeasyPrint adds one per heading. Keep only the
+   h1 chapter titles — Contents, Introduction, and each recipe opener — and drop
+   the h2 section labels ("Directions", "Ingredients", the Contents sub-heads),
+   which would otherwise clutter the outline. */
+h2 { bookmark-level: none; }
+
 /* Cream pages: a paper-grain texture for a premium printed-paper feel. Painted as
    the page background (not an overlay) so absolutely-positioned furniture keeps its
    positioning. Both textures are pre-baked to raster images by tools/bake_assets.py
@@ -118,6 +124,40 @@ html, body { margin: 0; padding: 0; color: var(--ink); }
 }
 .intro hr.rule { margin: 0.28in 0 0.3in; }
 .intro .prose { text-align: left; }
+
+/* ---- Contents ---------------------------------------------------------- */
+.contents .inner { padding: 1.0in 0.95in 0; text-align: center; }
+.contents .title { font-size: 44pt; margin: 0; }
+.contents hr.rule { margin: 0.28in 0 0.34in; }
+.toc { text-align: left; }
+.toc-section { margin-bottom: 0.3in; }
+.toc-section:last-child { margin-bottom: 0; }
+.toc-head {
+  margin: 0 0 0.1in;
+  font-family: var(--body);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 8pt;
+  color: var(--ink-deep);
+}
+.toc-list { list-style: none; margin: 0; padding: 0; }
+.toc-list li { margin: 0; }
+.toc-list a {
+  display: block;
+  text-decoration: none;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 13pt;
+  line-height: 2.0;
+}
+/* Dotted leader + page number resolved from each recipe opener's id. */
+.toc-list a::after {
+  content: leader('. ') target-counter(attr(href url), page);
+  font-family: var(--body);
+  font-size: 9.5pt;
+  color: var(--ink-deep);
+}
 
 /* ---- Recipe story page / compact opener -------------------------------- */
 .recipe-head .inner { padding: 0.9in 0.81in 0; }   /* 0.81in margins match the original */

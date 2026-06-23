@@ -101,10 +101,11 @@ def validate_pdf() -> None:
     n_recipes = sum(
         1 for p in RECIPES.glob("*.md") if not front_matter(p).get("draft", False)
     )
-    # cover + endpaper + intro + colophon + endpaper = 5 fixed; each recipe = opener/story + method
-    expected = 5 + 2 * n_recipes
+    # cover + endpaper + contents + intro + endpaper + colophon = 6 fixed;
+    # each recipe = opener/story + method
+    expected = 6 + 2 * n_recipes
     if pages == expected:
-        ok(f"page count = {pages} (5 fixed + {n_recipes} recipes×2)")
+        ok(f"page count = {pages} (6 fixed + {n_recipes} recipes×2)")
     else:
         bad(f"page count = {pages}, expected {expected}")
 

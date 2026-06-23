@@ -55,7 +55,7 @@
 {% macro story_page(r) -%}
 <section class="page cream recipe-head story">
   <div class="inner">
-    <h1 class="display title {{ 'small' if r.title|length > 22 else '' }}">{{ r.title }}</h1>
+    <h1 id="{{ r.slug }}" class="display title {{ 'small' if r.title|length > 22 else '' }}">{{ r.title }}</h1>
     <div class="recipe-by">
       <span class="label">Recipe {{ 'by' if r.author.name else 'from' }}</span>
       <span class="byline">
@@ -81,7 +81,7 @@
 {% macro opener_page(r) -%}
 <section class="page cream recipe-head opener">
   <div class="inner">
-    <h1 class="display title {{ 'small' if r.title|length > 22 else '' }}">{{ r.title }}</h1>
+    <h1 id="{{ r.slug }}" class="display title {{ 'small' if r.title|length > 22 else '' }}">{{ r.title }}</h1>
     <div class="recipe-by">
       <span class="label">Recipe from</span>
       <span class="byline"><span class="name">{{ r.credits }}</span></span>
@@ -128,6 +128,30 @@
 </section>
 
 <section class="page navy endpaper"><div class="pattern"></div></section>
+
+{# Contents: recipes grouped by section, with page numbers resolved by WeasyPrint
+   (target-counter) against each recipe opener's id. #}
+<section class="page cream contents">
+  <div class="inner">
+    <h1 class="display title">Contents</h1>
+    <hr class="rule">
+    <nav class="toc">
+      {% for section in book.sections %}
+      {% set items = recipes | selectattr('category', 'equalto', section) | list %}
+      {% if items %}
+      <div class="toc-section">
+        <h2 class="toc-head">{{ section }}</h2>
+        <ul class="toc-list">
+          {% for r in items %}<li><a href="#{{ r.slug }}">{{ r.title }}</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </nav>
+  </div>
+  {{ footer() }}
+</section>
 
 <section class="page cream intro">
   <div class="inner">

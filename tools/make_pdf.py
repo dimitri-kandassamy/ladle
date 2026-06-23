@@ -20,11 +20,20 @@ INPUT = ROOT / "build" / "cookbook.html"
 OUTPUT = ROOT / "build" / "cookbook.pdf"
 
 
+def open_outline(document, pdf) -> None:
+    """Ask viewers to show the bookmark outline (table of contents) on open.
+
+    WeasyPrint builds the outline from the HTML headings; this only flips the
+    document's PageMode so the panel isn't collapsed by default.
+    """
+    pdf.catalog["PageMode"] = "/UseOutlines"
+
+
 def main() -> int:
     if not INPUT.exists():
         print("Missing build/cookbook.html — run `python3 tools/build_html.py` first.", file=sys.stderr)
         return 1
-    HTML(filename=str(INPUT)).write_pdf(str(OUTPUT))
+    HTML(filename=str(INPUT)).write_pdf(str(OUTPUT), finisher=open_outline)
     print(f"Wrote {OUTPUT.relative_to(ROOT)}")
     return 0
 
