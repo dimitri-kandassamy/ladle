@@ -4,38 +4,37 @@
 <meta charset="utf-8">
 <title>{{ book.title }}</title>
 </head>
+{# Recipes are flat <h1> chapters (no wrapping <section>): pandoc's
+   --split-level=1 only splits on top-level headings, so a wrapper would bundle
+   every recipe into one file and break its cross-references in epubcheck. #}
 <body>
 
-<section class="intro" id="introduction">
-  <h1>{{ intro.title }}</h1>
-  {% if intro.from_name %}<p class="byline">From {{ intro.from_name }}{% if intro.from_org %} ({{ intro.from_org }}){% endif %}</p>{% endif %}
-  {% for p in intro.body_html %}<p>{{ p }}</p>{% endfor %}
-</section>
+<h1 id="introduction">{{ intro.title }}</h1>
+{% if intro.from_name %}<p class="byline">From {{ intro.from_name }}{% if intro.from_org %} ({{ intro.from_org }}){% endif %}</p>{% endif %}
+{% for p in intro.body_html %}<p>{{ p }}</p>{% endfor %}
 
 {% for r in recipes %}
-<section class="recipe" id="{{ r.slug }}">
-  <h1>{{ r.title }}</h1>
-  <p class="byline">Recipe {{ 'by ' + r.author.name + (' (' + r.author.org + ')' if r.author.org else '') if (r.has_story and r.author.name) else 'from ' + r.credits }}</p>
-  {% if r.has_story %}{% for p in r.story_html %}<p>{{ p }}</p>{% endfor %}{% endif %}
-  {% if r.illustration_url %}<figure class="hero"><img src="{{ r.illustration_url }}" alt="{{ r.title }}"></figure>{% endif %}
+<h1 id="{{ r.slug }}">{{ r.title }}</h1>
+<p class="byline">Recipe {{ 'by ' + r.author.name + (' (' + r.author.org + ')' if r.author.org else '') if (r.has_story and r.author.name) else 'from ' + r.credits }}</p>
+{% if r.has_story %}{% for p in r.story_html %}<p>{{ p }}</p>{% endfor %}{% endif %}
+{% if r.illustration_url %}<figure class="hero"><img src="{{ r.illustration_url }}" alt="{{ r.title }}"></figure>{% endif %}
 
-  <h2>Ingredients</h2>
-  {% for g in r.ingredient_groups %}
-  {% if g.label %}<h3>{{ g.label }}</h3>{% endif %}
-  <ul>{% for item in g.lines %}<li>{{ item }}</li>{% endfor %}</ul>
-  {% endfor %}
-  <p class="yields"><strong>Yields:</strong> {{ r.servings }}</p>
+<h2>Ingredients</h2>
+{% for g in r.ingredient_groups %}
+{% if g.label %}<h3>{{ g.label }}</h3>{% endif %}
+<ul>{% for item in g.lines %}<li>{{ item }}</li>{% endfor %}</ul>
+{% endfor %}
+<p class="yields"><strong>Yields:</strong> {{ r.servings }}</p>
 
-  <h2>Directions</h2>
-  <ol>{% for step in r.directions %}<li>{{ step }}</li>{% endfor %}</ol>
+<h2>Directions</h2>
+<ol>{% for step in r.directions %}<li>{{ step }}</li>{% endfor %}</ol>
 
-  {% if r.notes_html %}
-  <h2>Notes</h2>
-  {% for p in r.notes_html %}<p>{{ p }}</p>{% endfor %}
-  {% endif %}
+{% if r.notes_html %}
+<h2>Notes</h2>
+{% for p in r.notes_html %}<p>{{ p }}</p>{% endfor %}
+{% endif %}
 
-  {% if r.attribution %}<p class="attribution">{{ r.attribution }}</p>{% endif %}
-</section>
+{% if r.attribution %}<p class="attribution">{{ r.attribution }}</p>{% endif %}
 {% endfor %}
 
 </body>

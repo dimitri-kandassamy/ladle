@@ -32,10 +32,18 @@ jobs:
           node-version: "20"
       - run: npm ci || npm install
 
+      # Pin pandoc to a known-good release. The distro's apt package lags and its
+      # EPUB writer emitted broken cross-references (epubcheck RSC-007); pinning
+      # keeps CI in lockstep with the version recipes are validated against locally.
       - name: Install pandoc + poppler
+        env:
+          PANDOC_VERSION: "3.10-1"
         run: |
           sudo apt-get update
-          sudo apt-get install -y pandoc poppler-utils
+          sudo apt-get install -y poppler-utils
+          curl -sL "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION%-*}/pandoc-${PANDOC_VERSION}-amd64.deb" -o pandoc.deb
+          sudo dpkg -i pandoc.deb
+          pandoc --version | head -1
 
       - uses: actions/setup-java@v4
         with:

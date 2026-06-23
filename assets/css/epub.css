@@ -48,10 +48,13 @@ h3 {
   margin: 0 0 1em;
 }
 
-.recipe ul { list-style: none; padding-left: 0; }
-.recipe ul li { font-style: italic; margin-bottom: 0.35em; }
-.recipe ol { padding-left: 1.3em; }
-.recipe ol li { margin-bottom: 0.55em; }
+/* Lists only ever appear inside a recipe (ingredients / directions); the print
+   build keeps its .recipe wrapper, but the EPUB flattens recipes to bare <h1>
+   chapters so pandoc can split one recipe per file. */
+ul { list-style: none; padding-left: 0; }
+ul li { font-style: italic; margin-bottom: 0.35em; }
+ol { padding-left: 1.3em; }
+ol li { margin-bottom: 0.55em; }
 
 figure.hero { text-align: center; margin: 1.2em 0; }
 figure.hero img { max-width: 70%; height: auto; }
