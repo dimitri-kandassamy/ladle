@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble recipes + book config into print HTML (Paged.js) and EPUB HTML (pandoc).
+"""Assemble recipes + book config into print HTML (WeasyPrint) and EPUB HTML (pandoc).
 
 Single source of truth -> two renderers. Reads book.yaml + recipes/*.md, validates
 front matter, parses each body into structured ingredients/directions/notes, and
@@ -232,7 +232,7 @@ def main() -> int:
     BUILD.mkdir(exist_ok=True)
     recipe_paths = sorted(RECIPES.glob("*.md"))
 
-    # ---- print HTML (absolute file:// assets for Chrome) ----
+    # ---- print HTML (absolute file:// assets for WeasyPrint) ----
     print_recipes = order_recipes(
         [load_recipe(p, absolute_assets=True) for p in recipe_paths], book
     )

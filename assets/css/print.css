@@ -1,8 +1,8 @@
-/* Paged (PDF) layout for The Community Cookbook.
+/* Print (PDF) layout for The Community Cookbook.
    Strategy: one .page element == exactly one printed sheet (full-bleed, fixed
-   height), with furniture absolutely positioned inside it. Paged.js puts each
-   .page on its own sheet. @font-face + :root overrides are injected by
-   build_html.py ahead of this file. */
+   height), with furniture absolutely positioned inside it. break-after: page
+   puts each .page on its own sheet (WeasyPrint). @font-face + :root overrides
+   are injected by build_html.py ahead of this file. */
 
 @page {
   size: 6.75in 9.5in;
@@ -23,13 +23,12 @@ html, body { margin: 0; padding: 0; color: var(--ink); }
 }
 .page:last-child { break-after: auto; }
 
-/* Cream pages: a transparent paper-grain texture over a faint warm vignette, for
-   a premium printed-paper feel. Painted as the page background (not an overlay)
-   so absolutely-positioned furniture keeps its positioning. The first background
-   paper grain. Cream uses a full-page texture baked from an SVG feTurbulence
-   filter (tools/bake_paper.py) — soft and non-repeating, grain already composited
-   in, so it's just a cover background. Navy tiles a stronger noise tile (multiply),
-   which reads well on the dark colour. */
+/* Cream pages: a paper-grain texture for a premium printed-paper feel. Painted as
+   the page background (not an overlay) so absolutely-positioned furniture keeps its
+   positioning. Both textures are pre-baked to raster images by tools/bake_assets.py
+   (numpy noise composited onto the base colour) rather than blended live in CSS,
+   which renderers handle inconsistently. Cream uses a full-page cover image; navy
+   tiles a smaller, stronger grain that reads well on the dark colour. */
 .page.cream {
   background: url(../illustrations/patterns/paper-cream.jpg) center / cover no-repeat;
 }
