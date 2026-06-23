@@ -107,8 +107,10 @@
     </div>
   </div>
   <div class="sidebar">
-    <span class="s-title">{{ r.title }}</span>
-    <span class="s-by">Recipe {{ 'by ' + r.author.name if (r.has_story and r.author.name) else 'from ' + r.credits }}</span>
+    <div class="sidebar-rot">
+      <span class="s-title">{{ r.title }}</span>
+      <span class="s-by">Recipe {{ 'by ' + r.author.name if (r.has_story and r.author.name) else 'from ' + r.credits }}</span>
+    </div>
   </div>
   {{ footer(r.attribution) }}
 </section>

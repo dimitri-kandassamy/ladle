@@ -22,25 +22,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Lint markdown
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          globs: "**/*.md"
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - run: npm ci || npm install
-
-      # Pin pandoc to a known-good release. The distro's apt package lags and its
-      # EPUB writer emitted broken cross-references (epubcheck RSC-007); pinning
-      # keeps CI in lockstep with the version recipes are validated against locally.
-      - name: Install pandoc + poppler
+      # System libraries WeasyPrint needs at runtime (Pango/cairo); poppler for
+      # pdfinfo + cover rasterisation. Pandoc is pinned to a known-good release —
+      # the distro's apt package lags and its EPUB writer emitted broken
+      # cross-references (epubcheck RSC-007); pinning keeps CI in lockstep with
+      # the version recipes are validated against locally.
+      - name: Install system tools (pandoc, poppler, WeasyPrint libs)
         env:
           PANDOC_VERSION: "3.10-1"
         run: |
           sudo apt-get update
-          sudo apt-get install -y poppler-utils
+          sudo apt-get install -y poppler-utils \
+            libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
+            libgdk-pixbuf-2.0-0 libffi-dev libcairo2
           curl -sL "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION%-*}/pandoc-${PANDOC_VERSION}-amd64.deb" -o pandoc.deb
           sudo apt-get install -y ./pandoc.deb
           pandoc --version | head -1
@@ -57,18 +61,11 @@ jobs:
           unzip -oq ec.zip -d tools/epubcheck
           ln -sf "epubcheck-${EC}/epubcheck.jar" tools/epubcheck/epubcheck.jar
 
-      - uses: browser-actions/setup-chrome@v1
-        id: chrome
-        with:
-          chrome-version: stable
-
       - name: Build PDF + EPUB
-        env:
-          PUPPETEER_EXECUTABLE_PATH: ${{ steps.chrome.outputs.chrome-path }}
         run: |
           python3 tools/gen_illustrations.py
           python3 tools/build_html.py
-          node tools/make_pdf.mjs
+          python3 tools/make_pdf.py
           bash tools/make_epub.sh
 
       - name: Validate

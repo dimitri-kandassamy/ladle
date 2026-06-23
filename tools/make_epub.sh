@@ -34,25 +34,4 @@ pandoc build/epub.html -o build/cookbook.epub \
   "${COVER_ARGS[@]}" "${FONT_ARGS[@]}"
 
 echo "Wrote build/cookbook.epub"
-
-# Validate when epubcheck is available. Find a java even if it's keg-only.
-find_java() {
-  # Return the first candidate that is a *working* runtime. On macOS, the
-  # /usr/bin/java stub is on PATH but errors unless a JDK is installed, so we
-  # verify each candidate with `-version` rather than trusting `command -v`.
-  local candidates=()
-  [ -n "${JAVA_HOME:-}" ] && candidates+=("$JAVA_HOME/bin/java")
-  candidates+=(/usr/local/opt/openjdk/bin/java /opt/homebrew/opt/openjdk/bin/java)
-  command -v java >/dev/null 2>&1 && candidates+=("$(command -v java)")
-  for j in "${candidates[@]}"; do
-    [ -x "$j" ] && "$j" -version >/dev/null 2>&1 && { echo "$j"; return; }
-  done
-}
-JAVA=$(find_java)
-if [ -f tools/epubcheck/epubcheck.jar ] && [ -n "$JAVA" ]; then
-  "$JAVA" -jar tools/epubcheck/epubcheck.jar build/cookbook.epub
-elif command -v epubcheck >/dev/null 2>&1; then
-  epubcheck build/cookbook.epub
-else
-  echo "(epubcheck/java not found — skipping validation; CI runs the full check)"
-fi
+# EPUB validation (epubcheck) lives in tools/validate.py — `make validate`.
