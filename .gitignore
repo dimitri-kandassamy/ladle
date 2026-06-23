@@ -4,10 +4,6 @@ build/
 *.epub
 !reference/**/*.pdf
 
-# Node
-node_modules/
-npm-debug.log*
-
 # Python
 __pycache__/
 *.pyc
@@ -17,6 +13,5 @@ __pycache__/
 .DS_Store
 
 # Tool caches
-.pagedjs/
 epubcheck*.zip
 tools/epubcheck/

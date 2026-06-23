@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Validate the cookbook: recipe schema, PDF structure, EPUB (epubcheck), contact sheet.
 
-Since the content and artwork intentionally diverge from any reference, validation
-is *structural*, not pixel-based:
+Validation is *structural*, not pixel-based:
 
   1. every recipes/*.md front matter conforms to schema/recipe.schema.json;
   2. build/cookbook.pdf has the right trim (6.75x9.5in) and page count;
@@ -16,26 +15,19 @@ from __future__ import annotations
 import glob
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import zipfile
 from pathlib import Path
 
+import jsonschema
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
 RECIPES = ROOT / "recipes"
-
-JSON_TYPE = {
-    "string": str,
-    "array": list,
-    "object": dict,
-    "boolean": bool,
-    "integer": int,
-    "number": (int, float),
-}
 
 failures: list[str] = []
 
@@ -53,13 +45,17 @@ def bad(msg: str) -> None:
     failures.append(msg)
 
 
+def front_matter(path: Path) -> dict:
+    return yaml.safe_load(path.read_text(encoding="utf-8").split("---", 2)[1]) or {}
+
+
 # ---- 1. recipe schema ------------------------------------------------------
 def validate_recipes() -> None:
     section("Recipe front matter")
     schema = json.loads((ROOT / "schema" / "recipe.schema.json").read_text())
-    props = schema["properties"]
-    required = schema["required"]
-    allow_extra = schema.get("additionalProperties", True)
+    Validator = jsonschema.validators.validator_for(schema)
+    Validator.check_schema(schema)
+    validator = Validator(schema)
 
     paths = sorted(RECIPES.glob("*.md"))
     if not paths:
@@ -70,57 +66,57 @@ def validate_recipes() -> None:
         if not raw.startswith("---"):
             bad(f"{p.name}: missing front matter")
             continue
-        fm = yaml.safe_load(raw.split("---", 2)[1]) or {}
-        errs = []
-        for key in required:
-            if not str(fm.get(key, "")).strip():
-                errs.append(f"missing/empty '{key}'")
-        for key, val in fm.items():
-            if key not in props:
-                if not allow_extra:
-                    errs.append(f"unknown key '{key}'")
-                continue
-            spec = props[key]
-            expected = spec.get("type")
-            if expected and val is not None and not isinstance(val, JSON_TYPE.get(expected, object)):
-                errs.append(f"'{key}' should be {expected}")
-            if "enum" in spec and val not in spec["enum"]:
-                errs.append(f"'{key}'='{val}' not in {spec['enum']}")
-        if errs:
-            bad(f"{p.name}: " + "; ".join(errs))
+        try:
+            fm = yaml.safe_load(raw.split("---", 2)[1]) or {}
+        except yaml.YAMLError as e:
+            bad(f"{p.name}: invalid YAML: {e}")
+            continue
+        errors = sorted(validator.iter_errors(fm), key=lambda e: list(e.path))
+        if errors:
+            for e in errors:
+                loc = "/".join(map(str, e.path)) or "(root)"
+                bad(f"{p.name}: {loc}: {e.message}")
         else:
             ok(p.name)
 
 
 # ---- 2. PDF structure ------------------------------------------------------
-def validate_pdf() -> int:
+def validate_pdf() -> None:
     section("PDF structure")
     pdf = BUILD / "cookbook.pdf"
     if not pdf.exists():
         bad("build/cookbook.pdf not found (run `make pdf`)")
-        return 0
-    import fitz  # PyMuPDF
+        return
+    res = subprocess.run(["pdfinfo", str(pdf)], capture_output=True, text=True)
+    if res.returncode != 0:
+        bad("pdfinfo failed (is poppler installed?)")
+        return
+    info = dict(
+        (k.strip(), v.strip())
+        for k, _, v in (line.partition(":") for line in res.stdout.splitlines())
+        if k
+    )
 
-    doc = fitz.open(pdf)
+    pages = int(info.get("Pages", "0"))
     n_recipes = sum(
-        1
-        for p in RECIPES.glob("*.md")
-        if not (yaml.safe_load(p.read_text().split("---", 2)[1]) or {}).get("draft", False)
+        1 for p in RECIPES.glob("*.md") if not front_matter(p).get("draft", False)
     )
     # cover + endpaper + intro + colophon + endpaper = 5 fixed; each recipe = opener/story + method
     expected = 5 + 2 * n_recipes
-    if len(doc) == expected:
-        ok(f"page count = {len(doc)} (5 fixed + {n_recipes} recipes×2)")
+    if pages == expected:
+        ok(f"page count = {pages} (5 fixed + {n_recipes} recipes×2)")
     else:
-        bad(f"page count = {len(doc)}, expected {expected}")
+        bad(f"page count = {pages}, expected {expected}")
 
-    w, h = doc[0].rect.width, doc[0].rect.height
-    if abs(w - 486) <= 1 and abs(h - 684) <= 1:
-        ok(f"trim = {w:.0f}x{h:.0f} pt (6.75x9.5 in)")
+    m = re.search(r"([\d.]+)\s*x\s*([\d.]+)", info.get("Page size", ""))
+    if m:
+        w, h = float(m.group(1)), float(m.group(2))
+        if abs(w - 486) <= 1 and abs(h - 684) <= 1:
+            ok(f"trim = {w:.0f}x{h:.0f} pt (6.75x9.5 in)")
+        else:
+            bad(f"trim = {w:.1f}x{h:.1f} pt, expected 486x684")
     else:
-        bad(f"trim = {w:.1f}x{h:.1f} pt, expected 486x684")
-    doc.close()
-    return expected
+        bad("could not read page size from pdfinfo")
 
 
 # ---- 3. EPUB ---------------------------------------------------------------
@@ -147,7 +143,7 @@ def find_java() -> str | None:
 
 
 def structural_epub_check(epub: Path) -> None:
-    """Minimal EPUB sanity when epubcheck/Java is unavailable."""
+    """Minimal EPUB sanity when epubcheck/Java is unavailable (e.g. locally)."""
     with zipfile.ZipFile(epub) as z:
         names = z.namelist()
         if names and names[0] == "mimetype" and z.read("mimetype") == b"application/epub+zip":
@@ -177,6 +173,12 @@ def validate_epub() -> None:
             ok("epubcheck: " + " ".join(tail[-1:]))
         else:
             bad("epubcheck reported errors:\n      " + "\n      ".join(tail))
+    elif shutil.which("epubcheck"):
+        res = subprocess.run(["epubcheck", str(epub)], capture_output=True, text=True)
+        tail = (res.stdout + res.stderr).strip().splitlines()[-3:]
+        ok("epubcheck: " + " ".join(tail[-1:])) if res.returncode == 0 else bad(
+            "epubcheck reported errors:\n      " + "\n      ".join(tail)
+        )
     else:
         print("  note: epubcheck/Java unavailable — running structural fallback")
         structural_epub_check(epub)

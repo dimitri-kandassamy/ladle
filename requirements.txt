@@ -2,5 +2,8 @@
 #   pip install -r requirements.txt
 Jinja2>=3.1
 PyYAML>=6.0
+jsonschema>=4.0
+weasyprint>=63
+cairosvg>=2.7
 Pillow>=9.4
-PyMuPDF>=1.27
+numpy>=1.26

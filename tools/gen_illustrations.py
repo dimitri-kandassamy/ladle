@@ -8,9 +8,9 @@ Two motifs, matching the art direction:
 
 This writes deterministic, on-brand **SVG placeholders** so every build is green
 with zero dependencies or network. To create real artwork, generate each image by
-hand from the prompts in ILLUSTRATIONS.md (see tools/illustration_prompts.py) and
-save it as assets/illustrations/recipes/<slug>.png — build_html.py prefers that
-raster over the placeholder automatically.
+hand in the locked style documented in DESIGN.md and save it as
+assets/illustrations/recipes/<slug>.png — build_html.py prefers that raster over
+the placeholder automatically.
 
 Idempotent: existing files are skipped unless --force.
 
@@ -374,11 +374,9 @@ GLYPHS = [
 ]
 
 
-# Page grain is two static, committed tiles in assets/illustrations/patterns/:
-# paper-tile-cream.png (gentle) and paper-tile-navy.png (stronger), made from a
-# seamless paper-noise source by tools/prep_paper.py and tiled over each page colour
-# with multiply in print.css. Cream needs a softer tile because multiply darkens
-# light colours quickly. Not generated here.
+# Page grain and the navy line-art pattern PNGs are baked by tools/bake_assets.py
+# (paper-cream.jpg, paper-navy.png, cover.png, endpaper.png) and committed. They
+# are not generated here.
 
 
 def pattern_svg(seed: int, density: float) -> str:
@@ -429,7 +427,7 @@ def write(path_: Path, content: str, force: bool) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Generate the built-in SVG placeholder illustrations. "
-        "To create real artwork, see ILLUSTRATIONS.md (prompts + sizes) and drop the "
+        "To create real artwork, see the locked style in DESIGN.md and drop the "
         "resulting PNG next to each placeholder — the build prefers it automatically."
     )
     ap.add_argument("--force", action="store_true", help="overwrite existing art")

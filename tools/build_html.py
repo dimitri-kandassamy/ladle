@@ -133,8 +133,8 @@ def resolve_illustration(path_str: str) -> str:
     """Prefer a raster sibling (real AI art) over the placeholder SVG.
 
     A recipe references e.g. `assets/illustrations/recipes/carrot-cake.svg`; if a
-    `carrot-cake.png` exists alongside it (hand-generated artwork, see
-    ILLUSTRATIONS.md), use that instead — so real art drops in with no front-matter edits.
+    `carrot-cake.png` exists alongside it (hand-generated artwork, see DESIGN.md),
+    use that instead — so real art drops in with no front-matter edits.
     """
     if not path_str:
         return ""
