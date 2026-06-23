@@ -51,6 +51,15 @@ page. Two patterns are worth noting because they keep the layout renderer-portab
 A recipe with a non-empty `story` gets a full story page (optional `headshot`);
 without one it gets a compact opener. Either way the method page follows.
 
+The front matter includes a **Contents** page: recipes grouped by section, with
+page numbers resolved at render time via CSS `target-counter()` against each
+recipe opener's `id` — no manual page numbering. The same headings drive the
+**PDF outline** (viewer bookmarks): WeasyPrint emits one bookmark per heading, so
+`print.css` sets `bookmark-level: none` on the `<h2>` section labels to keep the
+outline to just Contents, Introduction, and the recipe titles. `make_pdf.py`
+flips the document's `PageMode` to `/UseOutlines` so viewers open with the
+bookmark panel showing.
+
 ## Design tokens
 
 `book.yaml` holds the palette, fonts, and section order; `build_html.py` injects
