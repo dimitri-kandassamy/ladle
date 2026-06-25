@@ -121,6 +121,22 @@ reproducible and not versioned per build.
   _Latest_ badge). GitHub Pages deploy is opt-in via the `ENABLE_PAGES=true`
   repository variable.
 
+## Credits & thanks
+
+- **Inspiration** — the
+  [Cloud Native Community Cookbook](https://github.com/cncf/cloud-native-community-cookbook),
+  originated by [Equinix Metal](https://www.equinix.com).
+- **Contributors** — every cook who shared a recipe, a story, or an illustration.
+- **Type** — [Playfair Display](https://github.com/clauseggers/Playfair-Display)
+  and [Bitter](https://github.com/solmatas/BitterPro), both under the SIL Open
+  Font License.
+- **Tooling** — [WeasyPrint](https://weasyprint.org) (PDF),
+  [pandoc](https://pandoc.org) (EPUB), [poppler](https://poppler.freedesktop.org),
+  [epubcheck](https://www.w3.org/publishing/epubcheck/), plus
+  [Jinja](https://jinja.palletsprojects.com), [PyYAML](https://pyyaml.org),
+  [jsonschema](https://github.com/python-jsonschema/jsonschema), and
+  [Pillow](https://python-pillow.org).
+
 ## Licensing
 
 - **Code** (tools, templates, CSS): Apache-2.0 — see [`LICENSE-CODE`](LICENSE-CODE).
