@@ -10,22 +10,62 @@ Run: python3 tools/build_html.py
 """
 from __future__ import annotations
 
+import argparse
 import html
 import re
 import sys
 from pathlib import Path
 
 import yaml
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader
+from markupsafe import Markup
+
+import bookconfig
 
 ROOT = Path(__file__).resolve().parent.parent
-RECIPES = ROOT / "recipes"
 TEMPLATES = ROOT / "templates"
 BUILD = ROOT / "build"
 FONTS = ROOT / "assets" / "fonts"
 CSS = ROOT / "assets" / "css"
 
 ARTICLES = {"the", "a", "an"}
+
+# Book chrome strings, overridable per-book via book.yaml's `labels:` block.
+# `section_names` maps the internal category enum (Savory/Desserts/Beverages —
+# the front-matter matching key, never translated) to a displayed name.
+DEFAULT_LABELS = {
+    "ingredients": "Ingredients",
+    "directions": "Directions",
+    "notes": "Notes",
+    "yields": "Yields",
+    "recipe_by": "Recipe by",
+    "recipe_from": "Recipe from",
+    "contents": "Contents",
+    "from": "From",
+    "volume": "Volume",
+    "produced_by": "Edited & produced by",
+    "section_names": {
+        "Savory": "Savory",
+        "Desserts": "Desserts",
+        "Beverages": "Beverages",
+    },
+}
+
+
+def merged_labels(book: dict) -> dict:
+    """DEFAULT_LABELS with book.yaml's `labels:` block merged on top.
+
+    An un-edited book.yaml (no `labels:` key) yields DEFAULT_LABELS unchanged,
+    so this is backward compatible with every book that predates this feature.
+    """
+    labels = dict(DEFAULT_LABELS)
+    labels["section_names"] = dict(DEFAULT_LABELS["section_names"])
+    for key, value in (book.get("labels") or {}).items():
+        if key == "section_names" and isinstance(value, dict):
+            labels["section_names"].update(value)
+        else:
+            labels[key] = value
+    return labels
 
 FONT_FACES = [
     ("Playfair Display", "PlayfairDisplay.ttf", "normal"),
@@ -36,14 +76,19 @@ FONT_FACES = [
 
 
 # ---- tiny, dependency-free inline markdown ---------------------------------
-def inline(text: str) -> str:
-    """Escape HTML then apply links, bold and italic. Good enough for recipe prose."""
+def inline(text: str) -> Markup:
+    """Escape HTML then apply links, bold and italic. Good enough for recipe prose.
+
+    Returns a Markup so the pre-built <a>/<strong>/<em> tags render as-is
+    through the now-autoescaping Jinja environment instead of being escaped
+    again.
+    """
     s = html.escape(text.strip())
     s = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", r'<a href="\2">\1</a>', s)
     s = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", s)
     s = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", s)
     s = re.sub(r"(?<!\w)_([^_]+)_(?!\w)", r"<em>\1</em>", s)
-    return s
+    return Markup(s)
 
 
 def plain_text(text: str) -> str:
@@ -129,7 +174,7 @@ def split_title_article(title: str) -> tuple[str, str]:
 RASTER_EXTS = (".png", ".webp", ".jpg", ".jpeg")
 
 
-def resolve_illustration(path_str: str) -> str:
+def resolve_illustration(path_str: str, *, book_root: Path) -> str:
     """Prefer a raster sibling (real AI art) over the placeholder SVG.
 
     A recipe references e.g. `assets/illustrations/recipes/carrot-cake.svg`; if a
@@ -138,42 +183,63 @@ def resolve_illustration(path_str: str) -> str:
     """
     if not path_str:
         return ""
-    base = ROOT / path_str
+    base = book_root / path_str
     for ext in RASTER_EXTS:
         cand = base.with_suffix(ext)
         if cand.exists():
-            return str(cand.relative_to(ROOT))
+            return str(cand.relative_to(book_root))
     return path_str
 
 
-def asset_url(path_str: str, *, absolute: bool) -> str:
-    """Resolve an asset path; absolute file:// for print, repo-relative for epub."""
+def asset_url(path_str: str, *, absolute: bool, book_root: Path) -> str:
+    """Resolve an asset path; absolute file:// for print, REPO_ROOT-relative for epub.
+
+    Pandoc (via make_epub.sh's `--resource-path=".:build"`) resolves relative
+    paths against REPO_ROOT regardless of which book.yaml is building, so a
+    book living under e.g. books/<name>/ needs its asset path re-expressed
+    relative to REPO_ROOT here, not left relative to book_root.
+    """
     if not path_str:
         return ""
-    p = (ROOT / path_str).resolve()
+    p = (book_root / path_str).resolve()
     if absolute:
-        return p.as_uri() if p.exists() else (ROOT / path_str).as_uri()
-    return path_str
+        return p.as_uri() if p.exists() else (book_root / path_str).as_uri()
+    try:
+        return str(p.relative_to(ROOT))
+    except ValueError:
+        return path_str
 
 
-def load_recipe(path: Path, *, absolute_assets: bool) -> dict:
+def load_recipe(path: Path, *, absolute_assets: bool, book_root: Path) -> dict:
     fm, body = split_front_matter(path.read_text(encoding="utf-8"))
     sec = sections_of(body)
     slug = fm.get("slug") or path.stem
     author = fm.get("author") or {}
     story = (fm.get("story") or "").strip()
+    credits = plain_text(fm.get("credits", ""))
+    page = str(fm.get("page", "") or "").strip()
+    if page:
+        credits_line = f"{credits} (p. {page})" if credits else f"p. {page}"
+    else:
+        credits_line = credits
     return {
         "slug": slug,
         "title": fm.get("title", slug),
         "category": fm.get("category", "Savory"),
         "servings": fm.get("servings", ""),
-        "credits": plain_text(fm.get("credits", "")),
+        "credits": credits,
+        "page": page,
+        "credits_line": credits_line,
         "attribution": fm.get("attribution", ""),
         "has_story": bool(story),
         "story_html": paragraphs(story),
         "author": {"name": author.get("name", ""), "org": author.get("org", "")},
-        "headshot_url": asset_url(fm.get("headshot", ""), absolute=absolute_assets),
-        "illustration_url": asset_url(resolve_illustration(fm.get("illustration", "")), absolute=absolute_assets),
+        "headshot_url": asset_url(fm.get("headshot", ""), absolute=absolute_assets, book_root=book_root),
+        "illustration_url": asset_url(
+            resolve_illustration(fm.get("illustration", ""), book_root=book_root),
+            absolute=absolute_assets,
+            book_root=book_root,
+        ),
         "ingredient_groups": parse_ingredients(sec.get("INGREDIENTS", [])),
         "directions": parse_directions(sec.get("DIRECTIONS", [])),
         "notes_html": paragraphs("\n".join(sec.get("NOTES", []))),
@@ -193,8 +259,8 @@ def order_recipes(recipes: list[dict], book: dict) -> list[dict]:
     return sorted(recipes, key=key)
 
 
-def load_intro(book: dict, *, absolute_assets: bool) -> dict:
-    path = ROOT / book.get("introduction", "content/introduction.md")
+def load_intro(book: dict, *, absolute_assets: bool, book_root: Path) -> dict:
+    path = book_root / book.get("introduction", "content/introduction.md")
     if not path.exists():
         return {"title": "Introduction", "from_name": "", "from_org": "", "body_html": []}
     fm, body = split_front_matter(path.read_text(encoding="utf-8"))
@@ -220,26 +286,32 @@ def font_face_css() -> str:
 
 
 def main() -> int:
-    book = yaml.safe_load((ROOT / "book.yaml").read_text(encoding="utf-8"))
+    ap = argparse.ArgumentParser(description=__doc__)
+    bookconfig.add_book_arg(ap)
+    args = ap.parse_args()
+    book_cfg = bookconfig.load_book_config(args.book)
+    book = book_cfg.data
+    book_root = book_cfg.root
     book["title_article"], book["title_rest"] = split_title_article(book["title"])
+    book["labels"] = merged_labels(book)
 
     env = Environment(
         loader=FileSystemLoader(str(TEMPLATES)),
-        autoescape=select_autoescape(["html"]),
+        autoescape=True,
         trim_blocks=True,
         lstrip_blocks=True,
     )
     BUILD.mkdir(exist_ok=True)
-    recipe_paths = sorted(RECIPES.glob("*.md"))
+    recipe_paths = sorted(book_cfg.recipes_dir.glob("*.md"))
 
     # ---- print HTML (absolute file:// assets for WeasyPrint) ----
     print_recipes = order_recipes(
-        [load_recipe(p, absolute_assets=True) for p in recipe_paths], book
+        [load_recipe(p, absolute_assets=True, book_root=book_root) for p in recipe_paths], book
     )
     print_recipes = [r for r in print_recipes if not r["draft"]]
     print_html = env.get_template("print.html.j2").render(
         book=book,
-        intro=load_intro(book, absolute_assets=True),
+        intro=load_intro(book, absolute_assets=True, book_root=book_root),
         recipes=print_recipes,
         font_face_css=font_face_css(),
         css_links=[(CSS / "common.css").as_uri(), (CSS / "print.css").as_uri()],
@@ -248,12 +320,12 @@ def main() -> int:
 
     # ---- EPUB HTML (repo-relative assets for pandoc) ----
     epub_recipes = order_recipes(
-        [load_recipe(p, absolute_assets=False) for p in recipe_paths], book
+        [load_recipe(p, absolute_assets=False, book_root=book_root) for p in recipe_paths], book
     )
     epub_recipes = [r for r in epub_recipes if not r["draft"]]
     epub_html = env.get_template("epub.html.j2").render(
         book=book,
-        intro=load_intro(book, absolute_assets=False),
+        intro=load_intro(book, absolute_assets=False, book_root=book_root),
         recipes=epub_recipes,
     )
     (BUILD / "epub.html").write_text(epub_html, encoding="utf-8")
