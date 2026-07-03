@@ -8,11 +8,14 @@ illustrations, and improvements to the build.
 1. **Create the file.** Name it `recipes/<slug>.md` where `<slug>` is lowercase,
    hyphenated, ASCII (e.g. `lemon-olive-oil-cake.md`).
 2. **Write the front matter and body** following the format in the
-   [README](README.md#recipe-format). Required fields: `title`, `category`,
-   `servings`, `credits`.
+   [README](README.md#recipe-format). Required fields: `title`, `category`.
+   `servings`, `credits`, and `page` are optional — include them when known,
+   omit them when the source doesn't give a yield, a named source, or a page
+   number (e.g. an archival/family recipe with no known quantity).
 3. **Pick a category:** `Savory`, `Desserts`, or `Beverages`.
-4. **Credit the source** in `credits` — a person, a book, or a URL. If you adapted a
-   published recipe, also set `attribution: "Based on a recipe by …"`.
+4. **Credit the source** in `credits` when you have one — a person, a book, or
+   a URL. If you adapted a published recipe, also set
+   `attribution: "Based on a recipe by …"`.
 5. **Build and check:**
 
    ```sh

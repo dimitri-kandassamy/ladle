@@ -39,13 +39,15 @@
   </ul>
 </div>
 {% endfor %}
+{% if r.servings %}
 <div class="serves">
-  <span class="label">Yields</span>
+  <span class="label">{{ book.labels.yields }}</span>
   <span class="value">{{ r.servings }}</span>
 </div>
+{% endif %}
 {% if r.notes_html %}
 <div class="notes">
-  <h2 class="label">Notes</h2>
+  <h2 class="label">{{ book.labels.notes }}</h2>
   <div class="prose">{% for p in r.notes_html %}<p>{{ p }}</p>{% endfor %}</div>
 </div>
 {% endif %}
@@ -56,13 +58,15 @@
 <section class="page cream recipe-head story">
   <div class="inner">
     <h1 id="{{ r.slug }}" class="display title {{ 'small' if r.title|length > 22 else '' }}">{{ r.title }}</h1>
+    {% if r.author.name or r.credits_line %}
     <div class="recipe-by">
-      <span class="label">Recipe {{ 'by' if r.author.name else 'from' }}</span>
+      <span class="label">{{ book.labels.recipe_by if r.author.name else book.labels.recipe_from }}</span>
       <span class="byline">
         {% if r.author.name %}<span class="name">{{ r.author.name }}</span>{% if r.author.org %} <span class="org">({{ r.author.org }})</span>{% endif %}
-        {% else %}<span class="name">{{ r.credits }}</span>{% endif %}
+        {% else %}<span class="name">{{ r.credits_line }}</span>{% endif %}
       </span>
     </div>
+    {% endif %}
     <hr class="rule">
     <div class="story">
       {% if r.headshot_url %}<img class="headshot" src="{{ r.headshot_url }}" alt="">{% endif %}
@@ -82,10 +86,12 @@
 <section class="page cream recipe-head opener">
   <div class="inner">
     <h1 id="{{ r.slug }}" class="display title {{ 'small' if r.title|length > 22 else '' }}">{{ r.title }}</h1>
+    {% if r.credits_line %}
     <div class="recipe-by">
-      <span class="label">Recipe from</span>
-      <span class="byline"><span class="name">{{ r.credits }}</span></span>
+      <span class="label">{{ book.labels.recipe_from }}</span>
+      <span class="byline"><span class="name">{{ r.credits_line }}</span></span>
     </div>
+    {% endif %}
     <hr class="rule">
   </div>
   {% if r.illustration_url %}<img class="hero" src="{{ r.illustration_url }}" alt="">{% endif %}
@@ -109,7 +115,9 @@
   <div class="sidebar">
     <div class="sidebar-rot">
       <span class="s-title">{{ r.title }}</span>
-      <span class="s-by">Recipe {{ 'by ' + r.author.name if (r.has_story and r.author.name) else 'from ' + r.credits }}</span>
+      {% if (r.has_story and r.author.name) or r.credits_line %}
+      <span class="s-by">{{ (book.labels.recipe_by + ' ' + r.author.name) if (r.has_story and r.author.name) else (book.labels.recipe_from + ' ' + r.credits_line) }}</span>
+      {% endif %}
     </div>
   </div>
   {{ footer(r.attribution) }}

@@ -4,7 +4,7 @@
   "title": "Recipe front matter",
   "description": "Contract for the YAML front matter of every recipes/*.md file.",
   "type": "object",
-  "required": ["title", "category", "servings", "credits"],
+  "required": ["title", "category"],
   "additionalProperties": false,
   "properties": {
     "title": { "type": "string", "minLength": 1 },
@@ -22,11 +22,22 @@
       "items": { "type": "string" },
       "default": []
     },
-    "servings": { "type": "string", "minLength": 1 },
+    "servings": {
+      "type": "string",
+      "minLength": 1,
+      "default": "",
+      "description": "Optional yield (e.g. '6 people'). Omit when the source gives no quantity."
+    },
     "credits": {
       "type": "string",
-      "description": "Recipe source / attribution shown in the footer.",
-      "minLength": 1
+      "description": "Recipe source / attribution shown in the footer. Optional — omit when there's no named source.",
+      "minLength": 1,
+      "default": ""
+    },
+    "page": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional provenance: source notebook/book page number (e.g. 'p. 42')."
     },
     "attribution": {
       "type": "string",
