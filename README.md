@@ -70,10 +70,10 @@ CI validates every recipe against
 ---
 title: Carrot Cake
 category: Desserts            # Savory | Desserts | Beverages
-servings: "6 people"
-credits: "Marine Gora, Café Gramme, Paris"
+servings: "6 people"          # optional — omit when the source gives no quantity
+credits: "Marine Gora, Café Gramme, Paris"   # optional — omit when there's no named source
 illustration: assets/illustrations/recipes/carrot-cake.svg
-# optional: story, author:{name,org}, headshot, attribution, tags, license, draft
+# optional: page, story, author:{name,org}, headshot, attribution, tags, license, draft
 ---
 
 ## INGREDIENTS

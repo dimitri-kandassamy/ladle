@@ -10,27 +10,29 @@
 <body>
 
 <h1 id="introduction">{{ intro.title }}</h1>
-{% if intro.from_name %}<p class="byline">From {{ intro.from_name }}{% if intro.from_org %} ({{ intro.from_org }}){% endif %}</p>{% endif %}
+{% if intro.from_name %}<p class="byline">{{ book.labels.from }} {{ intro.from_name }}{% if intro.from_org %} ({{ intro.from_org }}){% endif %}</p>{% endif %}
 {% for p in intro.body_html %}<p>{{ p }}</p>{% endfor %}
 
 {% for r in recipes %}
 <h1 id="{{ r.slug }}">{{ r.title }}</h1>
-<p class="byline">Recipe {{ 'by ' + r.author.name + (' (' + r.author.org + ')' if r.author.org else '') if (r.has_story and r.author.name) else 'from ' + r.credits }}</p>
+{% if (r.has_story and r.author.name) or r.credits_line %}
+<p class="byline">{{ (book.labels.recipe_by + ' ' + r.author.name + (' (' + r.author.org + ')' if r.author.org else '')) if (r.has_story and r.author.name) else (book.labels.recipe_from + ' ' + r.credits_line) }}</p>
+{% endif %}
 {% if r.has_story %}{% for p in r.story_html %}<p>{{ p }}</p>{% endfor %}{% endif %}
 {% if r.illustration_url %}<figure class="hero"><img src="{{ r.illustration_url }}" alt="{{ r.title }}"></figure>{% endif %}
 
-<h2>Ingredients</h2>
+<h2>{{ book.labels.ingredients }}</h2>
 {% for g in r.ingredient_groups %}
 {% if g.label %}<h3>{{ g.label }}</h3>{% endif %}
 <ul>{% for item in g.lines %}<li>{{ item }}</li>{% endfor %}</ul>
 {% endfor %}
-<p class="yields"><strong>Yields:</strong> {{ r.servings }}</p>
+{% if r.servings %}<p class="yields"><strong>{{ book.labels.yields }}:</strong> {{ r.servings }}</p>{% endif %}
 
-<h2>Directions</h2>
+<h2>{{ book.labels.directions }}</h2>
 <ol>{% for step in r.directions %}<li>{{ step }}</li>{% endfor %}</ol>
 
 {% if r.notes_html %}
-<h2>Notes</h2>
+<h2>{{ book.labels.notes }}</h2>
 {% for p in r.notes_html %}<p>{{ p }}</p>{% endfor %}
 {% endif %}
 
