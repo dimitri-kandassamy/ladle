@@ -115,6 +115,56 @@ jobs:
         with:
           path: build
 
+  # Builds tests/fixtures/torture-book — one recipe designed to exercise a
+  # quoted title (epubcheck's FATAL(RSC-016) escaping bug), an unusually long
+  # NOTES section (the PDF page-count diagnostic), missing optional fields,
+  # and accented characters. A separate job (not a step in `build` above)
+  # because BUILD is a single global build/ dir regardless of --book, so
+  # running both books in one job's workspace would let this fixture's PDF
+  # clobber the real book's build/cookbook.pdf right before `build`'s own
+  # upload/publish steps use it.
+  torture-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+
+      - name: Install system tools (pandoc, poppler, WeasyPrint libs)
+        env:
+          PANDOC_VERSION: "3.10-1"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils \
+            libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \
+            libgdk-pixbuf-2.0-0 libffi-dev libcairo2
+          curl -sL "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION%-*}/pandoc-${PANDOC_VERSION}-amd64.deb" -o pandoc.deb
+          sudo apt-get install -y ./pandoc.deb
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install epubcheck
+        run: |
+          EC=5.1.0
+          curl -sL "https://github.com/w3c/epubcheck/releases/download/v${EC}/epubcheck-${EC}.zip" -o ec.zip
+          unzip -oq ec.zip -d tools/epubcheck
+          ln -sf "epubcheck-${EC}/epubcheck.jar" tools/epubcheck/epubcheck.jar
+
+      - name: Build + validate torture-test fixture
+        run: |
+          BOOK=tests/fixtures/torture-book/book.yaml
+          python3 tools/gen_illustrations.py --book "$BOOK"
+          python3 tools/build_html.py --book "$BOOK"
+          python3 tools/make_pdf.py
+          bash tools/make_epub.sh --book "$BOOK"
+          python3 tools/validate.py --book "$BOOK"
+
   deploy-pages:
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_PAGES == 'true'
