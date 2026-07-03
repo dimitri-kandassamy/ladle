@@ -4,6 +4,9 @@ build/
 *.epub
 !reference/**/*.pdf
 
+# CI torture-test fixture: illustrations are generated fresh each run
+tests/fixtures/**/assets/
+
 # Python
 __pycache__/
 *.pyc

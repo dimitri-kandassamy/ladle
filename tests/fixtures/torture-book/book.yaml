@@ -1,0 +1,32 @@
+# Minimal book config for the CI torture-test fixture (see recipes/torture-test.md
+# for what it exercises). Not a real book — no content/introduction.md is provided,
+# and build_html.py's load_intro() degrades gracefully when that path is missing.
+title: Torture Test Book
+subtitle: CI fixture — exercises quoted titles, optional fields, long notes, accents
+volume: "1.0"
+language: en
+producer: ci
+rights: "© 2026 Torture Test Book"
+content_license: CC-BY-SA-4.0
+repo_url: https://github.com/dimitri-kandassamy/community-cookbook
+
+palette:
+  navy: "#16203a"
+  cream: "#faefdb"
+  ink: "#3c3c3c"
+  ink_deep: "#231f20"
+  rule: "#c9bfa6"
+
+fonts:
+  display: "Playfair Display"
+  body: "Bitter"
+
+sections:
+  - Savory
+  - Desserts
+  - Beverages
+
+order: []
+
+recipes_dir: recipes
+illustrations_dir: assets/illustrations/recipes
