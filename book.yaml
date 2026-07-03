@@ -39,3 +39,22 @@ order: []
 
 # Front matter content page.
 introduction: content/introduction.md
+
+# Optional: override the book's chrome strings for a non-English edition.
+# Any key omitted here falls back to the English default, so this whole
+# block can be left out entirely (as it is by default).
+# labels:
+#   ingredients: Ingredientes
+#   directions: Preparação
+#   notes: Notas
+#   yields: Rende
+#   recipe_by: Receita de
+#   recipe_from: Receita de
+#   contents: Índice
+#   from: De
+#   volume: Volume
+#   produced_by: "Editado e produzido por"
+#   section_names:
+#     Savory: Salgados
+#     Desserts: Sobremesas
+#     Beverages: Bebidas
