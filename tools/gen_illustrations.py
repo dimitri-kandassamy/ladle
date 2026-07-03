@@ -27,10 +27,10 @@ from pathlib import Path
 
 import yaml
 
+import bookconfig
+
 ROOT = Path(__file__).resolve().parent.parent
-RECIPES = ROOT / "recipes"
 PATTERNS = ROOT / "assets" / "illustrations" / "patterns"
-SPOTS = ROOT / "assets" / "illustrations" / "recipes"
 
 INK = "#3a2f25"
 LEAF = "#7f9b53"
@@ -402,9 +402,9 @@ def pattern_svg(seed: int, density: float) -> str:
 
 
 # ---- driver ----------------------------------------------------------------
-def load_recipes() -> list[dict]:
+def load_recipes(recipes_dir: Path) -> list[dict]:
     out = []
-    for p in sorted(RECIPES.glob("*.md")):
+    for p in sorted(recipes_dir.glob("*.md")):
         raw = p.read_text(encoding="utf-8")
         fm = yaml.safe_load(raw.split("---", 2)[1]) if raw.startswith("---") else {}
         out.append({
@@ -431,14 +431,16 @@ def main() -> int:
         "resulting PNG next to each placeholder — the build prefers it automatically."
     )
     ap.add_argument("--force", action="store_true", help="overwrite existing art")
+    bookconfig.add_book_arg(ap)
     args = ap.parse_args()
+    book_cfg = bookconfig.load_book_config(args.book)
 
     write(PATTERNS / "cover.svg", pattern_svg(1, 0.95), args.force)
     write(PATTERNS / "endpaper.svg", pattern_svg(2, 0.8), args.force)
     write(PATTERNS / "back.svg", pattern_svg(3, 0.7), args.force)
 
-    for r in load_recipes():
-        write(SPOTS / f"{r['slug']}.svg", scene_svg(r), args.force)
+    for r in load_recipes(book_cfg.recipes_dir):
+        write(book_cfg.illustrations_dir / f"{r['slug']}.svg", scene_svg(r), args.force)
 
     return 0
 
