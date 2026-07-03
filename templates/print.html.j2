@@ -30,7 +30,7 @@
 
 {# Ingredients column body, shared by the story method page and the single page. #}
 {% macro ingredients_col(r) -%}
-<h2 class="label">Ingredients</h2>
+<h2 class="label">{{ book.labels.ingredients }}</h2>
 {% for g in r.ingredient_groups %}
 <div class="ing-group">
   {% if g.label %}<div class="group-label">{{ g.label }}</div>{% endif %}
@@ -104,7 +104,7 @@
   <div class="inner">
     <div class="columns">
       <div class="col directions">
-        <h2 class="label">Directions</h2>
+        <h2 class="label">{{ book.labels.directions }}</h2>
         <ol class="steps">
           {% for step in r.directions %}<li>{{ step }}</li>{% endfor %}
         </ol>
@@ -131,7 +131,7 @@
   <div class="panel">
     <div class="display title"><span class="article">{{ book.title_article }}</span>{{ book.title_rest }}</div>
     <div class="subtitle">{{ book.subtitle }}</div>
-    <div class="volume">Volume {{ book.volume }}</div>
+    <div class="volume">{{ book.labels.volume }} {{ book.volume }}</div>
   </div>
 </section>
 
@@ -141,14 +141,14 @@
    (target-counter) against each recipe opener's id. #}
 <section class="page cream contents">
   <div class="inner">
-    <h1 class="display title">Contents</h1>
+    <h1 class="display title">{{ book.labels.contents }}</h1>
     <hr class="rule">
     <nav class="toc">
       {% for section in book.sections %}
       {% set items = recipes | selectattr('category', 'equalto', section) | list %}
       {% if items %}
       <div class="toc-section">
-        <h2 class="toc-head">{{ section }}</h2>
+        <h2 class="toc-head">{{ book.labels.section_names.get(section, section) }}</h2>
         <ul class="toc-list">
           {% for r in items %}<li><a href="#{{ r.slug }}">{{ r.title }}</a></li>
           {% endfor %}
@@ -166,7 +166,7 @@
     <h1 class="display title">{{ intro.title }}</h1>
     {% if intro.from_name %}
     <div class="from">
-      <span class="label">From</span><br>
+      <span class="label">{{ book.labels.from }}</span><br>
       <span class="byline"><span class="name">{{ intro.from_name }}</span>{% if intro.from_org %} <span class="org">({{ intro.from_org }})</span>{% endif %}</span>
     </div>
     {% endif %}
@@ -186,7 +186,7 @@
 <section class="page navy colophon">
   <div class="pattern"></div>
   <div class="inner">
-    <div class="producer">Edited &amp; produced by<span class="name">{{ book.producer }}</span></div>
+    <div class="producer">{{ book.labels.produced_by }}<span class="name">{{ book.producer }}</span></div>
     <div></div>
     <div class="copyright">{{ book.rights }}</div>
   </div>
