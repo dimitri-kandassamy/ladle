@@ -11,8 +11,8 @@
 #   make new-book NAME=x   scaffold a new book under books/x/
 #   make clean
 #
-# Add BOOK=path/to/book.yaml to build a book other than ./book.yaml, e.g.
-#   make all BOOK=examples/community-cookbook/book.yaml
+# `make all` builds the bundled example book (examples/community-cookbook).
+# Override BOOK to build another book, e.g. `make all BOOK=books/pt/book.yaml`.
 #
 # This runs the package straight from src/ — no install needed. After
 # `pip install -e .` (or `pip install ladle`), the same verbs are available as
@@ -21,7 +21,7 @@
 LADLE := PYTHONPATH=src python3 -m ladle
 BUILD := build
 
-BOOK      ?=
+BOOK      ?= examples/community-cookbook/book.yaml
 BOOK_FLAG := $(if $(BOOK),--book $(BOOK),)
 
 .PHONY: all pdf epub html illustrations assets validate doctor new-book clean
