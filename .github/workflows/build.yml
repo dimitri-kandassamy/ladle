@@ -95,16 +95,9 @@ jobs:
             build/cookbook.pdf
             build/cookbook.epub
 
-      # Pushing a vX.Y tag cuts a citeable, versioned edition (newest = Latest badge).
-      - name: Publish edition
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ github.ref_name }}
-          make_latest: true
-          files: |
-            build/cookbook.pdf
-            build/cookbook.epub
+      # A vX.Y.Z tag releases the *tool* to PyPI (see the publish-pypi job below),
+      # not a book edition — cutting citeable book editions belongs to a book's
+      # own repo, which pip-installs ladle.
 
       # Pages deploy is opt-in: set repository variable ENABLE_PAGES=true once you've
       # enabled Pages (Settings → Pages → Source: GitHub Actions). This keeps the build
@@ -162,6 +155,31 @@ jobs:
           ladle illustrations --book "$BOOK"
           ladle build --book "$BOOK"
           ladle validate --book "$BOOK"
+
+  # Release the tool to PyPI on a vX.Y.Z tag (the tag's version must match
+  # pyproject.toml's version). Uses PyPI Trusted Publishing (OIDC) — no token:
+  # configure a trusted publisher for the 'ladle' project on PyPI and a 'pypi'
+  # environment on this repo. Runs only after tests pass.
+  publish-pypi:
+    needs: [build, torture-test]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/ladle
+    permissions:
+      id-token: write   # OIDC token for Trusted Publishing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build sdist + wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
 
   deploy-pages:
     needs: build
