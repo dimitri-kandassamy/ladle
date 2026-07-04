@@ -61,14 +61,6 @@ def merged_labels(book: dict) -> dict:
             labels[key] = value
     return labels
 
-FONT_FACES = [
-    ("Playfair Display", "PlayfairDisplay.ttf", "normal"),
-    ("Playfair Display", "PlayfairDisplay-Italic.ttf", "italic"),
-    ("Bitter", "Bitter.ttf", "normal"),
-    ("Bitter", "Bitter-Italic.ttf", "italic"),
-]
-
-
 # ---- tiny, dependency-free inline markdown ---------------------------------
 def inline(text: str) -> Markup:
     """Escape HTML then apply links, bold and italic. Good enough for recipe prose.
@@ -267,12 +259,13 @@ def load_intro(book: dict, *, absolute_assets: bool, book_root: Path) -> dict:
     }
 
 
-def font_face_css(fonts_dir: Path) -> str:
+def font_face_css(fonts_dir: Path, font_faces: list[dict]) -> str:
     out = []
-    for family, fname, style in FONT_FACES:
-        uri = (fonts_dir / fname).as_uri()
+    for face in font_faces:
+        uri = (fonts_dir / face["file"]).as_uri()
+        style = face.get("style", "normal")
         out.append(
-            f'@font-face{{font-family:"{family}";'
+            f'@font-face{{font-family:"{face["family"]}";'
             f'src:url("{uri}") format("truetype");'
             f"font-weight:100 900;font-style:{style};font-display:swap;}}"
         )
@@ -287,10 +280,21 @@ def main(argv: list[str] | None = None) -> int:
     book = book_cfg.data
     book_root = book_cfg.root
     theme = book_cfg.theme_dir
+    theme_manifest = config.load_theme(theme)
     templates_dir = theme / "templates"
     fonts_dir = theme / "fonts"
     css_dir = theme / "css"
     build = config.build_dir()
+    # Theme tokens are defaults; book.yaml overrides any key. So a minimal book
+    # (no palette/fonts) still renders with the theme's look.
+    book["palette"] = {**theme_manifest.get("palette", {}), **(book.get("palette") or {})}
+    book["fonts"] = {**theme_manifest.get("fonts", {}), **(book.get("fonts") or {})}
+    # Optional top-level book metadata defaults, so a minimal book.yaml (just a
+    # title) builds without KeyErrors in the templates / landing page.
+    for key in ("subtitle", "producer", "rights", "repo_url"):
+        book.setdefault(key, "")
+    book.setdefault("volume", "")
+    book.setdefault("language", "en")
     book["title_article"], book["title_rest"] = split_title_article(book["title"])
     book["labels"] = merged_labels(book)
 
@@ -312,7 +316,7 @@ def main(argv: list[str] | None = None) -> int:
         book=book,
         intro=load_intro(book, absolute_assets=True, book_root=book_root),
         recipes=print_recipes,
-        font_face_css=font_face_css(fonts_dir),
+        font_face_css=font_face_css(fonts_dir, theme_manifest["font_faces"]),
         css_links=[(css_dir / "common.css").as_uri(), (css_dir / "print.css").as_uri()],
     )
     (build / "cookbook.html").write_text(print_html, encoding="utf-8")

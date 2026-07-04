@@ -1,0 +1,34 @@
+# The `default` theme — the original Community Cookbook art direction.
+#
+# A theme is a self-contained design bundle: this manifest plus sibling
+# templates/, css/, fonts/, and illustrations/patterns/ directories. A book
+# selects a theme with `theme: <name>` in its book.yaml (a bare name resolves
+# to a theme shipped in the package; a path resolves relative to the book).
+#
+# The palette and fonts below are DEFAULTS: a book.yaml may override any token,
+# so a minimal book (just a title + language) still renders with this look.
+# See docs/THEMING.md to author your own theme.
+
+name: default
+description: Didone display (Playfair) + Clarendon slab body (Bitter) on cream paper.
+
+# Default design tokens (book.yaml overrides these per key).
+palette:
+  navy: "#16203a"
+  cream: "#faefdb"
+  ink: "#3c3c3c"        # soft charcoal (primary text)
+  ink_deep: "#231f20"   # warm near-black (ingredients, footer)
+  rule: "#c9bfa6"
+
+fonts:
+  display: "Playfair Display"   # headings
+  body: "Bitter"                # body text
+
+# Font files embedded in the PDF (@font-face) and EPUB. Each entry names the
+# CSS family, the file under this theme's fonts/ dir, and the style. A theme
+# ships its own fonts — nothing here is hardcoded in the tool.
+font_faces:
+  - { family: "Playfair Display", file: "PlayfairDisplay.ttf", style: normal }
+  - { family: "Playfair Display", file: "PlayfairDisplay-Italic.ttf", style: italic }
+  - { family: "Bitter", file: "Bitter.ttf", style: normal }
+  - { family: "Bitter", file: "Bitter-Italic.ttf", style: italic }
