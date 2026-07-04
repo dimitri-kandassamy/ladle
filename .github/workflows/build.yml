@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -r requirements.txt
+      - run: pip install -e .
 
       # System libraries WeasyPrint needs at runtime (Pango/cairo); poppler for
       # pdfinfo + cover rasterisation. Pandoc is pinned to a known-good release —
@@ -62,14 +62,14 @@ jobs:
           ln -sf "epubcheck-${EC}/epubcheck.jar" tools/epubcheck/epubcheck.jar
 
       - name: Build PDF + EPUB
+        env:
+          BOOK: examples/community-cookbook/book.yaml
         run: |
-          python3 tools/gen_illustrations.py
-          python3 tools/build_html.py
-          python3 tools/make_pdf.py
-          bash tools/make_epub.sh
+          ladle illustrations --book "$BOOK"
+          ladle build --book "$BOOK"
 
       - name: Validate
-        run: python3 tools/validate.py
+        run: ladle validate --book examples/community-cookbook/book.yaml
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -131,7 +131,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -r requirements.txt
+      - run: pip install -e .
 
       - name: Install system tools (pandoc, poppler, WeasyPrint libs)
         env:
@@ -159,11 +159,9 @@ jobs:
       - name: Build + validate torture-test fixture
         run: |
           BOOK=tests/fixtures/torture-book/book.yaml
-          python3 tools/gen_illustrations.py --book "$BOOK"
-          python3 tools/build_html.py --book "$BOOK"
-          python3 tools/make_pdf.py
-          bash tools/make_epub.sh --book "$BOOK"
-          python3 tools/validate.py --book "$BOOK"
+          ladle illustrations --book "$BOOK"
+          ladle build --book "$BOOK"
+          ladle validate --book "$BOOK"
 
   deploy-pages:
     needs: build
