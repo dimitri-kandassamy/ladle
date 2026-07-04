@@ -91,26 +91,27 @@ Legend: ✅ done · 🔟 in progress · ⬜ todo
 - ✅ Phase 1: `pyproject.toml` (`ladle` dist, console script, bundled data)
 - ✅ Phase 1: rewire `Makefile` to `PYTHONPATH=src python3 -m ladle`
 - ✅ Phase 1: verify build == baseline; wheel builds w/ data + entry point; torture book builds via `--book`
-- ⬜ **Phase 1: COMMIT** — 35 files **staged, NOT committed** (see below)
-- ⬜ Phase 0: decide/execute the carried-over docs (fold into `docs/`, drop CHANGES-FROM-UPSTREAM.md)
-- ⬜ Phase 2: move demo book → `examples/community-cookbook/`, root tool-only, CLI default
-- ⬜ Phase 3: pluggable themes (`theme.yaml` manifest, THEMING.md)
+- ✅ **Phase 1: COMMITTED** — `2d14743` (code) + `fbf0746` (this plan)
+- ✅ Phase 0: docs decision — **user: RETROSPECTIVE.md + CHANGES-FROM-UPSTREAM.md must NOT be committed**; they stay as local untracked working notes. (Do not fold into `docs/`; do not `git add` them.)
+- ✅ Phase 2: move demo book → `examples/community-cookbook/`, root tool-only, Makefile `BOOK` defaults to example — committed `81cccdf`. Verified: `make all && make validate` (no BOOK) → 11 recipes, 28 pages, epubcheck pass.
+- 🔟 Phase 3: pluggable themes (`theme.yaml` manifest, THEMING.md) — IN PROGRESS
 - ⬜ Phase 4: `ladle new` starter path + template repo
 - ⬜ Phase 5: CI test/release matrix + PyPI publish workflow
-- ⬜ Phase 6: docs split (README/CONTRIBUTING/DESIGN)
+  - ✅ (partial) CI invocations updated to `pip install -e .` + `ladle … --book …`, committed `98f4803` (verified in a fresh venv). REMAINING: release/PyPI-publish job on `v*` tags, tool-vs-edition versioning, matrix.
+- ⬜ Phase 6: docs split (README/CONTRIBUTING/DESIGN) — NOTE: README/DESIGN.md still reference old `tools/`, `recipes/`, root `book.yaml` paths; stale until this phase.
 - ⬜ Phase 7: spin out flagship book repo
 
 ## Current git state (IMPORTANT for resuming)
 
-- Branch: `feat/changes-after-review` (NOT main).
-- Phase 1 changes are **`git add`-staged but not committed** (35 files,
-  ~456 insertions / 228 deletions). If a new session starts and the working
-  tree looks already-changed, that's expected — Phase 1 is done, awaiting the
-  commit decision. Suggested commit message:
-  `refactor(tools): repackage as installable 'ladle' CLI (Phase 1)`
-- `RETROSPECTIVE.md` + `CHANGES-FROM-UPSTREAM.md` are intentionally left
-  **untracked** (excluded from the Phase 1 commit; pending Phase 0).
-- To commit Phase 1: `git commit` the staged set (the two untracked docs stay out).
+- Branch: `feat/changes-after-review` (NOT main). Commits so far:
+  - `2d14743` refactor(tools): repackage as installable 'ladle' CLI (Phase 1)
+  - `fbf0746` docs: add ladle refactor plan + task tracking
+  - `81cccdf` refactor: move demo book to examples/, root tool-only (Phase 2)
+  - `98f4803` ci: drive builds via installed 'ladle' CLI + example book path
+- `RETROSPECTIVE.md` + `CHANGES-FROM-UPSTREAM.md` are permanently **untracked**
+  by the user's instruction — NEVER `git add` them.
+- In progress: Phase 3 (pluggable themes). Nothing uncommitted expected at the
+  start of a fresh session unless Phase 3 work is mid-flight.
 
 ## Key technical context / decisions (so a cold session doesn't re-derive)
 
