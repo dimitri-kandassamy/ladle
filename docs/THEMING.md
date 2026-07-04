@@ -16,7 +16,7 @@ look is hardcoded in the tool.
 
 ## Anatomy of a theme
 
-```
+```text
 mytheme/
   theme.yaml                     # manifest: tokens + font declarations
   templates/

@@ -1,68 +1,82 @@
-# The Community Cookbook
+# ladle
 
-A beautifully designed, community-sourced cookbook. Recipes are plain markdown
-files; a Python build pipeline turns the whole collection into an art-directed
-**PDF** and a reflowable, validated **EPUB**, published automatically on every
-change.
+**Build a beautiful cookbook — an art-directed PDF and a validated, reflowable
+EPUB — from a folder of markdown recipes.**
 
-Recipes, stories, and illustrations are all original, contributed by people who
-love to cook.
+Recipes are plain markdown files with a little YAML front matter. `ladle` turns
+the whole collection into a print-ready PDF (via WeasyPrint) and an
+epubcheck-clean EPUB (via pandoc), driven by one `book.yaml` and a swappable
+**theme** for the look. The design (fonts, palette, layout) is fully decoupled
+from the content, so the same recipes can render under any theme, and any book
+can bring its own.
 
-## What's in the box
+> A full worked example — 11 recipes, stories, illustrations, the works — lives
+> in [`examples/community-cookbook/`](examples/community-cookbook/). That is the
+> book this tool grew out of; it now ships as the reference example.
 
-| Area | Where |
-| --- | --- |
-| Content | `recipes/*.md` (YAML front matter + body), `content/introduction.md`, `book.yaml` |
-| Design | OFL fonts (Playfair Display + Bitter), CSS in `assets/css/`, Jinja templates in `templates/` |
-| Art | original illustrations in `assets/illustrations/` (SVG placeholders ship; real art drops in as PNG) |
-| Build | `tools/` (Python), orchestrated by the `Makefile` |
-| CI | `.github/workflows/build.yml` — lint, validate, build, and release |
-
-See [DESIGN.md](DESIGN.md) for the architecture and [CONTRIBUTING.md](CONTRIBUTING.md)
-for the full contributor guide.
-
-## Requirements
-
-The build is Python plus two small command-line tools. One language runtime, no
-browser, no Node.
-
-| Tool | Version | Notes |
-| --- | --- | --- |
-| Python | 3.11+ | `pip install -r requirements.txt` |
-| pandoc | 3.x (CI pins 3.10) | EPUB generation |
-| poppler | any recent | `pdfinfo` + `pdftoppm` (PDF checks, cover) |
-| Java | 17+ | optional, only to run `epubcheck` locally |
-
-[WeasyPrint](https://weasyprint.org) (installed via `requirements.txt`) needs the
-Pango/cairo system libraries:
-
-- **macOS:** `brew install pango`
-- **Debian/Ubuntu:** `sudo apt-get install libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 poppler-utils pandoc`
-
-## Build it locally
+## Install
 
 ```sh
-pip install -r requirements.txt
-make all          # -> build/cookbook.pdf and build/cookbook.epub
-make validate     # schema + PDF structure + epubcheck + contact sheet
+pip install ladle
+```
+
+`ladle` is Python plus two small command-line tools (one runtime, no browser,
+no Node):
+
+| Tool | Version | Used for |
+| --- | --- | --- |
+| Python | 3.11+ | the tool itself |
+| pandoc | 3.x | EPUB generation |
+| poppler | any recent | `pdfinfo` + `pdftoppm` (PDF checks, EPUB cover) |
+| Java | 17+ | optional — only to run `epubcheck` in `ladle validate` |
+
+[WeasyPrint](https://weasyprint.org) (a dependency) needs the Pango/cairo system
+libraries:
+
+- **macOS:** `brew install pango poppler pandoc`
+- **Debian/Ubuntu:** `sudo apt-get install libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 poppler-utils pandoc`
+
+Run `ladle doctor` to check everything is present, with per-OS install hints.
+
+## Quickstart
+
+```sh
+ladle new mybook                 # scaffold books/mybook/ (book.yaml + a draft recipe)
+cd books/mybook
+# …add your recipes under recipes/…
+ladle build                      # -> build/cookbook.pdf and build/cookbook.epub
+ladle validate                   # schema + PDF structure + epubcheck + contact sheet
 open build/contact-sheet.png
 ```
 
-Individual targets: `make pdf`, `make epub`, `make illustrations`,
-`make assets` (re-bake paper grain + patterns), `make clean`.
+Book-scoped commands take `--book PATH` (default: `$BOOK_CONFIG` or
+`./book.yaml`), so you can keep several books side by side and build any of them.
 
-`epubcheck` runs in `make validate` when Java and the epubcheck jar are present;
-otherwise it falls back to a structural EPUB check. CI always runs the full
-validation.
+## Commands
 
-## Add a recipe
+| Command | Does |
+| --- | --- |
+| `ladle new [--name X]` | scaffold a new book under `books/X/` |
+| `ladle build` | build PDF + EPUB (`html` → `pdf` → `epub`) |
+| `ladle html` / `pdf` / `epub` | run a single stage |
+| `ladle validate` | recipe schema, PDF trim + page count, epubcheck, contact sheet |
+| `ladle illustrations` | (re)generate the SVG placeholder art |
+| `ladle assets [--theme DIR]` | re-bake a theme's raster brand assets (paper grain, patterns) |
+| `ladle doctor` | check pandoc/poppler/WeasyPrint/Java are installed |
 
-1. Copy an existing file in `recipes/` to `recipes/<your-slug>.md`.
-2. Fill in the front matter and the `## INGREDIENTS` / `## DIRECTIONS` body.
-3. Run `make all && make validate`, eyeball `build/contact-sheet.png`, open a pull request.
+## A book
 
-CI validates every recipe against
-[`schema/recipe.schema.json`](schema/recipe.schema.json) and rebuilds the book.
+```text
+mybook/
+  book.yaml            # title, language, theme, palette/font overrides, section order
+  recipes/*.md         # one recipe per file (front matter + body)
+  content/introduction.md
+  assets/illustrations/recipes/*   # generated per-recipe art (real art drops in as PNG)
+```
+
+`book.yaml` needs only a `title` to build — everything else (palette, fonts,
+labels) falls back to the theme's defaults. Point `theme:` at a bundled theme by
+name (`default`) or at your own theme directory.
 
 ### Recipe format
 
@@ -92,44 +106,50 @@ illustration: assets/illustrations/recipes/carrot-cake.svg
 ```
 
 A recipe with a non-empty `story:` gets a full story page (with optional
-`headshot`); without one it gets a compact opener. Either way the look stays
-consistent.
+`headshot`); without one it gets a compact opener. Every recipe is validated
+against [`src/ladle/schema/recipe.schema.json`](src/ladle/schema/recipe.schema.json).
+
+Section headings (`## INGREDIENTS` etc.) and all UI chrome ("Yields",
+"Contents", section names) are localizable per book via a `labels:` block in
+`book.yaml` — see the example book for a template.
+
+## Themes
+
+The look is a **theme**: a self-contained bundle of `theme.yaml` (palette,
+fonts, font files) plus `templates/`, `css/`, `fonts/`, and
+`illustrations/patterns/`. The tool ships one theme, `default`. To restyle,
+override tokens in `book.yaml`, or fork the theme and point `theme:` at it. See
+[docs/THEMING.md](docs/THEMING.md).
 
 ## Illustrations
 
-Each recipe ships with an on-brand **SVG placeholder**
-(`tools/gen_illustrations.py`), so builds are always green. To add real artwork,
-generate it by hand in any image model using the locked watercolour-and-ink style
-(documented in [DESIGN.md](DESIGN.md#illustrations)) and save it as
-`assets/illustrations/recipes/<slug>.png` (transparent PNG). The build prefers
-that raster over the placeholder automatically — no front-matter change.
+Each recipe ships with an on-brand **SVG placeholder** (`ladle illustrations`),
+so builds are always green. To add real artwork, generate it in any image model
+using the theme's locked style and save it as
+`assets/illustrations/recipes/<slug>.png` (transparent PNG) next to the
+placeholder — the build prefers the raster automatically, no front-matter change.
 
-## Releases
+## Developing the tool (from a checkout)
 
-Git holds the meaningful history (the markdown source); the built PDF and EPUB are
-reproducible and not versioned per build.
+```sh
+git clone https://github.com/dimitri-kandassamy/ladle && cd ladle
+pip install -e .                 # or: pip install -r requirements.txt
+make all                         # builds the example book (examples/community-cookbook)
+make validate
+```
 
-- Every push to `main` refreshes a single rolling `latest` release, at a stable
-  URL: `…/releases/download/latest/cookbook.pdf` (and `.epub`).
-- To cut a citeable edition, bump `volume` in `book.yaml` and push a tag:
-
-  ```sh
-  git tag v1.0 && git push origin v1.0
-  ```
-
-  CI publishes a versioned release for it (the newest tagged edition gets the
-  _Latest_ badge). GitHub Pages deploy is opt-in via the `ENABLE_PAGES=true`
-  repository variable.
+`make` drives the package straight from `src/` (no install needed):
+`make all BOOK=path/to/book.yaml` builds any book. The `Makefile` targets mirror
+the CLI commands. CI (`.github/workflows/build.yml`) builds + validates the
+example book and a torture-test fixture on every push.
 
 ## Credits & thanks
 
 - **Inspiration** — the
   [Cloud Native Community Cookbook](https://github.com/cncf/cloud-native-community-cookbook),
   originated by [Equinix Metal](https://www.equinix.com).
-- **Contributors** — every cook who shared a recipe, a story, or an illustration.
-- **Type** — [Playfair Display](https://github.com/clauseggers/Playfair-Display)
-  and [Bitter](https://github.com/solmatas/BitterPro), both under the SIL Open
-  Font License.
+- **Type** (default theme) — [Playfair Display](https://github.com/clauseggers/Playfair-Display)
+  and [Bitter](https://github.com/solmatas/BitterPro), both under the SIL Open Font License.
 - **Tooling** — [WeasyPrint](https://weasyprint.org) (PDF),
   [pandoc](https://pandoc.org) (EPUB), [poppler](https://poppler.freedesktop.org),
   [epubcheck](https://www.w3.org/publishing/epubcheck/), plus
@@ -139,6 +159,6 @@ reproducible and not versioned per build.
 
 ## Licensing
 
-- **Code** (tools, templates, CSS): Apache-2.0 — see [`LICENSE-CODE`](LICENSE-CODE).
-- **Content** (recipes, stories, illustrations): CC BY-SA 4.0 — see
-  [`LICENSE-CONTENT`](LICENSE-CONTENT), unless a recipe's `license:` says otherwise.
+- **Code** (the tool, themes, CSS, templates): Apache-2.0 — see [`LICENSE-CODE`](LICENSE-CODE).
+- **Content** (the example book's recipes, stories, illustrations): CC BY-SA 4.0
+  — see [`LICENSE-CONTENT`](LICENSE-CONTENT), unless a recipe's `license:` says otherwise.

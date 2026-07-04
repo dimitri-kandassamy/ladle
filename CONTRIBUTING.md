@@ -1,66 +1,67 @@
-# Contributing
+# Contributing to ladle
 
-Thank you for adding to the cookbook! Contributions are recipes (most common),
-illustrations, and improvements to the build.
+Thanks for helping improve the tool! This guide is about contributing to
+**`ladle` itself** — code, themes, and docs. If instead you want to add a
+**recipe** to the example cookbook, see
+[`examples/community-cookbook/CONTRIBUTING.md`](examples/community-cookbook/CONTRIBUTING.md).
 
-## Add a recipe
+## Dev setup
 
-1. **Create the file.** Name it `recipes/<slug>.md` where `<slug>` is lowercase,
-   hyphenated, ASCII (e.g. `lemon-olive-oil-cake.md`).
-2. **Write the front matter and body** following the format in the
-   [README](README.md#recipe-format). Required fields: `title`, `category`.
-   `servings`, `credits`, and `page` are optional — include them when known,
-   omit them when the source doesn't give a yield, a named source, or a page
-   number (e.g. an archival/family recipe with no known quantity).
-3. **Pick a category:** `Savory`, `Desserts`, or `Beverages`.
-4. **Credit the source** in `credits` when you have one — a person, a book, or
-   a URL. If you adapted a published recipe, also set
-   `attribution: "Based on a recipe by …"`.
-5. **Build and check:**
+```sh
+git clone https://github.com/dimitri-kandassamy/ladle && cd ladle
+pip install -e .            # or: pip install -r requirements.txt
+ladle doctor               # verify pandoc / poppler / WeasyPrint / Java
+make all                   # build the example book (examples/community-cookbook)
+make validate              # schema + PDF structure + epubcheck + contact sheet
+```
 
-   ```sh
-   make all && make validate
-   open build/contact-sheet.png
-   ```
+`make` runs the package straight from `src/` (`PYTHONPATH=src python3 -m ladle`),
+so no install is needed to iterate. `make all BOOK=path/to/book.yaml` builds any
+book. There is also a torture-test fixture that exercises the tricky cases
+(quoted titles, accents, missing optional fields, long notes):
 
-6. **Open a pull request.** CI will lint markdown, validate the schema, and rebuild.
+```sh
+make all BOOK=tests/fixtures/torture-book/book.yaml
+make validate BOOK=tests/fixtures/torture-book/book.yaml
+```
 
-### Style conventions
+## Repository layout
 
-- One ingredient per list item. Group with `### Group` headings when a recipe has
-  parts (e.g. *Cake* / *Frosting*).
-- Numbered `## DIRECTIONS` steps, imperative voice.
-- Units: metric preferred (`g`, `ml`, `tbsp`, `tsp`). Temperatures as `180°C` (no space).
-- Keep ingredients and steps concise — the print layout favours short lines.
-- Want the full **story page** treatment? Add a `story:` paragraph and, optionally,
-  `author: {name, org}` and a `headshot:` image. Otherwise you get a clean compact opener.
+| Path | What |
+| --- | --- |
+| `src/ladle/` | the package — `cli.py`, `config.py`, and the build/validate modules |
+| `src/ladle/schema/` | the recipe JSON Schema |
+| `src/ladle/themes/default/` | the built-in theme (manifest + templates + css + fonts + patterns) |
+| `examples/community-cookbook/` | the reference example book |
+| `tests/fixtures/torture-book/` | CI edge-case fixture |
+| `Makefile` | thin wrapper over the `ladle` CLI |
+| `.github/workflows/build.yml` | lint, build, validate (+ release) |
 
-## Add or change illustrations
+## Making a change
 
-Each recipe ships with an auto-generated SVG placeholder. To contribute real art:
+1. Branch off `main`.
+2. Keep the example build green: `make all && make validate` should still report
+   the same page count and a clean epubcheck. The example book is the
+   regression guard — if a change alters its output, that should be intentional.
+3. Match the surrounding code: type hints, module docstrings explaining *why*,
+   `main(argv=None)` entry points wired through `cli.py`.
+4. Update docs when you change behaviour (README, and `docs/THEMING.md` for
+   theme-facing changes).
+5. Open a pull request. CI must pass.
 
-1. Generate your recipe's image in any image model using the cookbook's locked
-   style, documented in [DESIGN.md](DESIGN.md#illustrations). Export at ~1500 px
-   wide on a **transparent background**.
-2. Save it as `assets/illustrations/recipes/<slug>.png` (transparent **PNG** or
-   WebP; not JPEG). The build prefers it over the placeholder automatically — no
-   front-matter change.
+## Adding a theme
 
-Keep to the cookbook's visual language (loose watercolour-and-ink, transparent
-background, plate-centred, soft cast shadow, lots of negative space) so each image
-drops onto the cream page cleanly. Only submit art you have the right to share;
-AI-generated images are welcome.
+Themes are the intended extension point — see
+[docs/THEMING.md](docs/THEMING.md) for the manifest format and authoring
+workflow. A new built-in theme is a directory under `src/ladle/themes/`; a
+book-local theme lives in the book and is selected by path.
 
-## Licensing of contributions
+## Architecture
 
-By contributing you agree that:
+See [DESIGN.md](DESIGN.md) for the parse → render → build pipeline and the
+design rationale.
 
-- **content** (your recipe text, story, images) is licensed **CC BY-SA 4.0**, and
-- **code** changes are licensed **Apache-2.0**.
+## Licensing
 
-Only submit content you have the right to share. Don't paste copyrighted recipe text
-or photos; write the method in your own words and credit the source.
-
-## Code of conduct
-
+Code contributions are licensed **Apache-2.0** (see [`LICENSE-CODE`](LICENSE-CODE)).
 This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). Be kind.
