@@ -16,16 +16,14 @@ Usage: python3 tools/bake_assets.py
 """
 from __future__ import annotations
 
+import argparse
+from pathlib import Path
+
 import cairosvg
 import numpy as np
 from PIL import Image, ImageChops, ImageFilter
 
 from . import config
-
-PATTERNS = config.THEMES_DIR / "default" / "illustrations" / "patterns"
-
-CREAM = (250, 239, 219)  # #faefdb
-NAVY = (22, 32, 58)      # #16203a
 
 
 def grain(size: tuple[int, int], *, alpha: float, blur: float, seed: int) -> Image.Image:
@@ -46,23 +44,35 @@ def bake_paper(color: tuple[int, int, int], size, *, alpha, blur, seed) -> Image
 
 
 def main(argv: list[str] | None = None) -> int:
-    PATTERNS.mkdir(parents=True, exist_ok=True)
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument(
+        "--theme",
+        default=str(config.THEMES_DIR / "default"),
+        help="path to a theme dir whose patterns to bake (default: the bundled 'default' theme)",
+    )
+    args = ap.parse_args(argv)
+    patterns = Path(args.theme) / "illustrations" / "patterns"
+    palette = config.load_theme(Path(args.theme)).get("palette", {})
+    cream_rgb = config.hex_to_rgb(palette.get("cream", "#faefdb"))
+    navy_rgb = config.hex_to_rgb(palette.get("navy", "#16203a"))
 
-    cream = bake_paper(CREAM, (1350, 1900), alpha=0.06, blur=0.6, seed=7)
-    cream.save(PATTERNS / "paper-cream.jpg", quality=86)
+    patterns.mkdir(parents=True, exist_ok=True)
 
-    navy = bake_paper(NAVY, (256, 256), alpha=0.10, blur=0.5, seed=11)
-    navy.save(PATTERNS / "paper-navy.png")
+    cream = bake_paper(cream_rgb, (1350, 1900), alpha=0.06, blur=0.6, seed=7)
+    cream.save(patterns / "paper-cream.jpg", quality=86)
+
+    navy = bake_paper(navy_rgb, (256, 256), alpha=0.10, blur=0.5, seed=11)
+    navy.save(patterns / "paper-navy.png")
 
     for name in ("cover", "endpaper"):
         cairosvg.svg2png(
-            url=str(PATTERNS / f"{name}.svg"),
-            write_to=str(PATTERNS / f"{name}.png"),
+            url=str(patterns / f"{name}.svg"),
+            write_to=str(patterns / f"{name}.png"),
             output_width=1360,
             output_height=1900,
         )
 
-    print("Baked paper-cream.jpg, paper-navy.png, cover.png, endpaper.png")
+    print(f"Baked {config.rel(patterns)}: paper-cream.jpg, paper-navy.png, cover.png, endpaper.png")
     return 0
 
 

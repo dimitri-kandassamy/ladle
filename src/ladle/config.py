@@ -55,6 +55,28 @@ def rel(path: Path) -> str:
         return str(path)
 
 
+# Shape a theme.yaml is normalized to, so callers can rely on the keys existing.
+_THEME_DEFAULTS: dict = {"name": "", "palette": {}, "fonts": {}, "font_faces": []}
+
+
+def load_theme(theme_dir: Path) -> dict:
+    """Load a theme's `theme.yaml` manifest (palette/fonts/font_faces defaults).
+
+    A theme without a manifest still works — it just contributes no token
+    defaults, so its book.yaml must supply palette/fonts itself.
+    """
+    manifest = theme_dir / "theme.yaml"
+    data = {}
+    if manifest.exists():
+        data = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
+    return {**_THEME_DEFAULTS, **data}
+
+
+def hex_to_rgb(value: str) -> tuple[int, int, int]:
+    h = value.lstrip("#")
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+
 @dataclass
 class BookConfig:
     path: Path
@@ -93,6 +115,10 @@ class BookConfig:
 
     def theme_path(self, *parts: str) -> Path:
         return self.theme_dir.joinpath(*parts)
+
+    def load_theme(self) -> dict:
+        """This book's theme manifest (see :func:`load_theme`)."""
+        return load_theme(self.theme_dir)
 
 
 def add_book_arg(parser: argparse.ArgumentParser) -> None:

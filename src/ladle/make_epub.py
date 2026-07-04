@@ -17,8 +17,6 @@ from pathlib import Path
 
 from . import config
 
-FONT_FILES = ["PlayfairDisplay", "PlayfairDisplay-Italic", "Bitter", "Bitter-Italic"]
-
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
@@ -39,6 +37,7 @@ def main(argv: list[str] | None = None) -> int:
 
     theme = book_cfg.theme_dir
     css = theme / "css" / "epub.css"
+    font_files = list(dict.fromkeys(f["file"] for f in config.load_theme(theme)["font_faces"]))
 
     title = str(book.get("title", "Cookbook"))
     rights = str(book.get("rights", ""))
@@ -58,7 +57,7 @@ def main(argv: list[str] | None = None) -> int:
     if cover_png.exists():
         cover_args = [f"--epub-cover-image={cover_png}"]
 
-    font_args = [f"--epub-embed-font={theme / 'fonts' / f'{f}.ttf'}" for f in FONT_FILES]
+    font_args = [f"--epub-embed-font={theme / 'fonts' / f}" for f in font_files]
 
     # pandoc resolves relative resource paths (per-recipe illustrations in the
     # epub HTML) against these dirs; "." is the cwd, where those paths were
