@@ -1,6 +1,8 @@
-# The Community Cookbook — book-level configuration.
+# The Community Cookbook — an example book that ships with the `ladle` tool.
 # This single file drives titles, palette, fonts, and recipe ordering for both
-# the PDF and EPUB builds. Edit here, then run `make all`.
+# the PDF and EPUB builds. Build it with:
+#   make all                                       # this is the default book
+#   ladle build --book examples/community-cookbook/book.yaml
 
 title: The Community Cookbook
 subtitle: Stories & food from people who love to cook
@@ -10,6 +12,10 @@ producer: dimitri-kandassamy
 rights: "© 2026 The Community Cookbook contributors"
 content_license: CC-BY-SA-4.0
 repo_url: https://github.com/dimitri-kandassamy/community-cookbook
+
+# Design bundle (templates/css/fonts). `default` is the theme shipped in the
+# package; point this at a directory to use a book-local theme instead.
+theme: default
 
 # Design tokens — reverse-engineered palette from the reference art direction.
 palette:
