@@ -27,10 +27,7 @@ from pathlib import Path
 
 import yaml
 
-import bookconfig
-
-ROOT = Path(__file__).resolve().parent.parent
-PATTERNS = ROOT / "assets" / "illustrations" / "patterns"
+from . import config
 
 INK = "#3a2f25"
 LEAF = "#7f9b53"
@@ -421,23 +418,24 @@ def write(path_: Path, content: str, force: bool) -> None:
         return
     path_.parent.mkdir(parents=True, exist_ok=True)
     path_.write_text(content, encoding="utf-8")
-    print(f"wrote {path_.relative_to(ROOT)}")
+    print(f"wrote {config.rel(path_)}")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description="Generate the built-in SVG placeholder illustrations. "
         "To create real artwork, see the locked style in DESIGN.md and drop the "
         "resulting PNG next to each placeholder — the build prefers it automatically."
     )
     ap.add_argument("--force", action="store_true", help="overwrite existing art")
-    bookconfig.add_book_arg(ap)
-    args = ap.parse_args()
-    book_cfg = bookconfig.load_book_config(args.book)
+    config.add_book_arg(ap)
+    args = ap.parse_args(argv)
+    book_cfg = config.load_book_config(args.book)
 
-    write(PATTERNS / "cover.svg", pattern_svg(1, 0.95), args.force)
-    write(PATTERNS / "endpaper.svg", pattern_svg(2, 0.8), args.force)
-    write(PATTERNS / "back.svg", pattern_svg(3, 0.7), args.force)
+    patterns = book_cfg.theme_dir / "illustrations" / "patterns"
+    write(patterns / "cover.svg", pattern_svg(1, 0.95), args.force)
+    write(patterns / "endpaper.svg", pattern_svg(2, 0.8), args.force)
+    write(patterns / "back.svg", pattern_svg(3, 0.7), args.force)
 
     for r in load_recipes(book_cfg.recipes_dir):
         write(book_cfg.illustrations_dir / f"{r['slug']}.svg", scene_svg(r), args.force)

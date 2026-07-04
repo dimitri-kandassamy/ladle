@@ -15,9 +15,7 @@ from pathlib import Path
 
 from weasyprint import HTML
 
-ROOT = Path(__file__).resolve().parent.parent
-INPUT = ROOT / "build" / "cookbook.html"
-OUTPUT = ROOT / "build" / "cookbook.pdf"
+from . import config
 
 
 def open_outline(document, pdf) -> None:
@@ -29,12 +27,15 @@ def open_outline(document, pdf) -> None:
     pdf.catalog["PageMode"] = "/UseOutlines"
 
 
-def main() -> int:
-    if not INPUT.exists():
-        print("Missing build/cookbook.html — run `python3 tools/build_html.py` first.", file=sys.stderr)
+def main(argv: list[str] | None = None) -> int:
+    build = config.build_dir()
+    inp = build / "cookbook.html"
+    out = build / "cookbook.pdf"
+    if not inp.exists():
+        print(f"Missing {config.rel(inp)} — run `ladle html` first.", file=sys.stderr)
         return 1
-    HTML(filename=str(INPUT)).write_pdf(str(OUTPUT), finisher=open_outline)
-    print(f"Wrote {OUTPUT.relative_to(ROOT)}")
+    HTML(filename=str(inp)).write_pdf(str(out), finisher=open_outline)
+    print(f"Wrote {config.rel(out)}")
     return 0
 
 

@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ladle"
+version = "0.1.0"
+description = "Build art-directed cookbooks (PDF + EPUB) from markdown recipes."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE-CODE"]
+authors = [{ name = "Dimitri Kandassamy", email = "dimitri.kandassamy@gmail.com" }]
+keywords = ["cookbook", "pdf", "epub", "markdown", "weasyprint", "pandoc", "publishing"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: End Users/Desktop",
+  "Programming Language :: Python :: 3",
+  "Topic :: Text Processing :: Markup",
+  "Topic :: Printing",
+]
+dependencies = [
+  "Jinja2>=3.1",
+  "MarkupSafe>=2.1",
+  "PyYAML>=6.0",
+  "jsonschema>=4.0",
+  "weasyprint>=63",
+  "cairosvg>=2.7",
+  "Pillow>=9.4",
+  "numpy>=1.26",
+]
+
+[project.urls]
+Homepage = "https://github.com/dimitri-kandassamy/ladle"
+Repository = "https://github.com/dimitri-kandassamy/ladle"
+
+[project.scripts]
+ladle = "ladle.cli:main"
+
+# hatchling bundles every file under the package (fonts, css, templates,
+# patterns, schema) into the wheel by default — without those data files an
+# installed `ladle` could not build anything.
+[tool.hatch.build.targets.wheel]
+packages = ["src/ladle"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/ladle", "README.md", "LICENSE-CODE"]

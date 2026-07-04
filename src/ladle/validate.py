@@ -26,10 +26,9 @@ from pathlib import Path
 import jsonschema
 import yaml
 
-import bookconfig
+from . import config
 
-ROOT = Path(__file__).resolve().parent.parent
-BUILD = ROOT / "build"
+BUILD = config.build_dir()
 
 failures: list[str] = []
 
@@ -76,7 +75,7 @@ def notes_line_count(path: Path) -> int:
 # ---- 1. recipe schema ------------------------------------------------------
 def validate_recipes(recipes_dir: Path) -> None:
     section("Recipe front matter")
-    schema = json.loads((ROOT / "schema" / "recipe.schema.json").read_text())
+    schema = json.loads(config.SCHEMA_PATH.read_text())
     Validator = jsonschema.validators.validator_for(schema)
     Validator.check_schema(schema)
     validator = Validator(schema)
@@ -201,7 +200,7 @@ def validate_epub() -> None:
     if not epub.exists():
         bad("build/cookbook.epub not found (run `make epub`)")
         return
-    jar = ROOT / "tools" / "epubcheck" / "epubcheck.jar"
+    jar = config.epubcheck_jar()
     java = find_java()
     if jar.exists() and java:
         res = subprocess.run([java, "-jar", str(jar), str(epub)], capture_output=True, text=True)
@@ -248,14 +247,14 @@ def contact_sheet() -> None:
         canvas.paste(im, (pad + (k % cols) * (w + pad), pad + (k // cols) * (h + pad)))
     out = BUILD / "contact-sheet.png"
     canvas.save(out)
-    ok(f"wrote {out.relative_to(ROOT)} ({len(ims)} pages)")
+    ok(f"wrote {config.rel(out)} ({len(ims)} pages)")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    bookconfig.add_book_arg(ap)
-    args = ap.parse_args()
-    book_cfg = bookconfig.load_book_config(args.book)
+    config.add_book_arg(ap)
+    args = ap.parse_args(argv)
+    book_cfg = config.load_book_config(args.book)
 
     validate_recipes(book_cfg.recipes_dir)
     validate_pdf(book_cfg.recipes_dir)
