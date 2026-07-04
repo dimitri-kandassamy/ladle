@@ -16,14 +16,13 @@ Usage: python3 tools/bake_assets.py
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 import cairosvg
 import numpy as np
 from PIL import Image, ImageChops, ImageFilter
 
-ROOT = Path(__file__).resolve().parent.parent
-PATTERNS = ROOT / "assets" / "illustrations" / "patterns"
+from . import config
+
+PATTERNS = config.THEMES_DIR / "default" / "illustrations" / "patterns"
 
 CREAM = (250, 239, 219)  # #faefdb
 NAVY = (22, 32, 58)      # #16203a
@@ -46,7 +45,7 @@ def bake_paper(color: tuple[int, int, int], size, *, alpha, blur, seed) -> Image
     return ImageChops.multiply(base, grain(size, alpha=alpha, blur=blur, seed=seed))
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     PATTERNS.mkdir(parents=True, exist_ok=True)
 
     cream = bake_paper(CREAM, (1350, 1900), alpha=0.06, blur=0.6, seed=7)

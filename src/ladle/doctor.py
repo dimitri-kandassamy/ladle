@@ -18,10 +18,9 @@ import platform
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-from validate import find_java  # reuses the same JDK-probing logic
+from . import config
+from .validate import find_java  # reuses the same JDK-probing logic
 
 required_failures: list[str] = []
 
@@ -112,11 +111,11 @@ def check_java_epubcheck() -> None:
         ok(f"working Java found: {java}")
     else:
         warn("no working Java found — epubcheck will be skipped in favor of a structural fallback")
-    jar = ROOT / "tools" / "epubcheck" / "epubcheck.jar"
+    jar = config.epubcheck_jar()
     if jar.exists():
-        ok(f"{jar.relative_to(ROOT)} present")
+        ok(f"{config.rel(jar)} present")
     else:
-        warn(f"{jar.relative_to(ROOT)} not present — see README for how CI installs it")
+        warn(f"{config.rel(jar)} not present — see README for how CI installs it")
 
 
 def install_hints() -> None:
@@ -142,7 +141,7 @@ def install_hints() -> None:
         print(f"  {system}: see README.md's Requirements section for what to install.")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     check_python()
     check_pandoc()
     check_poppler()

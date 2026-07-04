@@ -20,13 +20,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 from markupsafe import Markup
 
-import bookconfig
-
-ROOT = Path(__file__).resolve().parent.parent
-TEMPLATES = ROOT / "templates"
-BUILD = ROOT / "build"
-FONTS = ROOT / "assets" / "fonts"
-CSS = ROOT / "assets" / "css"
+from . import config
 
 ARTICLES = {"the", "a", "an"}
 
@@ -192,12 +186,12 @@ def resolve_illustration(path_str: str, *, book_root: Path) -> str:
 
 
 def asset_url(path_str: str, *, absolute: bool, book_root: Path) -> str:
-    """Resolve an asset path; absolute file:// for print, REPO_ROOT-relative for epub.
+    """Resolve an asset path; absolute file:// for print, cwd-relative for epub.
 
-    Pandoc (via make_epub.sh's `--resource-path=".:build"`) resolves relative
-    paths against REPO_ROOT regardless of which book.yaml is building, so a
-    book living under e.g. books/<name>/ needs its asset path re-expressed
-    relative to REPO_ROOT here, not left relative to book_root.
+    Pandoc (see make_epub, `--resource-path=".:<build>"`) resolves relative
+    paths against the current working directory, so a book's asset is
+    re-expressed relative to the cwd here — which is where `make_epub` runs
+    pandoc — rather than left relative to book_root.
     """
     if not path_str:
         return ""
@@ -205,7 +199,7 @@ def asset_url(path_str: str, *, absolute: bool, book_root: Path) -> str:
     if absolute:
         return p.as_uri() if p.exists() else (book_root / path_str).as_uri()
     try:
-        return str(p.relative_to(ROOT))
+        return str(p.relative_to(Path.cwd()))
     except ValueError:
         return path_str
 
@@ -273,10 +267,10 @@ def load_intro(book: dict, *, absolute_assets: bool, book_root: Path) -> dict:
     }
 
 
-def font_face_css() -> str:
+def font_face_css(fonts_dir: Path) -> str:
     out = []
     for family, fname, style in FONT_FACES:
-        uri = (FONTS / fname).as_uri()
+        uri = (fonts_dir / fname).as_uri()
         out.append(
             f'@font-face{{font-family:"{family}";'
             f'src:url("{uri}") format("truetype");'
@@ -285,23 +279,28 @@ def font_face_css() -> str:
     return "\n".join(out)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    bookconfig.add_book_arg(ap)
-    args = ap.parse_args()
-    book_cfg = bookconfig.load_book_config(args.book)
+    config.add_book_arg(ap)
+    args = ap.parse_args(argv)
+    book_cfg = config.load_book_config(args.book)
     book = book_cfg.data
     book_root = book_cfg.root
+    theme = book_cfg.theme_dir
+    templates_dir = theme / "templates"
+    fonts_dir = theme / "fonts"
+    css_dir = theme / "css"
+    build = config.build_dir()
     book["title_article"], book["title_rest"] = split_title_article(book["title"])
     book["labels"] = merged_labels(book)
 
     env = Environment(
-        loader=FileSystemLoader(str(TEMPLATES)),
+        loader=FileSystemLoader(str(templates_dir)),
         autoescape=True,
         trim_blocks=True,
         lstrip_blocks=True,
     )
-    BUILD.mkdir(exist_ok=True)
+    build.mkdir(parents=True, exist_ok=True)
     recipe_paths = sorted(book_cfg.recipes_dir.glob("*.md"))
 
     # ---- print HTML (absolute file:// assets for WeasyPrint) ----
@@ -313,10 +312,10 @@ def main() -> int:
         book=book,
         intro=load_intro(book, absolute_assets=True, book_root=book_root),
         recipes=print_recipes,
-        font_face_css=font_face_css(),
-        css_links=[(CSS / "common.css").as_uri(), (CSS / "print.css").as_uri()],
+        font_face_css=font_face_css(fonts_dir),
+        css_links=[(css_dir / "common.css").as_uri(), (css_dir / "print.css").as_uri()],
     )
-    (BUILD / "cookbook.html").write_text(print_html, encoding="utf-8")
+    (build / "cookbook.html").write_text(print_html, encoding="utf-8")
 
     # ---- EPUB HTML (repo-relative assets for pandoc) ----
     epub_recipes = order_recipes(
@@ -328,15 +327,16 @@ def main() -> int:
         intro=load_intro(book, absolute_assets=False, book_root=book_root),
         recipes=epub_recipes,
     )
-    (BUILD / "epub.html").write_text(epub_html, encoding="utf-8")
+    (build / "epub.html").write_text(epub_html, encoding="utf-8")
 
-    write_landing(book)
+    write_landing(book, build)
 
-    print(f"Built build/cookbook.html and build/epub.html ({len(print_recipes)} recipes).")
+    print(f"Built {config.rel(build / 'cookbook.html')} and "
+          f"{config.rel(build / 'epub.html')} ({len(print_recipes)} recipes).")
     return 0
 
 
-def write_landing(book: dict) -> None:
+def write_landing(book: dict, build: Path) -> None:
     """A small GitHub Pages download page linking the PDF + EPUB."""
     p = book["palette"]
     html_doc = f"""<!doctype html>
@@ -365,7 +365,7 @@ def write_landing(book: dict) -> None:
   <p class="foot">{book['rights']} · <a href="{book['repo_url']}" style="color:{p['rule']}">Contribute a recipe</a></p>
 </div></body></html>
 """
-    (BUILD / "index.html").write_text(html_doc, encoding="utf-8")
+    (build / "index.html").write_text(html_doc, encoding="utf-8")
 
 
 if __name__ == "__main__":
