@@ -71,6 +71,7 @@ The user chose the maximal-ambition path on every axis:
   creation/push.
 
 ### Sequencing notes
+
 Phases 1→2→3 are the core; do each as a separate commit keeping `make all`
 green (verify with build + contact-sheet after each). Phase 3 is riskiest —
 land 1–2 first so structure is stable before touching design plumbing.
@@ -94,24 +95,30 @@ Legend: ✅ done · 🔟 in progress · ⬜ todo
 - ✅ **Phase 1: COMMITTED** — `2d14743` (code) + `fbf0746` (this plan)
 - ✅ Phase 0: docs decision — **user: RETROSPECTIVE.md + CHANGES-FROM-UPSTREAM.md must NOT be committed**; they stay as local untracked working notes. (Do not fold into `docs/`; do not `git add` them.)
 - ✅ Phase 2: move demo book → `examples/community-cookbook/`, root tool-only, Makefile `BOOK` defaults to example — committed `81cccdf`. Verified: `make all && make validate` (no BOOK) → 11 recipes, 28 pages, epubcheck pass.
-- 🔟 Phase 3: pluggable themes (`theme.yaml` manifest, THEMING.md) — IN PROGRESS
-- ⬜ Phase 4: `ladle new` starter path + template repo
-- ⬜ Phase 5: CI test/release matrix + PyPI publish workflow
-  - ✅ (partial) CI invocations updated to `pip install -e .` + `ladle … --book …`, committed `98f4803` (verified in a fresh venv). REMAINING: release/PyPI-publish job on `v*` tags, tool-vs-edition versioning, matrix.
-- ⬜ Phase 6: docs split (README/CONTRIBUTING/DESIGN) — NOTE: README/DESIGN.md still reference old `tools/`, `recipes/`, root `book.yaml` paths; stale until this phase.
-- ⬜ Phase 7: spin out flagship book repo
+- ✅ Phase 3: pluggable themes — `themes/default/theme.yaml` manifest (palette/fonts/font_faces), `config.load_theme()`, build_html/make_epub/bake_assets read the theme (no hardcoded fonts), minimal-book defaults, `docs/THEMING.md`. Committed `01b3a99`. Verified: default byte-stable (28pp, epubcheck); minimal book uses theme defaults; book-local theme w/ changed palette flows through + palette-driven paper bake.
+- ✅ Phase 6: docs split — README rewritten as a tool README; CONTRIBUTING split (root = tool; `examples/community-cookbook/CONTRIBUTING.md` = recipes); DESIGN.md paths + theme framing; markdownlint clean on tracked md. Committed `2fe3336`.
+- ✅ Phase 5 (test + PyPI publish): CI invocations → `pip install -e .` + `ladle … --book …` (`98f4803`); `publish-pypi` job releases to PyPI on `v*` tags via Trusted Publishing, removed example-edition release (`0a11b0e`). Test "matrix" = the `build` (example) + `torture-test` jobs. Verified: `python -m build` yields sdist+wheel w/ theme+schema data.
+  - REMAINING (minor): optional CI guard that the tag version == `pyproject` version; one-time PyPI trusted-publisher + `pypi` environment setup (user).
+- ⬜ Phase 4: `ladle new` starter path + template repo. Local `ladle new` already scaffolds a standalone book that builds against the installed package. REMAINING (external, needs user): publish a `ladle-book-template` GitHub repo; optionally have `ladle new` reference it.
+- ⬜ Phase 7: spin out flagship book repo (EXTERNAL, needs user). `examples/community-cookbook/` is already a self-contained book; spinning out = copy it into a new repo that `pip install ladle`s, add its own CI (build/validate + edition/rolling PDF releases + Pages, the logic removed from this repo in `0a11b0e`). Can prepare contents here; user creates/pushes the repo.
 
 ## Current git state (IMPORTANT for resuming)
 
 - Branch: `feat/changes-after-review` (NOT main). Commits so far:
-  - `2d14743` refactor(tools): repackage as installable 'ladle' CLI (Phase 1)
-  - `fbf0746` docs: add ladle refactor plan + task tracking
-  - `81cccdf` refactor: move demo book to examples/, root tool-only (Phase 2)
-  - `98f4803` ci: drive builds via installed 'ladle' CLI + example book path
+  - `2d14743` Phase 1: repackage as installable 'ladle' CLI
+  - `fbf0746` docs: add refactor plan + task tracking
+  - `81cccdf` Phase 2: move demo book to examples/, root tool-only
+  - `98f4803` ci: drive builds via 'ladle' CLI + example book path
+  - `774d296` docs(plan): Phase 2 + CI status
+  - `01b3a99` Phase 3: manifest-driven pluggable themes
+  - `2fe3336` Phase 6: reframe docs as a tool
+  - `0a11b0e` Phase 5: publish to PyPI on version tags
+  - (+ a follow-up docs(plan) commit for this update)
 - `RETROSPECTIVE.md` + `CHANGES-FROM-UPSTREAM.md` are permanently **untracked**
   by the user's instruction — NEVER `git add` them.
-- In progress: Phase 3 (pluggable themes). Nothing uncommitted expected at the
-  start of a fresh session unless Phase 3 work is mid-flight.
+- Done: Phases 1, 2, 3, 5 (test+publish), 6. Remaining: Phase 4 + Phase 7 (both
+  need the user to create external repos) and minor Phase 5 polish. Branch not
+  yet pushed / no PR opened.
 
 ## Key technical context / decisions (so a cold session doesn't re-derive)
 
