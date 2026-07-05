@@ -113,7 +113,7 @@ Legend: ✅ done · 🔟 in progress · ⬜ todo
   publish, or the git-URL fallback noted in its requirements.txt/README).
 - ✅ Bug fix found while preparing the template: `fix(epub)` `b6bfa62` — omit
   empty EPUB metadata so a book without `rights:` passes epubcheck (RSC-005).
-- PR #3 opened → https://github.com/dimitri-kandassamy/community-cookbook/pull/3 (branch pushed).
+- PR #3 opened → <https://github.com/dimitri-kandassamy/community-cookbook/pull/3> (branch pushed).
 
 ## Current git state (IMPORTANT for resuming)
 
@@ -153,9 +153,9 @@ Legend: ✅ done · 🔟 in progress · ⬜ todo
 - **`theme_dir` resolution** (`config.py`): bare name → `PACKAGE_ROOT/themes/<name>`;
   path with a separator or absolute → book-relative/absolute. This is the
   Phase 3 hook, already working.
-- CI (`.github/workflows/build.yml`) still calls the OLD `python3 tools/…`
-  invocations — **Phase 5 must update it** to `ladle …` (or `PYTHONPATH=src
-  python -m ladle …`). Not yet touched; CI would break on the old paths.
+- CI (`.github/workflows/build.yml`) installs the package (`pip install -e .`)
+  and drives the `ladle` command against the example + torture books; a `v*` tag
+  publishes to PyPI (`publish-pypi` job, Trusted Publishing). [Done in Phase 5.]
 
 ## How to build / verify (from repo root)
 

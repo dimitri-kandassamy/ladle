@@ -12,7 +12,7 @@ textures and decorative line-art patterns are pre-rendered here and committed:
 Baking once and committing keeps the build a single, fast, dependency-light step
 (no live SVG filters or blend modes, which renderers handle inconsistently).
 
-Usage: python3 tools/bake_assets.py
+Usage: ladle assets [--theme DIR]
 """
 from __future__ import annotations
 

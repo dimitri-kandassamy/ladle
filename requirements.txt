@@ -1,6 +1,7 @@
-# Python dependencies for building the cookbook.
-#   pip install -r requirements.txt
+# Runtime dependencies for the ladle build tool. Prefer `pip install -e .`
+# (which reads these from pyproject.toml); this file is kept in sync for convenience.
 Jinja2>=3.1
+MarkupSafe>=2.1
 PyYAML>=6.0
 jsonschema>=4.0
 weasyprint>=63

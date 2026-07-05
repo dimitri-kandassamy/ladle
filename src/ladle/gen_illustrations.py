@@ -15,7 +15,7 @@ the placeholder automatically.
 Idempotent: existing files are skipped unless --force.
 
 Usage:
-  python3 tools/gen_illustrations.py [--force]
+  ladle illustrations [--force] [--book PATH]
 """
 from __future__ import annotations
 
@@ -371,7 +371,7 @@ GLYPHS = [
 ]
 
 
-# Page grain and the navy line-art pattern PNGs are baked by tools/bake_assets.py
+# Page grain and the navy line-art pattern PNGs are baked by `ladle assets`
 # (paper-cream.jpg, paper-navy.png, cover.png, endpaper.png) and committed. They
 # are not generated here.
 
