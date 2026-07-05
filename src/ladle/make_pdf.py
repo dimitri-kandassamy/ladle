@@ -6,7 +6,7 @@ no browser. The print CSS uses CSS Paged Media (`@page`, fixed-size pages, page
 breaks) plus transforms and pre-rendered raster backgrounds, all of which
 WeasyPrint supports natively.
 
-Run: python3 tools/make_pdf.py
+Run: ladle pdf
 """
 from __future__ import annotations
 

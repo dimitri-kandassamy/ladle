@@ -3,10 +3,10 @@
 
 Single source of truth -> two renderers. Reads book.yaml + recipes/*.md, validates
 front matter, parses each body into structured ingredients/directions/notes, and
-renders templates/print.html.j2 -> build/cookbook.html and templates/epub.html.j2
+renders the theme's print.html.j2 -> build/cookbook.html and epub.html.j2
 -> build/epub.html.
 
-Run: python3 tools/build_html.py
+Run: ladle html
 """
 from __future__ import annotations
 

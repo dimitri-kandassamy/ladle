@@ -8,7 +8,7 @@ Validation is *structural*, not pixel-based:
   3. build/cookbook.epub passes epubcheck (or a structural fallback if no Java);
   4. a build/contact-sheet.png thumbnail grid is produced for eyeballing.
 
-Exit code is non-zero if any check fails. Run: python3 tools/validate.py
+Exit code is non-zero if any check fails. Run: ladle validate
 """
 from __future__ import annotations
 

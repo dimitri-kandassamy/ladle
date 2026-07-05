@@ -9,7 +9,7 @@ per-OS install instructions for anything missing.
 Exit code is non-zero only if a *required* dependency is missing; Java/epubcheck
 are warnings (validate.py already falls back to a structural check without them).
 
-Run: python3 tools/doctor.py
+Run: ladle doctor
 """
 from __future__ import annotations
 
