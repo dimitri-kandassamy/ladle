@@ -172,6 +172,8 @@ jobs:
       url: https://pypi.org/p/ladlebook
     permissions:
       id-token: write   # OIDC token for Trusted Publishing
+      contents: read    # clone the repo — a job-level permissions block replaces the
+                        # workflow defaults, and a *private* repo checkout needs this
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
