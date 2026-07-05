@@ -17,7 +17,7 @@ can bring its own.
 ## Install
 
 ```sh
-pip install ladle
+pip install ladlebook      # the PyPI package; the command it installs is `ladle`
 ```
 
 `ladle` is Python plus two small command-line tools (one runtime, no browser,
