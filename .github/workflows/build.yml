@@ -58,6 +58,7 @@ jobs:
         run: |
           EC=5.1.0
           curl -sL "https://github.com/w3c/epubcheck/releases/download/v${EC}/epubcheck-${EC}.zip" -o ec.zip
+          mkdir -p tools/epubcheck   # tools/ has no tracked files, so it isn't on a fresh checkout
           unzip -oq ec.zip -d tools/epubcheck
           ln -sf "epubcheck-${EC}/epubcheck.jar" tools/epubcheck/epubcheck.jar
 
@@ -146,6 +147,7 @@ jobs:
         run: |
           EC=5.1.0
           curl -sL "https://github.com/w3c/epubcheck/releases/download/v${EC}/epubcheck-${EC}.zip" -o ec.zip
+          mkdir -p tools/epubcheck   # tools/ has no tracked files, so it isn't on a fresh checkout
           unzip -oq ec.zip -d tools/epubcheck
           ln -sf "epubcheck-${EC}/epubcheck.jar" tools/epubcheck/epubcheck.jar
 
