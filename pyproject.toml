@@ -3,7 +3,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ladle"
+# PyPI distribution name. The import package and CLI command are both `ladle`;
+# the plain `ladle` name is already registered on PyPI, so we publish as
+# `ladlebook` (users run `pip install ladlebook`, then the `ladle` command).
+name = "ladlebook"
 version = "0.1.0"
 description = "Build art-directed cookbooks (PDF + EPUB) from markdown recipes."
 readme = "README.md"
