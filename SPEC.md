@@ -40,7 +40,7 @@ and the stable contract between ingestion and the build.
   art-directed print artifact.
 - **Add acquisition additively, cheapest-value-first:** a deterministic web
   (schema.org/Recipe JSON-LD) extractor **with no LLM** lands first; a **local**
-  Ollama fallback follows behind an optional extra (`pip install ladle[ingest]`);
+  Ollama fallback follows behind an optional extra (`pip install ladlebook[ingest]`);
   PDF/EPUB source extractors come later.
 - **CI stays LLM-free and deterministic** — it builds only from committed
   markdown and never runs Ollama or the network extractors. Ingestion is local.
@@ -103,7 +103,7 @@ ladle/
 └── .github/workflows/build.yml  # lint · build+validate · publish to PyPI on tags
 ```
 
-### A user's book (built by `ladle new`, or a repo that `pip install ladle`s)
+### A user's book (built by `ladle new`, or a repo that `pip install ladlebook`s)
 
 ```text
 my-cookbook/
@@ -264,7 +264,7 @@ walk-up to find the nearest `book.yaml` from a subdirectory.)
 **torture-test fixture** → on a `v*` tag, publish `ladle` to **PyPI** (Trusted
 Publishing). Deterministic and **LLM-free** — never runs ingestion.
 
-**A book repo** (e.g. the flagship cookbook that `pip install ladle`s): builds
+**A book repo** (e.g. the flagship cookbook that `pip install ladlebook`s): builds
 PDF + EPUB on push, publishes a rolling `latest` release + versioned editions on
 `v*` tags, and (opt-in) deploys the `build/` download page + artifacts to
 **GitHub Pages**. Also consumes only committed markdown.
@@ -347,7 +347,7 @@ Cheapest-value-first; each step keeps the builder green and CI LLM-free.
    (§6), `--json`/`--plain`, `--no-color`, `--no-input`, `-C`; add `ladle list`,
    `ladle theme list/show/use`, `ladle lint`. Pure upside, no new heavy deps.
 4. **Readable-text fallback + local Ollama.** `normalize.py` + `ollama.py` behind
-   the optional `ladle[ingest]` extra; non-JSON-LD pages → model → Recipe.
+   the optional `ladlebook[ingest]` extra; non-JSON-LD pages → model → Recipe.
    Local-only; never in CI.
 5. **PDF & EPUB source extractors.** `pdftotext -layout` and epub XHTML text →
    the same normalize path. `--chapter` selector for EPUBs.
@@ -389,7 +389,7 @@ Cheapest-value-first; each step keeps the builder green and CI LLM-free.
 ## 13. Caveats / open questions
 
 - **Ingest dependency surface.** Keep the core builder dependency-light: the
-  HTML/LLM stack lives in the `ladle[ingest]` extra so `pip install ladle` stays
+  HTML/LLM stack lives in the `ladlebook[ingest]` extra so `pip install ladlebook` stays
   lean and CI never pulls it. If it still feels heavy inside the repo, the
   fallback is a separate companion tool that writes the same `recipes/*.md`.
 - **Ollama model.** Local, text-only; name/host from config/env; clear error if
