@@ -65,13 +65,18 @@ def main(argv: list[str] | None = None) -> int:
     resource_path = os.pathsep.join([".", str(build)])
     out = build / "cookbook.epub"
 
+    # Only pass non-empty metadata: an empty `rights` becomes an empty
+    # <dc:rights> element, which epubcheck rejects (RSC-005). So a minimal
+    # book.yaml without a `rights:` field still produces a valid EPUB.
+    meta = [("title", title), ("author", author), ("lang", lang)]
+    if rights:
+        meta.append(("rights", rights))
+    meta_args = [arg for key, value in meta for arg in ("--metadata", f"{key}={value}")]
+
     cmd = [
         "pandoc", str(epub_html), "-o", str(out),
         "--from", "html", "--to", "epub3",
-        "--metadata", f"title={title}",
-        "--metadata", f"author={author}",
-        "--metadata", f"lang={lang}",
-        "--metadata", f"rights={rights}",
+        *meta_args,
         "--css", str(css),
         "--split-level=1",
         "--resource-path", resource_path,
