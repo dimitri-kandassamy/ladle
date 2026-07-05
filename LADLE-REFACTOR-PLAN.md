@@ -99,8 +99,21 @@ Legend: ✅ done · 🔟 in progress · ⬜ todo
 - ✅ Phase 6: docs split — README rewritten as a tool README; CONTRIBUTING split (root = tool; `examples/community-cookbook/CONTRIBUTING.md` = recipes); DESIGN.md paths + theme framing; markdownlint clean on tracked md. Committed `2fe3336`.
 - ✅ Phase 5 (test + PyPI publish): CI invocations → `pip install -e .` + `ladle … --book …` (`98f4803`); `publish-pypi` job releases to PyPI on `v*` tags via Trusted Publishing, removed example-edition release (`0a11b0e`). Test "matrix" = the `build` (example) + `torture-test` jobs. Verified: `python -m build` yields sdist+wheel w/ theme+schema data.
   - REMAINING (minor): optional CI guard that the tag version == `pyproject` version; one-time PyPI trusted-publisher + `pypi` environment setup (user).
-- ⬜ Phase 4: `ladle new` starter path + template repo. Local `ladle new` already scaffolds a standalone book that builds against the installed package. REMAINING (external, needs user): publish a `ladle-book-template` GitHub repo; optionally have `ladle new` reference it.
-- ⬜ Phase 7: spin out flagship book repo (EXTERNAL, needs user). `examples/community-cookbook/` is already a self-contained book; spinning out = copy it into a new repo that `pip install ladle`s, add its own CI (build/validate + edition/rolling PDF releases + Pages, the logic removed from this repo in `0a11b0e`). Can prepare contents here; user creates/pushes the repo.
+- ✅ Phase 4 (prepared): starter template contents ready at sibling dir
+  `../ladle-book-template/` (git-initialized, committed `12d20aa`). Minimal book +
+  example recipe + README ("Use this template") + CI (build/validate + rolling
+  release) + requirements.txt. Verified: builds an 8-page PDF, epubcheck clean.
+  REMAINING (user): `gh repo create dimitri-kandassamy/ladle-book-template --public --source=../ladle-book-template --push`, then mark it a Template repository in settings.
+- ✅ Phase 7 (prepared): flagship book repo contents ready at sibling dir
+  `../ladle-community-cookbook/` (git-initialized, committed `13af391`). The book
+  (book.yaml/recipes/content/illustrations from examples/) + book-focused README +
+  recipe CONTRIBUTING + CI carrying the edition/rolling/Pages release logic +
+  requirements.txt (`ladle`). Verified: 28-page PDF, epubcheck clean.
+  REMAINING (user): create/push the repo; requires `ladle` installable (PyPI
+  publish, or the git-URL fallback noted in its requirements.txt/README).
+- ✅ Bug fix found while preparing the template: `fix(epub)` `b6bfa62` — omit
+  empty EPUB metadata so a book without `rights:` passes epubcheck (RSC-005).
+- PR #3 opened → https://github.com/dimitri-kandassamy/community-cookbook/pull/3 (branch pushed).
 
 ## Current git state (IMPORTANT for resuming)
 
