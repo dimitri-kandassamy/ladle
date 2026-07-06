@@ -45,7 +45,7 @@ def bad(msg: str, *, required: bool = True) -> None:
 
 def check_python() -> None:
     section("Python")
-    if sys.version_info >= (3, 11):
+    if sys.version_info >= (3, 11):  # noqa: UP036 — runtime diagnostic; reports the user's actual Python
         ok(f"Python {platform.python_version()}")
     else:
         bad(f"Python {platform.python_version()} — need >= 3.11")

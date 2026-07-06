@@ -38,9 +38,7 @@ def _mix(hex_color: str, target: tuple[int, int, int], f: float) -> str:
     h = hex_color.lstrip("#")
     r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
     tr, tg, tb = target
-    return "#%02x%02x%02x" % (
-        round(r + (tr - r) * f), round(g + (tg - g) * f), round(b + (tb - b) * f)
-    )
+    return f"#{round(r + (tr - r) * f):02x}{round(g + (tg - g) * f):02x}{round(b + (tb - b) * f):02x}"
 
 
 def darken(c: str, f: float = 0.28) -> str:
