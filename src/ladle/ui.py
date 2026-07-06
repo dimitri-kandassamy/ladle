@@ -15,6 +15,7 @@ unless a ``--color``/``--no-color`` flag forces it (see :class:`Console`).
 """
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 from dataclasses import dataclass
@@ -39,13 +40,14 @@ class Console:
     plain: bool = False
     color: bool | None = None   # None = auto (TTY + NO_COLOR); True/False = forced
     no_input: bool = False
+    debug: bool = False         # show full tracebacks instead of a one-line error
 
 
 _console = Console()
 
 
 def configure(**kwargs) -> Console:
-    """Install a new console from parsed global flags; returns it."""
+    """Install a new console (defaults for anything unset); returns it."""
     global _console
     _console = Console(**kwargs)
     return _console
@@ -53,6 +55,41 @@ def configure(**kwargs) -> Console:
 
 def get() -> Console:
     return _console
+
+
+# ---- global flags ---------------------------------------------------------
+def add_global_flags(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    """Attach the clig.dev pragmatic-core global flags to *parser*."""
+    g = parser.add_argument_group("global options")
+    g.add_argument("-v", "--verbose", action="count", default=0, help="more detail on stderr")
+    g.add_argument("-q", "--quiet", action="store_true", help="only errors on stderr")
+    g.add_argument("--debug", action="store_true", help="developer output + full tracebacks")
+    g.add_argument("--json", action="store_true", help="machine-readable JSON (data commands)")
+    g.add_argument("--plain", action="store_true", help="tab-separated output (data commands)")
+    g.add_argument("--no-color", dest="no_color", action="store_true",
+                   help="disable color (also honors NO_COLOR / non-TTY)")
+    g.add_argument("--no-input", dest="no_input", action="store_true",
+                   help="never prompt; use defaults or fail")
+    return parser
+
+
+def global_parser() -> argparse.ArgumentParser:
+    """A standalone parser holding only the global flags (for pre-parsing)."""
+    return add_global_flags(argparse.ArgumentParser(add_help=False))
+
+
+def configure_from_args(args: argparse.Namespace) -> Console:
+    """Build the console from parsed global flags (quiet wins over verbose)."""
+    verbosity = -1 if getattr(args, "quiet", False) else getattr(args, "verbose", 0)
+    color = False if getattr(args, "no_color", False) else None
+    return configure(
+        verbosity=verbosity,
+        json=getattr(args, "json", False),
+        plain=getattr(args, "plain", False),
+        color=color,
+        no_input=getattr(args, "no_input", False),
+        debug=getattr(args, "debug", False),
+    )
 
 
 # ---- color ----------------------------------------------------------------

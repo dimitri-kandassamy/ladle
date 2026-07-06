@@ -21,6 +21,8 @@ from pathlib import Path
 
 import yaml
 
+from . import ui
+
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 # Defaults for a new book's design tokens — the built-in `default` theme's
@@ -139,9 +141,9 @@ draft: true                   # remove this line once you replace the recipe
         encoding="utf-8",
     )
 
-    print(f"Scaffolded books/{name}/")
-    print("Next steps:")
-    print(f"  ladle build --book books/{name}/book.yaml && ladle validate --book books/{name}/book.yaml")
+    ui.success(f"Scaffolded books/{name}/")
+    ui.step("Next steps:")
+    ui.step(f"  ladle build --book books/{name}/book.yaml && ladle validate --book books/{name}/book.yaml")
     return 0
 
 

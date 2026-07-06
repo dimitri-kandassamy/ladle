@@ -135,7 +135,15 @@ def resolve_book_path(cli_value: str | None = None) -> Path:
     return Path(value).resolve()
 
 
+class NoBookError(FileNotFoundError):
+    """Raised when the resolved book.yaml does not exist (mapped to exit code 3)."""
+
+
 def load_book_config(cli_value: str | None = None) -> BookConfig:
     path = resolve_book_path(cli_value)
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise NoBookError(f"no book config found at {rel(path)}") from None
+    data = yaml.safe_load(text) or {}
     return BookConfig(path=path, data=data)

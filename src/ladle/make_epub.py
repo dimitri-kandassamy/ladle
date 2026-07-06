@@ -14,7 +14,7 @@ import shutil
 import subprocess
 import sys
 
-from . import config
+from . import config, ui
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -85,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
     res = subprocess.run(cmd)
     if res.returncode != 0:
         return res.returncode
-    print(f"Wrote {config.rel(out)}")
+    ui.success(f"Wrote {config.rel(out)}")
     return 0
 
 
