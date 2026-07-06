@@ -14,7 +14,7 @@ import sys
 
 from weasyprint import HTML
 
-from . import config
+from . import config, ui
 
 
 def open_outline(document, pdf) -> None:
@@ -34,7 +34,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Missing {config.rel(inp)} — run `ladle html` first.", file=sys.stderr)
         return 1
     HTML(filename=str(inp)).write_pdf(str(out), finisher=open_outline)
-    print(f"Wrote {config.rel(out)}")
+    ui.success(f"Wrote {config.rel(out)}")
     return 0
 
 

@@ -12,11 +12,13 @@ from . import (
     __version__,
     bake_assets,
     build_html,
+    config,
     doctor,
     gen_illustrations,
     make_epub,
     make_pdf,
     new_book,
+    ui,
     validate,
 )
 
@@ -63,19 +65,37 @@ Run `ladle <command> --help` for a command's own options."""
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
-    if not argv or argv[0] in ("-h", "--help", "help"):
-        print(USAGE)
-        return 0
-    if argv[0] in ("-V", "--version"):
+
+    # Pull the global flags out from anywhere in argv (so both `ladle --json list`
+    # and `ladle list --json` work), configure the console, and dispatch on what
+    # remains. Global flags are store_true/count, so parse_known_args never
+    # swallows a command or its own flags (e.g. --book stays in `rest`).
+    gargs, rest = ui.global_parser().parse_known_args(argv)
+    ui.configure_from_args(gargs)
+
+    if not rest or rest[0] in ("-h", "--help", "help"):
+        print(USAGE)              # help is requested output -> stdout, exit 0
+        return ui.OK
+    if rest[0] in ("-V", "--version"):
         print(f"ladle {__version__}")
-        return 0
-    cmd, rest = argv[0], argv[1:]
+        return ui.OK
+
+    cmd, sub = rest[0], rest[1:]
     fn = COMMANDS.get(cmd)
     if fn is None:
-        print(f"ladle: unknown command {cmd!r}\n", file=sys.stderr)
-        print(USAGE, file=sys.stderr)
-        return 2
-    return fn(rest)
+        return ui.die(f"unknown command {cmd!r}", ui.USAGE,
+                      hint="run `ladle --help` for the command list")
+
+    try:
+        return fn(sub)
+    except config.NoBookError as exc:
+        return ui.die(str(exc), ui.NO_BOOK, hint="run `ladle new` or pass --book PATH")
+    except KeyboardInterrupt:
+        return ui.die("interrupted", ui.ERROR)
+    except Exception as exc:      # noqa: BLE001 — top-level guard: clean message, or traceback under --debug
+        if ui.get().debug:
+            raise
+        return ui.die(str(exc) or exc.__class__.__name__, ui.ERROR)
 
 
 if __name__ == "__main__":

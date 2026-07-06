@@ -27,7 +27,7 @@ from pathlib import Path
 
 import yaml
 
-from . import config
+from . import config, ui
 
 INK = "#3a2f25"
 LEAF = "#7f9b53"
@@ -416,7 +416,7 @@ def write(path_: Path, content: str, force: bool) -> None:
         return
     path_.parent.mkdir(parents=True, exist_ok=True)
     path_.write_text(content, encoding="utf-8")
-    print(f"wrote {config.rel(path_)}")
+    ui.step(f"wrote {config.rel(path_)}")
 
 
 def main(argv: list[str] | None = None) -> int:

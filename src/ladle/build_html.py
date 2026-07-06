@@ -20,7 +20,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 from markupsafe import Markup
 
-from . import config
+from . import config, ui
 
 ARTICLES = {"the", "a", "an"}
 
@@ -335,8 +335,8 @@ def main(argv: list[str] | None = None) -> int:
 
     write_landing(book, build)
 
-    print(f"Built {config.rel(build / 'cookbook.html')} and "
-          f"{config.rel(build / 'epub.html')} ({len(print_recipes)} recipes).")
+    ui.success(f"Built {config.rel(build / 'cookbook.html')} and "
+               f"{config.rel(build / 'epub.html')} ({len(print_recipes)} recipes).")
     return 0
 
 

@@ -1,7 +1,16 @@
 """Unit tests for command dispatch in ladle.cli."""
 from __future__ import annotations
 
-from ladle import cli
+import pytest
+
+from ladle import cli, ui
+
+
+@pytest.fixture(autouse=True)
+def _reset_console():
+    ui.configure()
+    yield
+    ui.configure()
 
 
 def test_no_args_prints_usage_and_succeeds(capsys):
@@ -32,5 +41,40 @@ def test_known_command_delegates(monkeypatch):
         return 7
 
     monkeypatch.setitem(cli.COMMANDS, "validate", fake_validate)
-    assert cli.main(["validate", "--book", "b.yaml"]) == 7
+    # Global flags are stripped before dispatch; the command sees only its own.
+    assert cli.main(["--quiet", "validate", "--book", "b.yaml"]) == 7
     assert called["argv"] == ["--book", "b.yaml"]
+
+
+def test_global_flags_configure_console(monkeypatch):
+    monkeypatch.setitem(cli.COMMANDS, "noop", lambda argv: 0)
+    cli.main(["--no-color", "-v", "noop"])
+    console = ui.get()
+    assert console.color is False
+    assert console.verbosity == 1
+
+
+def test_missing_book_returns_exit_3(capsys):
+    rc = cli.main(["validate", "--book", "/no/such/book.yaml"])
+    assert rc == ui.NO_BOOK == 3
+    err = capsys.readouterr().err
+    assert "no book config found" in err
+    assert "ladle new" in err            # the next-step hint
+
+
+def test_unexpected_error_maps_to_1_without_debug(monkeypatch, capsys):
+    def boom(argv):
+        raise ValueError("kaboom")
+
+    monkeypatch.setitem(cli.COMMANDS, "boom", boom)
+    assert cli.main(["boom"]) == ui.ERROR
+    assert "kaboom" in capsys.readouterr().err
+
+
+def test_debug_reraises_for_tracebacks(monkeypatch):
+    def boom(argv):
+        raise ValueError("kaboom")
+
+    monkeypatch.setitem(cli.COMMANDS, "boom", boom)
+    with pytest.raises(ValueError, match="kaboom"):
+        cli.main(["--debug", "boom"])

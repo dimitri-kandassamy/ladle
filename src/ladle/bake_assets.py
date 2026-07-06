@@ -23,7 +23,7 @@ import cairosvg
 import numpy as np
 from PIL import Image, ImageChops, ImageFilter
 
-from . import config
+from . import config, ui
 
 
 def grain(size: tuple[int, int], *, alpha: float, blur: float, seed: int) -> Image.Image:
@@ -72,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
             output_height=1900,
         )
 
-    print(f"Baked {config.rel(patterns)}: paper-cream.jpg, paper-navy.png, cover.png, endpaper.png")
+    ui.success(f"Baked {config.rel(patterns)}: paper-cream.jpg, paper-navy.png, cover.png, endpaper.png")
     return 0
 
 
