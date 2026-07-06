@@ -25,6 +25,7 @@ def open_outline(document, pdf) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    ui.command_parser(__doc__, "ladle pdf").parse_args(argv)
     build = config.build_dir()
     inp = build / "cookbook.html"
     out = build / "cookbook.pdf"

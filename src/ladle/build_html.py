@@ -10,7 +10,6 @@ Run: ladle html
 """
 from __future__ import annotations
 
-import argparse
 import html
 import re
 import sys
@@ -273,7 +272,7 @@ def font_face_css(fonts_dir: Path, font_faces: list[dict]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
+    ap = ui.command_parser(__doc__, "ladle html", "ladle html --book books/pt/book.yaml")
     config.add_book_arg(ap)
     args = ap.parse_args(argv)
     book_cfg = config.load_book_config(args.book)

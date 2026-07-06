@@ -9,14 +9,13 @@ Run: ladle lint
 """
 from __future__ import annotations
 
-import argparse
 import json
 
 from . import config, ui, validate
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
+    ap = ui.command_parser(__doc__, "ladle lint", "ladle lint --json | jq '.[] | select(.ok|not)'")
     config.add_book_arg(ap)
     args = ap.parse_args(argv)
     book_cfg = config.load_book_config(args.book)
