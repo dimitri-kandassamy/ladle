@@ -7,6 +7,9 @@
 #   make illustrations  (re)generate the SVG placeholder line-art
 #   make assets       re-bake the default theme's raster brand assets
 #   make validate     schema + structural + epubcheck + contact sheet
+#   make test         run the unit tests (pytest)
+#   make lint         run ruff over src/ and tests/
+#   make check        lint + test (the fast, no-toolchain CI gate)
 #   make doctor       preflight-check pandoc/poppler/WeasyPrint/Java are installed
 #   make new-book NAME=x   scaffold a new book under books/x/
 #   make clean
@@ -24,9 +27,19 @@ BUILD := build
 BOOK      ?= examples/the-ladle-kitchen/book.yaml
 BOOK_FLAG := $(if $(BOOK),--book $(BOOK),)
 
-.PHONY: all pdf epub html illustrations assets validate doctor new-book clean
+.PHONY: all pdf epub html illustrations assets validate test lint check doctor new-book clean
 
 all: pdf epub
+
+# Unit tests + lint — the fast CI gate, no book toolchain required.
+# pytest resolves `ladle` from src/ via pyproject's pythonpath setting.
+test:
+	python3 -m pytest
+
+lint:
+	python3 -m ruff check src tests
+
+check: lint test
 
 # On-brand SVG placeholder art (patterns + per-recipe spots).
 illustrations:
