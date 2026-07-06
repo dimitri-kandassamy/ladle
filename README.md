@@ -1,70 +1,112 @@
 # ladle
 
-**Build a beautiful cookbook — an art-directed PDF and a validated, reflowable
-EPUB — from a folder of markdown recipes.**
+[![GitHub](https://img.shields.io/badge/GitHub-dimitri--kandassamy%2Fladle-181717?logo=github)](https://github.com/dimitri-kandassamy/ladle)
+[![PyPI version](https://img.shields.io/pypi/v/ladlebook.svg)](https://pypi.org/project/ladlebook/)
+[![Python versions](https://img.shields.io/pypi/pyversions/ladlebook.svg)](https://pypi.org/project/ladlebook/)
+[![License](https://img.shields.io/github/license/dimitri-kandassamy/ladle)](https://github.com/dimitri-kandassamy/ladle/blob/main/LICENSE)
+[![CI](https://github.com/dimitri-kandassamy/ladle/actions/workflows/build.yml/badge.svg)](https://github.com/dimitri-kandassamy/ladle/actions/workflows/build.yml)
 
-Recipes are plain markdown files with a little YAML front matter. `ladle` turns
-the whole collection into a print-ready PDF (via WeasyPrint) and an
-epubcheck-clean EPUB (via pandoc), driven by one `book.yaml` and a swappable
-**theme** for the look. The design (fonts, palette, layout) is fully decoupled
-from the content, so the same recipes can render under any theme, and any book
-can bring its own.
+**Turn a folder of markdown recipes into a beautifully typeset cookbook — a
+print-ready PDF and a validated, reflowable EPUB — with one command.**
 
-> A full worked example — 11 recipes, stories, illustrations, the works — lives
-> in [`examples/community-cookbook/`](examples/community-cookbook/). That is the
-> book this tool grew out of; it now ships as the reference example.
+`ladle` is a command-line tool that builds art-directed cookbooks from plain
+markdown and a single `book.yaml`. The design — fonts, palette, layout — lives
+in a swappable **theme**, fully decoupled from your words, so the same recipes
+can be restyled without touching a line of content. It's plain Python with no
+browser and no Node, built for home cooks, communities, and small publishers who
+would rather keep their recipes in version-controlled plain text than locked
+inside a proprietary app.
 
-## Install
+![A spread from the example cookbook, built by ladle](https://raw.githubusercontent.com/dimitri-kandassamy/ladle/main/docs/assets/hero.png)
+
+*The example cookbook — a print-ready PDF from plain markdown.*
+
+![Building a cookbook from the terminal](https://raw.githubusercontent.com/dimitri-kandassamy/ladle/main/docs/assets/demo.gif)
+
+*One folder of markdown → a validated PDF + EPUB, in a single command.*
+
+## Installation
+
+`ladle` needs Python 3.11+ and a few small command-line tools (one runtime — no
+browser, no Node).
+
+### 1. Install the package
 
 ```sh
 pip install ladlebook      # the PyPI package; the command it installs is `ladle`
 ```
 
-`ladle` is Python plus two small command-line tools (one runtime, no browser,
-no Node):
+### 2. Install the system tools
 
-| Tool | Version | Used for |
-| --- | --- | --- |
-| Python | 3.11+ | the tool itself |
-| pandoc | 3.x | EPUB generation |
-| poppler | any recent | `pdfinfo` + `pdftoppm` (PDF checks, EPUB cover) |
-| Java | 17+ | optional — only to run `epubcheck` in `ladle validate` |
-
-[WeasyPrint](https://weasyprint.org) (a dependency) needs the Pango/cairo system
-libraries:
+[WeasyPrint](https://weasyprint.org) (the PDF engine) needs the Pango/cairo
+libraries; pandoc builds the EPUB; poppler powers the PDF checks and EPUB cover.
 
 - **macOS:** `brew install pango poppler pandoc`
 - **Debian/Ubuntu:** `sudo apt-get install libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 poppler-utils pandoc`
 
-Run `ladle doctor` to check everything is present, with per-OS install hints.
+| Tool    | Version    | Used for                                               |
+| ------- | ---------- | ------------------------------------------------------ |
+| Python  | 3.11+      | the tool itself                                        |
+| pandoc  | 3.x        | EPUB generation                                        |
+| poppler | any recent | `pdfinfo` + `pdftoppm` (PDF checks, EPUB cover)        |
+| Java    | 17+        | optional — only to run `epubcheck` in `ladle validate` |
 
-## Quickstart
+Then confirm everything is wired up, with per-OS install hints for anything missing:
 
 ```sh
-ladle new mybook                 # scaffold books/mybook/ (book.yaml + a draft recipe)
+ladle doctor
+```
+
+## Usage
+
+Scaffold a book, add recipes, and build:
+
+```sh
+ladle new --name mybook          # scaffold books/mybook/ (prompts for title, subtitle, language)
 cd books/mybook
 # …add your recipes under recipes/…
 ladle build                      # -> build/cookbook.pdf and build/cookbook.epub
 ladle validate                   # schema + PDF structure + epubcheck + contact sheet
-open build/contact-sheet.png
+open build/contact-sheet.png     # a thumbnail grid of every page
 ```
 
-Book-scoped commands take `--book PATH` (default: `$BOOK_CONFIG` or
-`./book.yaml`), so you can keep several books side by side and build any of them.
+Book-scoped commands take `--book PATH` (default: `$BOOK_CONFIG` or `./book.yaml`),
+so you can keep several books side by side and build any of them.
 
-## Commands
+### A recipe is just markdown
 
-| Command | Does |
-| --- | --- |
-| `ladle new [--name X]` | scaffold a new book under `books/X/` |
-| `ladle build` | build PDF + EPUB (`html` → `pdf` → `epub`) |
-| `ladle html` / `pdf` / `epub` | run a single stage |
-| `ladle validate` | recipe schema, PDF trim + page count, epubcheck, contact sheet |
-| `ladle illustrations` | (re)generate the SVG placeholder art |
-| `ladle assets [--theme DIR]` | re-bake a theme's raster brand assets (paper grain, patterns) |
-| `ladle doctor` | check pandoc/poppler/WeasyPrint/Java are installed |
+```markdown
+---
+title: Carrot Cake
+category: Desserts # Savory | Desserts | Beverages
+servings: "6 people" # optional
+credits: "The Ladle Kitchen" # optional — a person, a book, or a URL
+illustration: assets/illustrations/recipes/carrot-cake.svg
+# optional: page, story, author:{name,org}, headshot, attribution, tags, license, draft
+---
 
-## A book
+## INGREDIENTS
+
+### Cake # optional group headings
+
+- 2 large eggs
+- 200g sugar
+
+## DIRECTIONS
+
+1. Pre-heat the oven to 180°C.
+2. …
+
+## NOTES # optional
+
+- Keeps for several days.
+```
+
+A recipe with a non-empty `story:` gets a full story page (with an optional
+`headshot`); without one it gets a compact opener. Every recipe is validated
+against [`recipe.schema.json`](https://github.com/dimitri-kandassamy/ladle/blob/main/src/ladle/schema/recipe.schema.json).
+
+### A book is a folder
 
 ```text
 mybook/
@@ -75,51 +117,45 @@ mybook/
 ```
 
 `book.yaml` needs only a `title` to build — everything else (palette, fonts,
-labels) falls back to the theme's defaults. Point `theme:` at a bundled theme by
-name (`default`) or at your own theme directory.
+labels) falls back to the theme's defaults. Section headings and all UI chrome
+("Yields", "Contents", section names) are localizable per book via a `labels:`
+block. See the reference book in
+[`examples/the-ladle-kitchen/`](https://github.com/dimitri-kandassamy/ladle/tree/main/examples/the-ladle-kitchen)
+for a complete, working template.
 
-### Recipe format
+### Commands
 
-```markdown
----
-title: Carrot Cake
-category: Desserts            # Savory | Desserts | Beverages
-servings: "6 people"          # optional — omit when the source gives no quantity
-credits: "Marine Gora, Café Gramme, Paris"   # optional — omit when there's no named source
-illustration: assets/illustrations/recipes/carrot-cake.svg
-# optional: page, story, author:{name,org}, headshot, attribution, tags, license, draft
----
+| Command                       | Does                                                           |
+| ----------------------------- | -------------------------------------------------------------- |
+| `ladle new [--name X]`        | scaffold a new book under `books/X/`                           |
+| `ladle build`                 | build PDF + EPUB (`html` → `pdf` → `epub`)                     |
+| `ladle html` / `pdf` / `epub` | run a single stage                                             |
+| `ladle validate`              | recipe schema, PDF trim + page count, epubcheck, contact sheet |
+| `ladle illustrations`         | (re)generate the SVG placeholder art                           |
+| `ladle assets [--theme DIR]`  | re-bake a theme's raster brand assets (paper grain, patterns)  |
+| `ladle doctor`                | check pandoc/poppler/WeasyPrint/Java are installed             |
 
-## INGREDIENTS
+## Build from source
 
-### Cake                      # optional group headings
-- 2 large eggs
-- 200g sugar
-
-## DIRECTIONS
-
-1. Pre-heat the oven to 180°C.
-2. …
-
-## NOTES                      # optional
-- Keeps for several days.
+```sh
+git clone https://github.com/dimitri-kandassamy/ladle && cd ladle
+pip install -e .                 # or: pip install -r requirements.txt
+make all                         # builds the example book (examples/the-ladle-kitchen)
+make validate
 ```
 
-A recipe with a non-empty `story:` gets a full story page (with optional
-`headshot`); without one it gets a compact opener. Every recipe is validated
-against [`src/ladle/schema/recipe.schema.json`](src/ladle/schema/recipe.schema.json).
-
-Section headings (`## INGREDIENTS` etc.) and all UI chrome ("Yields",
-"Contents", section names) are localizable per book via a `labels:` block in
-`book.yaml` — see the example book for a template.
+`make` drives the package straight from `src/` (no install needed);
+`make all BOOK=path/to/book.yaml` builds any book, and the `Makefile` targets
+mirror the CLI commands. CI builds and validates the example book plus a
+torture-test fixture on every push.
 
 ## Themes
 
-The look is a **theme**: a self-contained bundle of `theme.yaml` (palette,
-fonts, font files) plus `templates/`, `css/`, `fonts/`, and
-`illustrations/patterns/`. The tool ships one theme, `default`. To restyle,
-override tokens in `book.yaml`, or fork the theme and point `theme:` at it. See
-[docs/THEMING.md](docs/THEMING.md).
+The look is a **theme**: a self-contained bundle of `theme.yaml` (palette, fonts,
+font files) plus `templates/`, `css/`, `fonts/`, and `illustrations/patterns/`.
+The tool ships one theme, `default`. To restyle, override tokens in `book.yaml`,
+or fork the theme and point `theme:` at your own directory. See
+[docs/THEMING.md](https://github.com/dimitri-kandassamy/ladle/blob/main/docs/THEMING.md).
 
 ## Illustrations
 
@@ -129,19 +165,23 @@ using the theme's locked style and save it as
 `assets/illustrations/recipes/<slug>.png` (transparent PNG) next to the
 placeholder — the build prefers the raster automatically, no front-matter change.
 
-## Developing the tool (from a checkout)
+## Contributing
 
-```sh
-git clone https://github.com/dimitri-kandassamy/ladle && cd ladle
-pip install -e .                 # or: pip install -r requirements.txt
-make all                         # builds the example book (examples/community-cookbook)
-make validate
-```
+Contributions are welcome — code, themes, docs, or a recipe for the example book.
+Start with [CONTRIBUTING.md](https://github.com/dimitri-kandassamy/ladle/blob/main/CONTRIBUTING.md)
+for the dev setup and repository layout, and see
+[DESIGN.md](https://github.com/dimitri-kandassamy/ladle/blob/main/DESIGN.md) for
+the parse → render → build pipeline and design rationale. By participating you
+agree to the
+[Code of Conduct](https://github.com/dimitri-kandassamy/ladle/blob/main/CODE_OF_CONDUCT.md).
+Found a security issue? See our
+[Security Policy](https://github.com/dimitri-kandassamy/ladle/blob/main/SECURITY.md).
 
-`make` drives the package straight from `src/` (no install needed):
-`make all BOOK=path/to/book.yaml` builds any book. The `Makefile` targets mirror
-the CLI commands. CI (`.github/workflows/build.yml`) builds + validates the
-example book and a torture-test fixture on every push.
+## License
+
+- **Code** (the tool, themes, CSS, templates): Apache-2.0 — see [`LICENSE`](https://github.com/dimitri-kandassamy/ladle/blob/main/LICENSE).
+- **Content** (the example book's sample recipes and illustrations): CC BY-SA 4.0
+  — see [`LICENSE-CONTENT`](https://github.com/dimitri-kandassamy/ladle/blob/main/LICENSE-CONTENT), unless a recipe's `license:` says otherwise.
 
 ## Credits & thanks
 
@@ -156,9 +196,3 @@ example book and a torture-test fixture on every push.
   [Jinja](https://jinja.palletsprojects.com), [PyYAML](https://pyyaml.org),
   [jsonschema](https://github.com/python-jsonschema/jsonschema), and
   [Pillow](https://python-pillow.org).
-
-## Licensing
-
-- **Code** (the tool, themes, CSS, templates): Apache-2.0 — see [`LICENSE-CODE`](LICENSE-CODE).
-- **Content** (the example book's recipes, stories, illustrations): CC BY-SA 4.0
-  — see [`LICENSE-CONTENT`](LICENSE-CONTENT), unless a recipe's `license:` says otherwise.
