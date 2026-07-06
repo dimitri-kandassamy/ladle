@@ -3,7 +3,7 @@
 Thanks for helping improve the tool! This guide is about contributing to
 **`ladle` itself** — code, themes, and docs. If instead you want to add a
 **recipe** to the example cookbook, see
-[`examples/community-cookbook/CONTRIBUTING.md`](examples/community-cookbook/CONTRIBUTING.md).
+[`examples/the-ladle-kitchen/CONTRIBUTING.md`](examples/the-ladle-kitchen/CONTRIBUTING.md).
 
 ## Dev setup
 
@@ -11,7 +11,7 @@ Thanks for helping improve the tool! This guide is about contributing to
 git clone https://github.com/dimitri-kandassamy/ladle && cd ladle
 pip install -e .            # or: pip install -r requirements.txt
 ladle doctor               # verify pandoc / poppler / WeasyPrint / Java
-make all                   # build the example book (examples/community-cookbook)
+make all                   # build the example book (examples/the-ladle-kitchen)
 make validate              # schema + PDF structure + epubcheck + contact sheet
 ```
 
@@ -32,7 +32,7 @@ make validate BOOK=tests/fixtures/torture-book/book.yaml
 | `src/ladle/` | the package — `cli.py`, `config.py`, and the build/validate modules |
 | `src/ladle/schema/` | the recipe JSON Schema |
 | `src/ladle/themes/default/` | the built-in theme (manifest + templates + css + fonts + patterns) |
-| `examples/community-cookbook/` | the reference example book |
+| `examples/the-ladle-kitchen/` | the reference example book |
 | `tests/fixtures/torture-book/` | CI edge-case fixture |
 | `Makefile` | thin wrapper over the `ladle` CLI |
 | `.github/workflows/build.yml` | lint, build, validate (+ release) |
@@ -63,5 +63,6 @@ design rationale.
 
 ## Licensing
 
-Code contributions are licensed **Apache-2.0** (see [`LICENSE-CODE`](LICENSE-CODE)).
+Code contributions are licensed **Apache-2.0** (see [`LICENSE`](LICENSE)); the
+example book's content is **CC BY-SA 4.0** (see [`LICENSE-CONTENT`](LICENSE-CONTENT)).
 This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). Be kind.
