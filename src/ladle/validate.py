@@ -73,34 +73,56 @@ def notes_line_count(path: Path) -> int:
 
 
 # ---- 1. recipe schema ------------------------------------------------------
-def validate_recipes(recipes_dir: Path) -> None:
-    section("Recipe front matter")
+def check_recipes(recipes_dir: Path) -> list[dict]:
+    """Validate every recipe's front matter against the schema.
+
+    Pure: returns one record per result — ``{file, ok, loc, message}`` — with no
+    printing, so both :func:`validate_recipes` (human report) and the ``lint``
+    command (human / ``--json`` / ``--plain``) can format the same data.
+    """
     schema = json.loads(config.SCHEMA_PATH.read_text())
     Validator = jsonschema.validators.validator_for(schema)
     Validator.check_schema(schema)
     validator = Validator(schema)
 
+    results: list[dict] = []
     paths = sorted(recipes_dir.glob("*.md"))
     if not paths:
-        bad("no recipes found")
-        return
+        return [{"file": "", "ok": False, "loc": "", "message": "no recipes found"}]
     for p in paths:
         raw = p.read_text(encoding="utf-8")
         if not raw.startswith("---"):
-            bad(f"{p.name}: missing front matter")
+            results.append({"file": p.name, "ok": False, "loc": "", "message": "missing front matter"})
             continue
         try:
             fm = yaml.safe_load(raw.split("---", 2)[1]) or {}
         except yaml.YAMLError as e:
-            bad(f"{p.name}: invalid YAML: {e}")
+            results.append({"file": p.name, "ok": False, "loc": "", "message": f"invalid YAML: {e}"})
             continue
         errors = sorted(validator.iter_errors(fm), key=lambda e: list(e.path))
         if errors:
             for e in errors:
                 loc = "/".join(map(str, e.path)) or "(root)"
-                bad(f"{p.name}: {loc}: {e.message}")
+                results.append({"file": p.name, "ok": False, "loc": loc, "message": e.message})
         else:
-            ok(p.name)
+            results.append({"file": p.name, "ok": True, "loc": "", "message": ""})
+    return results
+
+
+def _format_result(r: dict) -> str:
+    """Compose a ``file: loc: message`` label from a :func:`check_recipes` record."""
+    label = f"{r['file']}: " if r["file"] else ""
+    loc = f"{r['loc']}: " if r["loc"] else ""
+    return f"{label}{loc}{r['message']}"
+
+
+def validate_recipes(recipes_dir: Path) -> None:
+    section("Recipe front matter")
+    for r in check_recipes(recipes_dir):
+        if r["ok"]:
+            ok(r["file"])
+        else:
+            bad(_format_result(r))
 
 
 # ---- 2. PDF structure ------------------------------------------------------
