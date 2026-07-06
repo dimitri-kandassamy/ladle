@@ -18,8 +18,10 @@ make validate              # schema + PDF structure + epubcheck + contact sheet
 Run the unit tests and linter before opening a PR (CI runs both):
 
 ```sh
-pytest                     # unit tests (tests/test_*.py)
-ruff check src tests       # lint (style, dead code, import order)
+make check                 # lint + unit tests (the fast, no-toolchain gate)
+# or individually:
+make test                  # pytest — tests/test_*.py
+make lint                  # ruff — style, dead code, import order
 ```
 
 Unit tests cover the pure parsing/config logic across Python 3.11–3.13; the
