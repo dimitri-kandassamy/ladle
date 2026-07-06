@@ -57,14 +57,12 @@ def main(argv: list[str] | None = None) -> int:
 
     name = args.name or prompt("Book name (lowercase, hyphenated, e.g. 'pt')")
     if not SLUG_RE.match(name or ""):
-        print(f"error: --name must match {SLUG_RE.pattern!r}, got {name!r}", file=sys.stderr)
-        return 1
+        return ui.die(f"--name must match {SLUG_RE.pattern!r}, got {name!r}", ui.USAGE)
 
     out_root = Path.cwd()
     book_dir = out_root / "books" / name
     if book_dir.exists() and not args.force:
-        print(f"error: books/{name}/ already exists (use --force to overwrite)", file=sys.stderr)
-        return 1
+        return ui.die(f"books/{name}/ already exists", ui.ERROR, hint="pass --force to overwrite")
 
     title = args.title or prompt("Title", f"The {name.title()} Cookbook")
     subtitle = args.subtitle or prompt("Subtitle", "Stories & food from people who love to cook")

@@ -264,9 +264,9 @@ def main(argv: list[str] | None = None) -> int:
     section("Summary")
     if failures:
         ui.step(ui.style(f"  {len(failures)} check(s) failed.", "red"))
-        return 1
+        return ui.VALIDATION
     ui.step("  All checks passed.")
-    return 0
+    return ui.OK
 
 
 if __name__ == "__main__":

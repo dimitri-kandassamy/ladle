@@ -1,17 +1,25 @@
 """Unit tests for the `ladle new` scaffolder."""
 from __future__ import annotations
 
+import pytest
 import yaml
 
-from ladle import new_book
+from ladle import new_book, ui
 
 # Every non-interactive field supplied, so main() never falls back to input().
 FULL = ["--title", "T", "--subtitle", "S", "--language", "en"]
 
 
+@pytest.fixture(autouse=True)
+def _reset_console():
+    ui.configure()
+    yield
+    ui.configure()
+
+
 def test_rejects_invalid_slug(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
-    assert new_book.main(["--name", "Bad Name"]) == 1
+    assert new_book.main(["--name", "Bad Name"]) == ui.USAGE == 2
     assert "must match" in capsys.readouterr().err
     assert not (tmp_path / "books").exists()
 
