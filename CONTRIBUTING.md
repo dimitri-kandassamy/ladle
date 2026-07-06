@@ -9,11 +9,22 @@ Thanks for helping improve the tool! This guide is about contributing to
 
 ```sh
 git clone https://github.com/dimitri-kandassamy/ladle && cd ladle
-pip install -e .            # or: pip install -r requirements.txt
+pip install -e '.[dev]'    # the tool + test/lint tooling (pytest, ruff)
 ladle doctor               # verify pandoc / poppler / WeasyPrint / Java
 make all                   # build the example book (examples/the-ladle-kitchen)
 make validate              # schema + PDF structure + epubcheck + contact sheet
 ```
+
+Run the unit tests and linter before opening a PR (CI runs both):
+
+```sh
+pytest                     # unit tests (tests/test_*.py)
+ruff check src tests       # lint (style, dead code, import order)
+```
+
+Unit tests cover the pure parsing/config logic across Python 3.11–3.13; the
+example-book build (`make all && make validate`) is the end-to-end regression
+guard. Both run in CI.
 
 `make` runs the package straight from `src/` (`PYTHONPATH=src python3 -m ladle`),
 so no install is needed to iterate. `make all BOOK=path/to/book.yaml` builds any
@@ -35,7 +46,8 @@ make validate BOOK=tests/fixtures/torture-book/book.yaml
 | `examples/the-ladle-kitchen/` | the reference example book |
 | `tests/fixtures/torture-book/` | CI edge-case fixture |
 | `Makefile` | thin wrapper over the `ladle` CLI |
-| `.github/workflows/build.yml` | lint, build, validate (+ release) |
+| `tests/test_*.py` | unit tests (pytest) |
+| `.github/workflows/build.yml` | lint, unit tests, build, validate (+ release) |
 
 ## Making a change
 

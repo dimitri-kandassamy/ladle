@@ -21,6 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Community-health files: `SECURITY.md`, `CHANGELOG.md`, `NOTICE`, issue and
   pull-request templates, and a Dependabot configuration.
+- A `pytest` unit-test suite covering the config/path resolution and the
+  dependency-free markdown/recipe parsing, plus `test`/`dev` optional-dependency
+  groups and `ruff` configuration.
+- CI now runs `ruff` lint and the unit tests across Python 3.11–3.13, gating
+  releases on both alongside the existing example-book build.
+
+### Removed
+
+- CI no longer publishes a rolling "latest" book release or the example book to
+  GitHub Pages — this repository ships the `ladle` tool; book editions are cut
+  from their own repositories.
 
 ### Fixed
 
