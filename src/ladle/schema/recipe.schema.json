@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/dimitri-kandassamy/community-cookbook/schema/recipe.schema.json",
+  "$id": "https://github.com/dimitri-kandassamy/ladle/schema/recipe.schema.json",
   "title": "Recipe front matter",
   "description": "Contract for the YAML front matter of every recipes/*.md file.",
   "type": "object",

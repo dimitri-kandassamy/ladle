@@ -8,7 +8,7 @@ language: en
 producer: ci
 rights: "© 2026 Torture Test Book"
 content_license: CC-BY-SA-4.0
-repo_url: https://github.com/dimitri-kandassamy/community-cookbook
+repo_url: https://github.com/dimitri-kandassamy/ladle
 
 palette:
   navy: "#16203a"

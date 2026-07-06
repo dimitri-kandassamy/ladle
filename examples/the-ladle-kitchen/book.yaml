@@ -1,32 +1,31 @@
-# The Community Cookbook — an example book that ships with the `ladle` tool.
+# The Ladle Kitchen — an example book that ships with the `ladle` tool.
 # This single file drives titles, palette, fonts, and recipe ordering for both
 # the PDF and EPUB builds. Build it with:
 #   make all                                       # this is the default book
-#   ladle build --book examples/community-cookbook/book.yaml
+#   ladle build --book examples/the-ladle-kitchen/book.yaml
 
-title: The Community Cookbook
-subtitle: Stories & food from people who love to cook
+title: The Ladle Kitchen
+subtitle: A sample book that ships with the ladle tool
 volume: "1.0"
 language: en
-producer: dimitri-kandassamy
-rights: "© 2026 The Community Cookbook contributors"
+producer: The ladle project
+rights: "© 2026 The ladle project — sample recipes, CC BY-SA 4.0"
 content_license: CC-BY-SA-4.0
-repo_url: https://github.com/dimitri-kandassamy/community-cookbook
+repo_url: https://github.com/dimitri-kandassamy/ladle
 
 # Design bundle (templates/css/fonts). `default` is the theme shipped in the
 # package; point this at a directory to use a book-local theme instead.
 theme: default
 
-# Design tokens — reverse-engineered palette from the reference art direction.
+# Design tokens — a warm navy-and-cream palette for the default theme.
 palette:
   navy: "#16203a"
   cream: "#faefdb"
-  ink: "#3c3c3c"        # soft charcoal (primary text), measured from the reference
+  ink: "#3c3c3c"        # soft charcoal (primary text)
   ink_deep: "#231f20"   # warm near-black (ingredients, footer)
   rule: "#c9bfa6"
 
-# Free OFL substitutes for the reference's commercial type.
-# display ~ FreightBigPro Black (Didone)   body ~ Sentinel (Clarendon slab)
+# Open-licensed type: a Didone display face paired with a slab-serif body.
 fonts:
   display: "Playfair Display"
   body: "Bitter"
