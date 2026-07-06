@@ -12,7 +12,6 @@ import argparse
 import os
 import shutil
 import subprocess
-import sys
 
 from . import config, ui
 
@@ -25,14 +24,12 @@ def main(argv: list[str] | None = None) -> int:
     book = book_cfg.data
 
     if not shutil.which("pandoc"):
-        print("pandoc not found on PATH — see `ladle doctor`.", file=sys.stderr)
-        return 1
+        return ui.die("pandoc not found on PATH", ui.ERROR, hint="see `ladle doctor`")
 
     build = config.build_dir()
     epub_html = build / "epub.html"
     if not epub_html.exists():
-        print(f"Missing {config.rel(epub_html)} — run `ladle html` first.", file=sys.stderr)
-        return 1
+        return ui.die(f"missing {config.rel(epub_html)}", ui.ERROR, hint="run `ladle html` first")
 
     theme = book_cfg.theme_dir
     css = theme / "css" / "epub.css"

@@ -10,8 +10,6 @@ Run: ladle pdf
 """
 from __future__ import annotations
 
-import sys
-
 from weasyprint import HTML
 
 from . import config, ui
@@ -31,8 +29,7 @@ def main(argv: list[str] | None = None) -> int:
     inp = build / "cookbook.html"
     out = build / "cookbook.pdf"
     if not inp.exists():
-        print(f"Missing {config.rel(inp)} — run `ladle html` first.", file=sys.stderr)
-        return 1
+        return ui.die(f"missing {config.rel(inp)}", ui.ERROR, hint="run `ladle html` first")
     HTML(filename=str(inp)).write_pdf(str(out), finisher=open_outline)
     ui.success(f"Wrote {config.rel(out)}")
     return 0
