@@ -1,4 +1,4 @@
-name: Build cookbook
+name: CI
 
 on:
   push:
@@ -18,8 +18,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write   # softprops updates the rolling "latest" release (main only)
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -86,33 +84,10 @@ jobs:
             build/cookbook.epub
             build/contact-sheet.png
 
-      # Everyday builds on main update a single rolling "latest" release. It is
-      # not the repo's Latest badge (that's reserved for tagged editions); link to
-      # it with the stable URL .../releases/download/latest/cookbook.pdf
-      - name: Publish rolling build
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          tag_name: latest
-          name: Latest build (rolling)
-          prerelease: true
-          make_latest: false
-          files: |
-            build/cookbook.pdf
-            build/cookbook.epub
-
-      # A vX.Y.Z tag releases the *tool* to PyPI (see the publish-pypi job below),
-      # not a book edition — cutting citeable book editions belongs to a book's
-      # own repo, which pip-installs ladle.
-
-      # Pages deploy is opt-in: set repository variable ENABLE_PAGES=true once you've
-      # enabled Pages (Settings → Pages → Source: GitHub Actions). This keeps the build
-      # and Release green on private/free repos where Pages isn't available.
-      - name: Upload Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_PAGES == 'true'
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
-        with:
-          path: build
+      # The example-book build above is an end-to-end smoke test of the tool; its
+      # PDF/EPUB are kept only as CI artifacts (see "Upload build artifacts"). This
+      # repo ships the *tool* — a vX.Y.Z tag releases it to PyPI (publish-pypi job
+      # below). Book editions are cut from their own repos, which pip-install ladle.
 
   # Builds tests/fixtures/torture-book — one recipe designed to exercise a
   # quoted title (epubcheck's FATAL(RSC-016) escaping bug), an unusually long
@@ -206,17 +181,3 @@ jobs:
           python -m build
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
-
-  deploy-pages:
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_PAGES == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write      # deploy to GitHub Pages
-      id-token: write   # Pages OIDC
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - id: deploy
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
