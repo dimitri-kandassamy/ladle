@@ -16,6 +16,7 @@ from . import (
     doctor,
     gen_illustrations,
     lint,
+    list_recipes,
     make_epub,
     make_pdf,
     new_book,
@@ -41,6 +42,7 @@ COMMANDS = {
     "illustrations": gen_illustrations.main,
     "assets": bake_assets.main,
     "lint": lint.main,
+    "list": list_recipes.main,
     "validate": validate.main,
     "doctor": doctor.main,
     "new": new_book.main,
@@ -58,6 +60,7 @@ commands:
   illustrations  (re)generate the SVG placeholder art
   assets         re-bake the default theme's raster brand assets
   lint           validate recipe front matter (--json/--plain)
+  list           list a book's recipes (--json/--plain, --category, --tag)
   validate       schema + PDF structure + epubcheck + contact sheet
   doctor         check pandoc/poppler/WeasyPrint/Java are installed
   new            scaffold a new book under books/<name>/
