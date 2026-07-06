@@ -96,3 +96,10 @@ def test_pdf_help_exits_cleanly_instead_of_building(capsys):
         make_pdf.main(["--help"])
     assert exc.value.code == 0
     assert "usage:" in capsys.readouterr().out
+
+
+def test_pdf_accepts_book_flag_from_build_chain(monkeypatch, tmp_path):
+    # `ladle build --book X` threads --book into make_pdf; it must accept (ignore)
+    # it and fail cleanly on the missing HTML, not argparse-error on --book.
+    monkeypatch.setattr(make_pdf.config, "build_dir", lambda: tmp_path)  # empty -> no cookbook.html
+    assert make_pdf.main(["--book", "any.yaml"]) == ui.ERROR
