@@ -25,7 +25,7 @@ from pathlib import Path
 import jsonschema
 import yaml
 
-from . import config
+from . import config, ui
 
 BUILD = config.build_dir()
 
@@ -33,20 +33,21 @@ failures: list[str] = []
 
 
 def section(title: str) -> None:
-    print(f"\n\033[1m{title}\033[0m" if sys.stdout.isatty() else f"\n{title}")
+    ui.step("")
+    ui.step(ui.style(title, "bold"))
 
 
 def ok(msg: str) -> None:
-    print(f"  ok   {msg}")
+    ui.step(f"  ok   {msg}")
 
 
 def bad(msg: str) -> None:
-    print(f"  FAIL {msg}")
+    ui.step(f"  {ui.style('FAIL', 'red')} {msg}")
     failures.append(msg)
 
 
 def note(msg: str) -> None:
-    print(f"  note {msg}")
+    ui.step(f"  note {msg}")
 
 
 def front_matter(path: Path) -> dict:
@@ -215,7 +216,7 @@ def validate_epub() -> None:
             "epubcheck reported errors:\n      " + "\n      ".join(tail)
         )
     else:
-        print("  note: epubcheck/Java unavailable — running structural fallback")
+        note("epubcheck/Java unavailable — running structural fallback")
         structural_epub_check(epub)
 
 
@@ -224,7 +225,7 @@ def contact_sheet() -> None:
     section("Contact sheet")
     pdf = BUILD / "cookbook.pdf"
     if not pdf.exists():
-        print("  skipped (no PDF)")
+        ui.step("  skipped (no PDF)")
         return
     pngdir = BUILD / "pdf_png"
     pngdir.mkdir(exist_ok=True)
@@ -255,15 +256,16 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     book_cfg = config.load_book_config(args.book)
 
+    failures.clear()   # re-entrant: don't carry results across calls in one process
     validate_recipes(book_cfg.recipes_dir)
     validate_pdf(book_cfg.recipes_dir)
     validate_epub()
     contact_sheet()
     section("Summary")
     if failures:
-        print(f"  \033[31m{len(failures)} check(s) failed.\033[0m")
+        ui.step(ui.style(f"  {len(failures)} check(s) failed.", "red"))
         return 1
-    print("  All checks passed.")
+    ui.step("  All checks passed.")
     return 0
 
 

@@ -19,26 +19,27 @@ import shutil
 import subprocess
 import sys
 
-from . import config
+from . import config, ui
 from .validate import find_java  # reuses the same JDK-probing logic
 
 required_failures: list[str] = []
 
 
 def section(title: str) -> None:
-    print(f"\n\033[1m{title}\033[0m" if sys.stdout.isatty() else f"\n{title}")
+    ui.step("")
+    ui.step(ui.style(title, "bold"))
 
 
 def ok(msg: str) -> None:
-    print(f"  ok   {msg}")
+    ui.step(f"  ok   {msg}")
 
 
 def warn(msg: str) -> None:
-    print(f"  warn {msg}")
+    ui.step(f"  warn {msg}")
 
 
 def bad(msg: str, *, required: bool = True) -> None:
-    print(f"  FAIL {msg}")
+    ui.step(f"  {ui.style('FAIL', 'red')} {msg}")
     if required:
         required_failures.append(msg)
 
@@ -122,26 +123,27 @@ def install_hints() -> None:
     section("Install hints for anything missing above")
     system = platform.system()
     if system == "Darwin":
-        print("  macOS (Homebrew):")
-        print("    brew install pango poppler pandoc")
-        print("    brew install openjdk   # optional, for epubcheck")
-        print("    pip install -r requirements.txt")
+        ui.step("  macOS (Homebrew):")
+        ui.step("    brew install pango poppler pandoc")
+        ui.step("    brew install openjdk   # optional, for epubcheck")
+        ui.step("    pip install -r requirements.txt")
     elif system == "Linux":
-        print("  Linux (Debian/Ubuntu, matching .github/workflows/build.yml):")
-        print("    sudo apt-get update")
-        print("    sudo apt-get install -y poppler-utils \\")
-        print("      libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \\")
-        print("      libgdk-pixbuf-2.0-0 libffi-dev libcairo2")
-        print("    # pandoc: distro packages lag and can emit broken EPUB cross-references;")
-        print("    # install the pinned release instead (see build.yml's PANDOC_VERSION)")
-        print("    curl -sL https://github.com/jgm/pandoc/releases/download/3.10/pandoc-3.10-1-amd64.deb -o pandoc.deb")
-        print("    sudo apt-get install -y ./pandoc.deb")
-        print("    pip install -r requirements.txt")
+        ui.step("  Linux (Debian/Ubuntu, matching .github/workflows/build.yml):")
+        ui.step("    sudo apt-get update")
+        ui.step("    sudo apt-get install -y poppler-utils \\")
+        ui.step("      libpango-1.0-0 libpangocairo-1.0-0 libpangoft2-1.0-0 \\")
+        ui.step("      libgdk-pixbuf-2.0-0 libffi-dev libcairo2")
+        ui.step("    # pandoc: distro packages lag and can emit broken EPUB cross-references;")
+        ui.step("    # install the pinned release instead (see build.yml's PANDOC_VERSION)")
+        ui.step("    curl -sLO https://github.com/jgm/pandoc/releases/download/3.10/pandoc-3.10-1-amd64.deb")
+        ui.step("    sudo apt-get install -y ./pandoc-3.10-1-amd64.deb")
+        ui.step("    pip install -r requirements.txt")
     else:
-        print(f"  {system}: see README.md's Requirements section for what to install.")
+        ui.step(f"  {system}: see README.md's Requirements section for what to install.")
 
 
 def main(argv: list[str] | None = None) -> int:
+    required_failures.clear()   # re-entrant across calls in one process
     check_python()
     check_pandoc()
     check_poppler()
@@ -154,9 +156,9 @@ def main(argv: list[str] | None = None) -> int:
 
     section("Summary")
     if required_failures:
-        print(f"  \033[31m{len(required_failures)} required check(s) failed.\033[0m")
+        ui.step(ui.style(f"  {len(required_failures)} required check(s) failed.", "red"))
         return 1
-    print("  All required checks passed.")
+    ui.step("  All required checks passed.")
     return 0
 
 
