@@ -1,7 +1,7 @@
-# Contributing a recipe to The Community Cookbook
+# Contributing a recipe to The Ladle Kitchen
 
 This is the example book that ships with [`ladle`](../../README.md). Paths below
-are relative to this directory (`examples/community-cookbook/`). To contribute a
+are relative to this directory (`examples/the-ladle-kitchen/`). To contribute a
 recipe:
 
 1. **Create the file.** Name it `recipes/<slug>.md` where `<slug>` is lowercase,
@@ -21,7 +21,7 @@ recipe:
    open build/contact-sheet.png
    ```
 
-   Or explicitly: `ladle build --book examples/community-cookbook/book.yaml`.
+   Or explicitly: `ladle build --book examples/the-ladle-kitchen/book.yaml`.
 6. **Open a pull request.** CI lints markdown, validates the schema, and rebuilds.
 
 ## Style conventions

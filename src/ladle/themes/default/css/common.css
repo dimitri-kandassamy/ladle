@@ -1,4 +1,4 @@
-/* Shared design tokens + typography for The Community Cookbook.
+/* Shared design tokens + typography for The Ladle Kitchen.
    Used by both the print (PDF) and EPUB stylesheets. Colour and font values
    come from book.yaml and are injected as :root variables by build_html.py. */
 

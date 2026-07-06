@@ -1,4 +1,4 @@
-/* Print (PDF) layout for The Community Cookbook.
+/* Print (PDF) layout for The Ladle Kitchen.
    Strategy: one .page element == exactly one printed sheet (full-bleed, fixed
    height), with furniture absolutely positioned inside it. break-after: page
    puts each .page on its own sheet (WeasyPrint). @font-face + :root overrides

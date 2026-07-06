@@ -2,7 +2,7 @@
 title: Introduction
 from:
   name: The Contributors
-  org: community-cookbook
+  org: the-ladle-kitchen
 ---
 
 This is a cookbook built by a community, one pull request at a time. Every recipe
