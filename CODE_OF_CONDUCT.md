@@ -10,6 +10,11 @@ version 2.1, as our standard for expected behaviour and enforcement. Please read
 
 ## Reporting
 
-If you experience or witness unacceptable behaviour, open a confidential issue or contact
-the maintainers via the repository's contact channels. Reports are handled promptly and
-in confidence.
+If you experience or witness unacceptable behaviour, report it privately to the
+maintainer at **[dimitri.kandassamy@gmail.com](mailto:dimitri.kandassamy@gmail.com)**. Do not use public issues for
+reports. All reports are handled promptly and in confidence, and the reporter's
+identity is kept confidential.
+
+Enforcement follows the Contributor Covenant's guidelines. The maintainer is
+responsible for reviewing reports and may take any action deemed appropriate, up
+to and including a permanent ban from the project.

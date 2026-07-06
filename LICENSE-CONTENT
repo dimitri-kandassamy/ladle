@@ -16,7 +16,7 @@ Human-readable summary: https://creativecommons.org/licenses/by-sa/4.0/
 NOTE ON SCOPE
 -------------
 This license covers content only. The build tooling, templates, and stylesheets
-are licensed separately under Apache-2.0 — see LICENSE-CODE.
+are licensed separately under Apache-2.0 — see LICENSE.
 
 This project is an *original* work. It is inspired by the art direction of
 "The Cloud Native Community Cookbook" (© Equinix, Inc.) but reproduces none of

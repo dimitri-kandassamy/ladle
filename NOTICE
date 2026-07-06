@@ -1,0 +1,15 @@
+ladle
+Copyright 2026 Dimitri Kandassamy
+
+This product includes software developed by Dimitri Kandassamy and the ladle
+contributors, licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The default theme bundles the following open-licensed fonts, unmodified, under
+the SIL Open Font License, Version 1.1 (see the OFL-*.txt files alongside them
+in src/ladle/themes/default/fonts/):
+
+  - Bitter — Copyright 2011 The Bitter Project Authors
+  - Playfair Display — Copyright 2017 The Playfair Display Project Authors
+
+The example book's content (recipes, introduction, and generated illustrations
+under examples/) is licensed separately under CC BY-SA 4.0 — see LICENSE-CONTENT.
