@@ -62,6 +62,10 @@ include = ["src/ladle", "README.md", "LICENSE", "LICENSE-CONTENT", "NOTICE"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# src/ layout: put the package on the path so `pytest` works from a bare
+# checkout, without requiring `pip install -e .` first (mirrors the Makefile's
+# PYTHONPATH=src). An editable install still takes precedence when present.
+pythonpath = ["src"]
 # fixtures/ holds book inputs for the CI end-to-end build, not pytest modules.
 addopts = "--import-mode=importlib"
 
