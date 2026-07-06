@@ -19,7 +19,6 @@ Usage:
 """
 from __future__ import annotations
 
-import argparse
 import math
 import random
 import sys
@@ -420,10 +419,12 @@ def write(path_: Path, content: str, force: bool) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(
-        description="Generate the built-in SVG placeholder illustrations. "
+    ap = ui.command_parser(
+        "Generate the built-in SVG placeholder illustrations. "
         "To create real artwork, see the locked style in DESIGN.md and drop the "
-        "resulting PNG next to each placeholder — the build prefers it automatically."
+        "resulting PNG next to each placeholder — the build prefers it automatically.",
+        "ladle illustrations",
+        "ladle illustrations --force",
     )
     ap.add_argument("--force", action="store_true", help="overwrite existing art")
     config.add_book_arg(ap)

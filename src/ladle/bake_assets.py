@@ -16,7 +16,6 @@ Usage: ladle assets [--theme DIR]
 """
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
 import cairosvg
@@ -44,7 +43,7 @@ def bake_paper(color: tuple[int, int, int], size, *, alpha, blur, seed) -> Image
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
+    ap = ui.command_parser(__doc__, "ladle assets", "ladle assets --theme themes/midnight")
     ap.add_argument(
         "--theme",
         default=str(config.THEMES_DIR / "default"),

@@ -10,7 +10,6 @@ Run: ladle list
 """
 from __future__ import annotations
 
-import argparse
 import json
 
 from . import build_html, config, ui
@@ -32,7 +31,7 @@ def gather(book_cfg: config.BookConfig) -> list[dict]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
+    ap = ui.command_parser(__doc__, "ladle list", "ladle list --category Desserts --plain")
     ap.add_argument("--category", help="only recipes in this category")
     ap.add_argument("--tag", help="only recipes carrying this tag")
     config.add_book_arg(ap)

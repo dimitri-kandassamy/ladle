@@ -13,7 +13,6 @@ Any field not passed as a flag is prompted for interactively.
 """
 from __future__ import annotations
 
-import argparse
 import datetime
 import re
 import sys
@@ -45,7 +44,7 @@ def prompt(label: str, default: str = "") -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = ui.command_parser(__doc__, "ladle new --name pt --title 'Cozinha PT' --language pt")
     ap.add_argument("--name", help="lowercase, hyphenated book id, e.g. 'pt' -> books/pt/")
     ap.add_argument("--title")
     ap.add_argument("--subtitle")
@@ -55,7 +54,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--force", action="store_true", help="overwrite an existing books/<name>/")
     args = ap.parse_args(argv)
 
-    name = args.name or prompt("Book name (lowercase, hyphenated, e.g. 'pt')")
+    # Prompt only on a real TTY and unless --no-input; otherwise take flag/default.
+    interactive = sys.stdin.isatty() and not ui.get().no_input
+
+    def ask(value: str | None, label: str, default: str = "") -> str:
+        if value:
+            return value
+        return prompt(label, default) if interactive else default
+
+    name = args.name
+    if not name:
+        if not interactive:
+            return ui.die("--name is required", ui.USAGE, hint="pass --name SLUG (e.g. --name pt)")
+        name = prompt("Book name (lowercase, hyphenated, e.g. 'pt')")
     if not SLUG_RE.match(name or ""):
         return ui.die(f"--name must match {SLUG_RE.pattern!r}, got {name!r}", ui.USAGE)
 
@@ -64,9 +75,9 @@ def main(argv: list[str] | None = None) -> int:
     if book_dir.exists() and not args.force:
         return ui.die(f"books/{name}/ already exists", ui.ERROR, hint="pass --force to overwrite")
 
-    title = args.title or prompt("Title", f"The {name.title()} Cookbook")
-    subtitle = args.subtitle or prompt("Subtitle", "Stories & food from people who love to cook")
-    language = args.language or prompt("Language code (ISO 639-1)", "en")
+    title = ask(args.title, "Title", f"The {name.title()} Cookbook")
+    subtitle = ask(args.subtitle, "Subtitle", "Stories & food from people who love to cook")
+    language = ask(args.language, "Language code (ISO 639-1)", "en")
 
     palette = dict(DEFAULT_PALETTE)
     if args.palette_navy:

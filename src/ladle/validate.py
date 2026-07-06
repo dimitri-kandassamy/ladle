@@ -12,7 +12,6 @@ Exit code is non-zero if any check fails. Run: ladle validate
 """
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import re
@@ -273,7 +272,7 @@ def contact_sheet() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
+    ap = ui.command_parser(__doc__, "ladle validate", "ladle validate --book books/pt/book.yaml")
     config.add_book_arg(ap)
     args = ap.parse_args(argv)
     book_cfg = config.load_book_config(args.book)

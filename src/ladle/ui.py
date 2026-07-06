@@ -30,6 +30,8 @@ VALIDATION = 4
 
 _ANSI = {"bold": "1", "dim": "2", "red": "31", "green": "32", "yellow": "33"}
 
+REPO = "https://github.com/dimitri-kandassamy/ladle"
+
 
 @dataclass
 class Console:
@@ -76,6 +78,22 @@ def add_global_flags(parser: argparse.ArgumentParser) -> argparse.ArgumentParser
 def global_parser() -> argparse.ArgumentParser:
     """A standalone parser holding only the global flags (for pre-parsing)."""
     return add_global_flags(argparse.ArgumentParser(add_help=False))
+
+
+def command_parser(description: str | None, *examples: str) -> argparse.ArgumentParser:
+    """An ``ArgumentParser`` with a consistent examples + repo-link epilog.
+
+    Every subcommand uses this so ``ladle <cmd> --help`` leads with usage and
+    ends with runnable examples and the project home.
+    """
+    footer = [f"home: {REPO}"]
+    if examples:
+        footer = ["examples:", *(f"  {e}" for e in examples), "", *footer]
+    return argparse.ArgumentParser(
+        description=description,
+        epilog="\n".join(footer),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
 
 
 def configure_from_args(args: argparse.Namespace) -> Console:

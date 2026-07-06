@@ -64,3 +64,21 @@ def test_force_allows_overwrite(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     assert new_book.main(["--name", "pt", *FULL]) == 0
     assert new_book.main(["--name", "pt", "--force", *FULL]) == 0
+
+
+def test_name_only_uses_defaults_without_prompting(tmp_path, monkeypatch):
+    # Non-interactive (pytest stdin isn't a TTY): must NOT call input() and hang;
+    # the omitted fields fall back to their defaults.
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("builtins.input", lambda *a: pytest.fail("prompted in non-interactive mode"))
+    assert new_book.main(["--name", "pt"]) == 0
+    data = yaml.safe_load((tmp_path / "books" / "pt" / "book.yaml").read_text(encoding="utf-8"))
+    assert data["language"] == "en"                 # the default
+    assert data["title"] == "The Pt Cookbook"       # default derived from name
+
+
+def test_missing_name_fails_fast_when_noninteractive(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("builtins.input", lambda *a: pytest.fail("prompted in non-interactive mode"))
+    assert new_book.main([]) == ui.USAGE == 2
+    assert "--name is required" in capsys.readouterr().err

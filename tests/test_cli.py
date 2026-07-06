@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from ladle import cli, ui
+from ladle import cli, lint, make_pdf, ui
 
 
 @pytest.fixture(autouse=True)
@@ -78,3 +78,21 @@ def test_debug_reraises_for_tracebacks(monkeypatch):
     monkeypatch.setitem(cli.COMMANDS, "boom", boom)
     with pytest.raises(ValueError, match="kaboom"):
         cli.main(["--debug", "boom"])
+
+
+def test_subcommand_help_shows_examples(capsys):
+    # argparse prints help to stdout and exits 0.
+    with pytest.raises(SystemExit) as exc:
+        lint.main(["--help"])
+    assert exc.value.code == 0
+    out = capsys.readouterr().out
+    assert "examples:" in out
+    assert ui.REPO in out
+
+
+def test_pdf_help_exits_cleanly_instead_of_building(capsys):
+    # Regression: `ladle pdf --help` used to ignore argv and start a build.
+    with pytest.raises(SystemExit) as exc:
+        make_pdf.main(["--help"])
+    assert exc.value.code == 0
+    assert "usage:" in capsys.readouterr().out
