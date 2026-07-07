@@ -27,6 +27,7 @@ ERROR = 1
 USAGE = 2
 NO_BOOK = 3
 VALIDATION = 4
+INTERRUPTED = 130   # 128 + SIGINT, the conventional code for a Ctrl-C exit
 
 _ANSI = {"bold": "1", "dim": "2", "red": "31", "green": "32", "yellow": "33"}
 
@@ -76,8 +77,13 @@ def add_global_flags(parser: argparse.ArgumentParser) -> argparse.ArgumentParser
 
 
 def global_parser() -> argparse.ArgumentParser:
-    """A standalone parser holding only the global flags (for pre-parsing)."""
-    return add_global_flags(argparse.ArgumentParser(add_help=False))
+    """A standalone parser holding only the global flags (for pre-parsing).
+
+    ``allow_abbrev=False`` so pre-stripping a global never greedily matches an
+    abbreviated subcommand flag. Constraint: no subcommand flag may share a name
+    with a global (it would be consumed here before the subcommand sees it).
+    """
+    return add_global_flags(argparse.ArgumentParser(add_help=False, allow_abbrev=False))
 
 
 def command_parser(description: str | None, *examples: str) -> argparse.ArgumentParser:
@@ -86,9 +92,11 @@ def command_parser(description: str | None, *examples: str) -> argparse.Argument
     Every subcommand uses this so ``ladle <cmd> --help`` leads with usage and
     ends with runnable examples and the project home.
     """
-    footer = [f"home: {REPO}"]
+    # Bold the labels only when stdout supports it (argparse prints help there).
+    footer = [f"{style('home:', 'bold', stream=sys.stdout)} {REPO}"]
     if examples:
-        footer = ["examples:", *(f"  {e}" for e in examples), "", *footer]
+        footer = [style("examples:", "bold", stream=sys.stdout),
+                  *(f"  {e}" for e in examples), "", *footer]
     return argparse.ArgumentParser(
         description=description,
         epilog="\n".join(footer),
