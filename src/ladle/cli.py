@@ -48,71 +48,61 @@ def _build(argv: list[str]) -> int:
 class Command:
     fn: Callable[[list[str]], int]
     help: str
-    group: str
     book: bool = False   # meaningfully uses --book (advertised in help)
 
 
 COMMANDS: dict[str, Command] = {
-    "new": Command(new_book.main,
-                   "scaffold a new book under books/<name>/", "Start a book"),
-    "build": Command(_build,
-                     "build PDF + EPUB (html -> pdf -> epub)", "Build a book", book=True),
-    "html": Command(build_html.main,
-                    "render print + epub HTML only", "Build a book", book=True),
-    "pdf": Command(make_pdf.main,
-                   "render build/cookbook.pdf from the HTML", "Build a book"),
-    "epub": Command(make_epub.main,
-                    "render build/cookbook.epub from the HTML", "Build a book", book=True),
-    "illustrations": Command(gen_illustrations.main,
-                             "(re)generate the SVG placeholder art", "Generate assets", book=True),
-    "assets": Command(bake_assets.main,
-                      "re-bake a theme's raster brand assets (--theme)", "Generate assets"),
-    "lint": Command(lint.main,
-                    "validate recipe front matter (--json/--plain)", "Inspect & validate", book=True),
-    "list": Command(list_recipes.main,
-                    "list recipes (--json/--plain, --category, --tag)", "Inspect & validate", book=True),
-    "validate": Command(validate.main,
-                        "schema + PDF structure + epubcheck + contact sheet", "Inspect & validate", book=True),
-    "doctor": Command(doctor.main,
-                      "check pandoc/poppler/WeasyPrint/Java installed", "Inspect & validate"),
+    "new": Command(new_book.main, "scaffold a new book under books/<name>/"),
+    "build": Command(_build, "build PDF + EPUB (html -> pdf -> epub)", book=True),
+    "html": Command(build_html.main, "render print + epub HTML only", book=True),
+    "pdf": Command(make_pdf.main, "render build/cookbook.pdf from the HTML"),
+    "epub": Command(make_epub.main, "render build/cookbook.epub from the HTML", book=True),
+    "illustrations": Command(gen_illustrations.main, "(re)generate the SVG placeholder art", book=True),
+    "assets": Command(bake_assets.main, "re-bake a theme's raster brand assets (--theme)"),
+    "lint": Command(lint.main, "validate recipe front matter (--json/--plain)", book=True),
+    "list": Command(list_recipes.main, "list recipes (--json/--plain, --category, --tag)", book=True),
+    "validate": Command(validate.main, "schema + PDF structure + epubcheck + contact sheet", book=True),
+    "doctor": Command(doctor.main, "check pandoc/poppler/WeasyPrint/Java installed"),
 }
-
-_GROUP_ORDER = ["Start a book", "Build a book", "Generate assets", "Inspect & validate"]
 
 
 def render_help() -> str:
-    """Top-level help, generated from :data:`COMMANDS` (single source of truth).
-
-    Headings are bold only when stdout supports it (TTY, color not disabled) —
-    :func:`ui.style` no-ops otherwise, so piped/`--no-color` help stays plain.
+    """Top-level help, generated from :data:`COMMANDS` + the global flags (single
+    source of truth). Headings are bold only when stdout supports it (TTY, color
+    not disabled) — :func:`ui.style` no-ops otherwise, so piped help stays plain.
     """
     def h(text: str) -> str:
         return ui.style(text, "bold", stream=sys.stdout)
 
-    width = max(len(name) for name in COMMANDS)
-    lines = [
-        f"ladle {__version__} — build cookbooks (PDF + EPUB) from markdown.",
-        "",
-        f"{h('usage:')} ladle [-h] [--version] [-v | -q] [--debug] [--json | --plain]",
-        "             [--no-color] [--no-input] <command> [args]",
-        "",
+    cw = max(len(name) for name in COMMANDS)
+    flag_rows = [
+        ("-h, --help", "show this help and exit"),
+        ("--version", "show the version and exit"),
+        *ui.global_flags_help(),
     ]
-    for group in _GROUP_ORDER:
-        lines.append(h(f"{group}:"))
-        lines += [f"  {name:<{width}}  {c.help}" for name, c in COMMANDS.items() if c.group == group]
-        lines.append("")
+    fw = max(len(flags) for flags, _ in flag_rows)
     book_cmds = ", ".join(name for name, c in COMMANDS.items() if c.book)
-    lines += [
-        h("examples:"),
+
+    lines = [
+        "build cookbooks (PDF + EPUB) from markdown.",
+        "",
+        h("USAGE"),
+        "  ladle [--version] [-v | -q] [--debug] [--json | --plain] [--no-color]",
+        "        [--no-input] <command> [args]",
+        "",
+        h("COMMANDS"),
+        *(f"  {name:<{cw}}  {c.help}" for name, c in COMMANDS.items()),
+        "",
+        h("GLOBAL FLAGS"),
+        *(f"  {flags:<{fw}}  {desc}" for flags, desc in flag_rows),
+        "",
+        h("EXAMPLES"),
         "  ladle new --name mybook      scaffold a book",
         "  ladle build                  build the PDF + EPUB",
         "  ladle lint --json            check recipes, machine-readable",
         "",
         f"--book PATH selects the book (default: $BOOK_CONFIG or ./book.yaml) for: {book_cmds}.",
-        "global flags: -v/--verbose, -q/--quiet (note: -V is --version, not verbose),",
-        "              --debug, --json/--plain, --no-color, --no-input.",
-        "",
-        f"run `ladle <command> --help` for a command's own options.  home: {ui.REPO}",
+        f"run `ladle <command> --help` for a command's options.  home: {ui.REPO}",
     ]
     return "\n".join(lines)
 

@@ -15,21 +15,41 @@ def _reset_console():
 
 def _cmd(fn):
     """Wrap a bare function as a registry Command for monkeypatching COMMANDS."""
-    return cli.Command(fn, "test command", "Inspect & validate")
+    return cli.Command(fn, "test command")
 
 
-def test_no_args_prints_usage_and_succeeds(capsys):
+def test_no_args_prints_help_and_succeeds(capsys):
     assert cli.main([]) == 0
-    assert "usage: ladle" in capsys.readouterr().out
+    assert "USAGE" in capsys.readouterr().out
 
 
 def test_help_flag_succeeds(capsys):
     assert cli.main(["--help"]) == 0
-    assert "usage: ladle" in capsys.readouterr().out
+    assert "USAGE" in capsys.readouterr().out
+
+
+def test_help_layout(capsys):
+    cli.main(["--help"])
+    out = capsys.readouterr().out
+    lines = out.splitlines()
+    # Description is the sole top line — no program name / version.
+    assert lines[0] == "build cookbooks (PDF + EPUB) from markdown."
+    assert cli.__version__ not in out
+    # All four headings present, uppercase, no trailing colon.
+    for heading in ("USAGE", "COMMANDS", "GLOBAL FLAGS", "EXAMPLES"):
+        assert heading in lines
+        assert f"{heading}:" not in out
+    # --version is documented as a global flag.
+    assert any("--version" in line for line in lines)
 
 
 def test_version_flag(capsys):
     assert cli.main(["--version"]) == 0
+    assert cli.__version__ in capsys.readouterr().out
+
+
+def test_version_short_flag(capsys):
+    assert cli.main(["-V"]) == 0
     assert cli.__version__ in capsys.readouterr().out
 
 

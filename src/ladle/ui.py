@@ -76,6 +76,19 @@ def add_global_flags(parser: argparse.ArgumentParser) -> argparse.ArgumentParser
     return parser
 
 
+def global_flags_help() -> list[tuple[str, str]]:
+    """``(flag names, help)`` rows for each global flag, read off the parser.
+
+    Derived from :func:`add_global_flags` so the help listing can't drift from
+    the flags actually accepted.
+    """
+    return [
+        (", ".join(a.option_strings), a.help or "")
+        for a in global_parser()._actions
+        if a.option_strings
+    ]
+
+
 def global_parser() -> argparse.ArgumentParser:
     """A standalone parser holding only the global flags (for pre-parsing).
 
