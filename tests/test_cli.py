@@ -13,6 +13,11 @@ def _reset_console():
     ui.configure()
 
 
+def _cmd(fn):
+    """Wrap a bare function as a registry Command for monkeypatching COMMANDS."""
+    return cli.Command(fn, "test command", "Inspect & validate")
+
+
 def test_no_args_prints_usage_and_succeeds(capsys):
     assert cli.main([]) == 0
     assert "usage: ladle" in capsys.readouterr().out
@@ -40,14 +45,14 @@ def test_known_command_delegates(monkeypatch):
         called["argv"] = argv
         return 7
 
-    monkeypatch.setitem(cli.COMMANDS, "validate", fake_validate)
+    monkeypatch.setitem(cli.COMMANDS, "validate", _cmd(fake_validate))
     # Global flags are stripped before dispatch; the command sees only its own.
     assert cli.main(["--quiet", "validate", "--book", "b.yaml"]) == 7
     assert called["argv"] == ["--book", "b.yaml"]
 
 
 def test_global_flags_configure_console(monkeypatch):
-    monkeypatch.setitem(cli.COMMANDS, "noop", lambda argv: 0)
+    monkeypatch.setitem(cli.COMMANDS, "noop", _cmd(lambda argv: 0))
     cli.main(["--no-color", "-v", "noop"])
     console = ui.get()
     assert console.color is False
@@ -66,7 +71,7 @@ def test_unexpected_error_maps_to_1_without_debug(monkeypatch, capsys):
     def boom(argv):
         raise ValueError("kaboom")
 
-    monkeypatch.setitem(cli.COMMANDS, "boom", boom)
+    monkeypatch.setitem(cli.COMMANDS, "boom", _cmd(boom))
     assert cli.main(["boom"]) == ui.ERROR
     assert "kaboom" in capsys.readouterr().err
 
@@ -75,9 +80,41 @@ def test_debug_reraises_for_tracebacks(monkeypatch):
     def boom(argv):
         raise ValueError("kaboom")
 
-    monkeypatch.setitem(cli.COMMANDS, "boom", boom)
+    monkeypatch.setitem(cli.COMMANDS, "boom", _cmd(boom))
     with pytest.raises(ValueError, match="kaboom"):
         cli.main(["--debug", "boom"])
+
+
+def test_help_lists_every_registered_command(capsys):
+    # Guards against drift: generated help must mention every command.
+    cli.main(["--help"])
+    out = capsys.readouterr().out
+    for name in cli.COMMANDS:
+        assert name in out
+
+
+def test_subcommand_bad_flag_returns_2_not_raises(capsys):
+    # A subcommand argparse error becomes a returned exit code, not a SystemExit.
+    assert cli.main(["list", "--bogus"]) == ui.USAGE
+    assert "unrecognized arguments" in capsys.readouterr().err
+
+
+def test_build_help_returns_0_through_dispatch(capsys):
+    assert cli.main(["build", "--help"]) == ui.OK
+    assert "usage:" in capsys.readouterr().out
+
+
+def test_help_command_shows_subcommand_help(capsys):
+    assert cli.main(["help", "lint"]) == ui.OK
+    assert "examples:" in capsys.readouterr().out
+
+
+def test_keyboard_interrupt_maps_to_130(monkeypatch):
+    def interrupt(argv):
+        raise KeyboardInterrupt
+
+    monkeypatch.setitem(cli.COMMANDS, "hang", _cmd(interrupt))
+    assert cli.main(["hang"]) == ui.INTERRUPTED == 130
 
 
 def test_subcommand_help_shows_examples(capsys):

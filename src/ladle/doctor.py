@@ -143,6 +143,7 @@ def install_hints() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    ui.command_parser(__doc__, "ladle doctor").parse_args(argv)
     required_failures.clear()   # re-entrant across calls in one process
     check_python()
     check_pandoc()
