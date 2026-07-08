@@ -90,16 +90,15 @@ ladle build --book book.yaml && ladle validate --book book.yaml
 ### Paper textures
 
 The cream/navy paper grain and the cover/endpaper line-art are pre-baked raster
-files under `illustrations/patterns/`. If you change a theme's `palette.cream`
-or `palette.navy`, re-bake them so the textures match:
+files (`paper-cream.jpg`, `paper-navy.png`, `cover.png`, `endpaper.png`) committed
+under the theme's `illustrations/patterns/`, alongside the source SVGs they were
+rasterised from. The PDF build consumes the rasters directly.
 
-```sh
-ladle assets --theme themes/mine
-```
-
-`ladle assets` reads the theme's `theme.yaml` palette, regenerates
-`paper-cream.jpg` / `paper-navy.png`, and rasterizes `cover.svg` / `endpaper.svg`
-to PNG. Commit the results with your theme.
+If you change a theme's `palette.cream` or `palette.navy`, regenerate these files
+so the textures match and commit the results with your theme. The tool no longer
+ships a baking command — edit the source SVGs and rasterise them with your own
+tooling (the reference implementation lives in the project's git history at
+`src/ladle/bake_assets.py`).
 
 ## Checklist for a new theme
 

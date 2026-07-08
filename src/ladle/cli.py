@@ -14,7 +14,6 @@ from dataclasses import dataclass
 
 from . import (
     __version__,
-    bake_assets,
     build_html,
     config,
     doctor,
@@ -56,7 +55,6 @@ COMMANDS: dict[str, Command] = {
     "html": Command(build_html.main, "render print + epub HTML only", book=True),
     "pdf": Command(make_pdf.main, "render build/cookbook.pdf from the HTML"),
     "epub": Command(make_epub.main, "render build/cookbook.epub from the HTML", book=True),
-    "assets": Command(bake_assets.main, "re-bake a theme's raster brand assets (--theme)"),
     "lint": Command(lint.main, "validate recipe front matter (--json/--plain)", book=True),
     "list": Command(list_recipes.main, "list recipes (--json/--plain, --category, --tag)", book=True),
     "validate": Command(validate.main, "schema + PDF structure + epubcheck + contact sheet", book=True),
