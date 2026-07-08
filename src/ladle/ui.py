@@ -191,3 +191,30 @@ def die(msg: str, code: int = ERROR, hint: str | None = None) -> int:
     if hint:
         print(f"  hint: {hint}", file=sys.stderr)
     return code
+
+
+# ---- interaction ----------------------------------------------------------
+def interactive() -> bool:
+    """Whether we may prompt: a real stdin TTY and ``--no-input`` not set."""
+    return sys.stdin.isatty() and not _console.no_input
+
+
+def confirm(question: str, *, default: bool = False, assume_yes: bool = False) -> bool:
+    """Ask a yes/no *question* on stderr; return the answer. Never hangs.
+
+    ``assume_yes`` (e.g. from a ``--yes`` flag) answers True without asking.
+    When we can't prompt (no TTY or ``--no-input``) the *default* is returned
+    silently, so scripts and pipes never block.
+    """
+    if assume_yes:
+        return True
+    if not interactive():
+        return default
+    suffix = " [Y/n] " if default else " [y/N] "
+    try:
+        answer = input(style(question, "bold") + suffix).strip().lower()
+    except EOFError:
+        return default
+    if not answer:
+        return default
+    return answer in ("y", "yes")

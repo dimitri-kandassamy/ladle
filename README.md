@@ -7,7 +7,7 @@
 [![CI](https://github.com/dimitri-kandassamy/ladle/actions/workflows/build.yml/badge.svg)](https://github.com/dimitri-kandassamy/ladle/actions/workflows/build.yml)
 
 **Turn a folder of markdown recipes into a beautifully typeset cookbook — a
-print-ready PDF and a validated, reflowable EPUB — with one command.**
+print-ready PDF and a validated, reflowable EPUB — from a single `ladle build`.**
 
 `ladle` is a command-line tool that builds art-directed cookbooks from plain
 markdown and a single `book.yaml`. The design — fonts, palette, layout — lives
@@ -23,7 +23,7 @@ inside a proprietary app.
 
 ![Building a cookbook from the terminal](https://raw.githubusercontent.com/dimitri-kandassamy/ladle/main/docs/assets/demo.gif)
 
-*One folder of markdown → a validated PDF + EPUB, in a single command.*
+*One folder of markdown → a validated PDF + EPUB, from a single `ladle build`.*
 
 ## Installation
 
@@ -51,10 +51,14 @@ libraries; pandoc builds the EPUB; poppler powers the PDF checks and EPUB cover.
 | poppler | any recent | `pdfinfo` + `pdftoppm` (PDF checks, EPUB cover)        |
 | Java    | 17+        | optional — only to run `epubcheck` in `ladle validate` |
 
-Then confirm everything is wired up, with per-OS install hints for anything missing:
+Then confirm everything is wired up. `ladle doctor` reports anything missing
+with per-OS install hints — or let `ladle doctor --install` run the right
+package-manager commands for you (Homebrew/apt + `pip`), confirming before it
+does anything:
 
 ```sh
-ladle doctor
+ladle doctor            # check the toolchain
+ladle doctor --install  # …and offer to install whatever's missing
 ```
 
 ## Usage
