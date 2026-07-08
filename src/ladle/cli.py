@@ -116,6 +116,8 @@ def _dispatch(name: str, sub: list[str]) -> int:
         return exc.code if isinstance(exc.code, int) else ui.USAGE
     except config.NoBookError as exc:
         return ui.die(str(exc), ui.NO_BOOK, hint="run `ladle new` or pass --book PATH")
+    except config.ConfigError as exc:
+        return ui.die(str(exc), ui.ERROR, hint="check book.yaml's syntax and required fields")
     except KeyboardInterrupt:
         return ui.INTERRUPTED
     except Exception as exc:  # noqa: BLE001 — top-level guard: clean message, or traceback under --debug

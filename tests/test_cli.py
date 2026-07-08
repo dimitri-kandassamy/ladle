@@ -88,6 +88,17 @@ def test_missing_book_returns_exit_3(capsys):
     assert "ladle new" in err  # the next-step hint
 
 
+def test_missing_title_returns_clean_error_not_traceback(capsys, tmp_path):
+    # QA #1: a book.yaml missing `title` fails with a one-line message, no KeyError.
+    book = tmp_path / "book.yaml"
+    book.write_text("language: en\n", encoding="utf-8")
+    rc = cli.main(["html", "--book", str(book)])
+    assert rc == ui.ERROR
+    err = capsys.readouterr().err
+    assert "missing required field: title" in err
+    assert "Traceback" not in err
+
+
 def test_unexpected_error_maps_to_1_without_debug(monkeypatch, capsys):
     def boom(argv):
         raise ValueError("kaboom")
