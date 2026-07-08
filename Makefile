@@ -4,7 +4,7 @@ BUILD := build
 BOOK      ?= examples/the-ladle-kitchen/book.yaml
 BOOK_FLAG := $(if $(BOOK),--book $(BOOK),)
 
-.PHONY: all pdf epub html validate test lint check doctor new-book clean
+.PHONY: all pdf epub html validate test lint format check doctor new-book clean
 
 all: pdf epub
 
@@ -15,6 +15,11 @@ test:
 
 lint:
 	python3 -m ruff check src tests
+	python3 -m ruff format --check src tests
+
+# Auto-format the tree in place (ruff format, the canonical style).
+format:
+	python3 -m ruff format src tests
 
 check: lint test
 
