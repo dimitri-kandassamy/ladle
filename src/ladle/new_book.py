@@ -130,7 +130,7 @@ slug: example-recipe
 category: Desserts            # Savory | Desserts | Beverages
 servings: "6 people"          # optional
 credits: "Your name here"     # optional
-illustration: assets/illustrations/recipes/example-recipe.svg
+illustration: assets/illustrations/recipes/example-recipe.svg  # add your own art here (SVG/PNG)
 draft: true                   # remove this line once you replace the recipe
 # optional: page, story, author:{name,org}, headshot, attribution, tags, license
 ---

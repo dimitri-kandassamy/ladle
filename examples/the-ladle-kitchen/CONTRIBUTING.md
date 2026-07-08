@@ -37,13 +37,15 @@ recipe:
 
 ## Illustrations
 
-Each recipe ships with an auto-generated SVG placeholder. To contribute real art,
-generate your recipe's image in the theme's locked style (see
+Recipe art lives in `assets/illustrations/recipes/<slug>.svg`, referenced from
+each recipe's `illustration:` front matter. To contribute real art, generate your
+recipe's image in the theme's locked style (see
 [DESIGN.md](../../DESIGN.md#illustrations)), export ~1500 px wide on a
 **transparent background**, and save it as
 `assets/illustrations/recipes/<slug>.png` (transparent **PNG** or WebP; not
-JPEG). The build prefers it over the placeholder automatically — no front-matter
-change. Only submit art you have the right to share; AI-generated images welcome.
+JPEG) alongside the SVG. The build prefers the raster over the SVG automatically —
+no front-matter change. Only submit art you have the right to share; AI-generated
+images welcome.
 
 ## Licensing of contributions
 
