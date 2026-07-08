@@ -156,6 +156,15 @@ def test_pdf_help_exits_cleanly_instead_of_building(capsys):
     assert "usage:" in capsys.readouterr().out
 
 
+def test_subcommand_help_uses_ladle_prog_name(capsys):
+    # QA #6: usage must read `ladle <sub>`, not argparse's argv[0] (`__main__.py`).
+    with pytest.raises(SystemExit):
+        make_pdf.main(["--help"])
+    out = capsys.readouterr().out
+    assert "usage: ladle pdf" in out
+    assert "__main__" not in out
+
+
 def test_pdf_accepts_book_flag_from_build_chain(monkeypatch, tmp_path):
     # `ladle build --book X` threads --book into make_pdf; it must accept (ignore)
     # it and fail cleanly on the missing HTML, not argparse-error on --book.

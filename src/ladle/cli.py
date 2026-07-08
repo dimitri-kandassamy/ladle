@@ -30,7 +30,7 @@ from . import (
 
 def _build(argv: list[str]) -> int:
     """Build the book's PDF + EPUB: html -> pdf -> epub, stopping at the first failure."""
-    ap = ui.command_parser(_build.__doc__, "ladle build", "ladle build --book books/pt/book.yaml")
+    ap = ui.command_parser("ladle build", _build.__doc__, "ladle build --book books/pt/book.yaml")
     config.add_book_arg(ap)
     args = ap.parse_args(argv)
     # Forward only what the stages understand, so a future build-only flag can't

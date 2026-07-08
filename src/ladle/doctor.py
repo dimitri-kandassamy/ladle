@@ -78,7 +78,7 @@ def check_weasyprint() -> None:
         importlib.import_module("weasyprint")
         ok("weasyprint importable")
     except ImportError:
-        bad("weasyprint not installed — pip install -r requirements.txt")
+        bad("weasyprint not installed — reinstall the package: pip install ladlebook")
     except OSError as e:
         bad(f"weasyprint installed but its system libs (Pango/cairo) failed to load: {e}")
 
@@ -101,7 +101,7 @@ def check_python_packages() -> None:
         except ImportError:
             missing.append(pip_name)
     if missing:
-        bad(f"missing: {', '.join(missing)} — pip install -r requirements.txt")
+        bad(f"missing: {', '.join(missing)} — reinstall the package: pip install ladlebook")
     else:
         ok("all required packages importable")
 
@@ -144,7 +144,7 @@ def install_hints() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ui.command_parser(__doc__, "ladle doctor").parse_args(argv)
+    ui.command_parser("ladle doctor", __doc__, "ladle doctor").parse_args(argv)
     required_failures.clear()  # re-entrant across calls in one process
     check_python()
     check_pandoc()

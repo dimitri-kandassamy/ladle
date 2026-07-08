@@ -34,7 +34,7 @@ def gather(book_cfg: config.BookConfig) -> list[dict]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = ui.command_parser(__doc__, "ladle list", "ladle list --category Desserts --plain")
+    ap = ui.command_parser("ladle list", __doc__, "ladle list --category Desserts --plain")
     ap.add_argument("--category", help="only recipes in this category")
     ap.add_argument("--tag", help="only recipes carrying this tag")
     config.add_book_arg(ap)
