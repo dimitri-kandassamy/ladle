@@ -1,0 +1,13 @@
+{
+  // Format + lint Python with Ruff (the project's canonical tool). This
+  // workspace setting overrides any global formatter (e.g. Black), so the
+  // editor matches `make format` / CI and won't reformat files against
+  // ruff's line-length 120.
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.ruff": "explicit"
+    }
+  }
+}

@@ -26,8 +26,10 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -e '.[dev]'
-      - name: Ruff
+      - name: Ruff lint
         run: ruff check src tests
+      - name: Ruff format check
+        run: ruff format --check src tests
       - name: Lint markdown
         uses: DavidAnson/markdownlint-cli2-action@b4c9feab76d8025d1e83c653fa3990936df0e6c8 # v16
         with:

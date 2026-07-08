@@ -1,0 +1,4 @@
+{
+  // Recommended for this workspace: Ruff handles both linting and formatting.
+  "recommendations": ["charliermarsh.ruff"]
+}
