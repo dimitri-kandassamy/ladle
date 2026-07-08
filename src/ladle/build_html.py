@@ -347,29 +347,29 @@ def write_landing(book: dict, build: Path) -> None:
     """A small GitHub Pages download page linking the PDF + EPUB."""
     p = book["palette"]
     html_doc = f"""<!doctype html>
-<html lang="{book['language']}"><head><meta charset="utf-8">
+<html lang="{book["language"]}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{book['title']}</title>
+<title>{book["title"]}</title>
 <style>
-  body{{margin:0;font-family:Georgia,serif;background:{p['navy']};color:{p['cream']};
+  body{{margin:0;font-family:Georgia,serif;background:{p["navy"]};color:{p["cream"]};
        min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center}}
   .card{{max-width:640px;padding:3rem 1.5rem}}
   h1{{font-size:3rem;line-height:1.05;margin:0 0 .3rem}} .the{{font-style:italic;font-weight:400}}
   p.sub{{text-transform:uppercase;letter-spacing:.16em;font-size:.8rem;opacity:.85}}
-  .dl{{display:inline-block;margin:.5rem;padding:.8rem 1.6rem;border:1px solid {p['rule']};
-       border-radius:4px;color:{p['cream']};text-decoration:none;letter-spacing:.08em}}
+  .dl{{display:inline-block;margin:.5rem;padding:.8rem 1.6rem;border:1px solid {p["rule"]};
+       border-radius:4px;color:{p["cream"]};text-decoration:none;letter-spacing:.08em}}
   .dl:hover{{background:rgba(255,255,255,.08)}}
   img{{max-width:100%;margin-top:2rem;border-radius:4px;opacity:.95}}
   .foot{{margin-top:2rem;font-size:.75rem;opacity:.6}}
 </style></head><body><div class="card">
-  <h1><span class="the">{book['title_article']}</span> {book['title_rest']}</h1>
-  <p class="sub">{book['subtitle']} · Volume {book['volume']}</p>
+  <h1><span class="the">{book["title_article"]}</span> {book["title_rest"]}</h1>
+  <p class="sub">{book["subtitle"]} · Volume {book["volume"]}</p>
   <div>
     <a class="dl" href="cookbook.pdf">Download PDF</a>
     <a class="dl" href="cookbook.epub">Download EPUB</a>
   </div>
   <a href="cookbook.pdf"><img src="contact-sheet.png" alt="Preview of all pages"></a>
-  <p class="foot">{book['rights']} · <a href="{book['repo_url']}" style="color:{p['rule']}">Contribute a recipe</a></p>
+  <p class="foot">{book["rights"]} · <a href="{book["repo_url"]}" style="color:{p["rule"]}">Contribute a recipe</a></p>
 </div></body></html>
 """
     (build / "index.html").write_text(html_doc, encoding="utf-8")

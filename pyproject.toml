@@ -41,7 +41,9 @@ dependencies = [
 # Unit-test + lint tooling. Install with `pip install -e .[dev]`; CI installs
 # `.[test]` for the pytest matrix and `.[dev]` for the lint job.
 test = ["pytest>=8.0"]
-dev = ["pytest>=8.0", "ruff>=0.6"]
+# ruff is pinned exactly: its formatter output changes across releases, so an
+# unpinned range drifts between a contributor's ruff and CI's. Bump deliberately.
+dev = ["pytest>=8.0", "ruff==0.15.20"]
 
 [project.urls]
 Homepage = "https://github.com/dimitri-kandassamy/ladle"
@@ -70,6 +72,9 @@ pythonpath = ["src"]
 addopts = "--import-mode=importlib"
 
 [tool.ruff]
+# Must match the pinned `dev` extra above. Any other ruff (e.g. an editor's
+# bundled binary) errors out instead of silently reformatting to a different style.
+required-version = "==0.15.20"
 target-version = "py311"
 line-length = 120
 extend-exclude = ["build", "dist", ".venv"]

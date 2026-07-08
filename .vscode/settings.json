@@ -9,5 +9,8 @@
     "editor.codeActionsOnSave": {
       "source.organizeImports.ruff": "explicit"
     }
-  }
+  },
+  // Use the ruff pinned in the project's environment (dev extra) instead of the
+  // extension's bundled binary, so the editor formats exactly as CI checks.
+  "ruff.importStrategy": "fromEnvironment"
 }
