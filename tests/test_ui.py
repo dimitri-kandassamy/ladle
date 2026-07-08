@@ -96,3 +96,36 @@ def test_die_returns_code_and_prints_hint(capsys):
     err = capsys.readouterr().err
     assert "error: no book" in err
     assert "hint: run `ladle new`" in err
+
+
+# ---- confirm / interactive -------------------------------------------------
+def test_confirm_assume_yes_never_prompts(monkeypatch):
+    # Even on a TTY, --yes answers True without calling input().
+    monkeypatch.setattr(ui.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda *_: pytest.fail("should not prompt"))
+    assert ui.confirm("go?", assume_yes=True) is True
+
+
+def test_confirm_non_interactive_returns_default_without_prompting(monkeypatch):
+    # No TTY -> never blocks; returns the given default.
+    monkeypatch.setattr(ui.sys.stdin, "isatty", lambda: False)
+    monkeypatch.setattr("builtins.input", lambda *_: pytest.fail("should not prompt"))
+    assert ui.confirm("go?", default=False) is False
+    assert ui.confirm("go?", default=True) is True
+
+
+def test_confirm_no_input_flag_returns_default(monkeypatch):
+    monkeypatch.setattr(ui.sys.stdin, "isatty", lambda: True)  # TTY, but --no-input set
+    ui.configure(no_input=True)
+    monkeypatch.setattr("builtins.input", lambda *_: pytest.fail("should not prompt"))
+    assert ui.confirm("go?", default=False) is False
+
+
+@pytest.mark.parametrize(
+    "typed,default,expected",
+    [("y", False, True), ("yes", False, True), ("n", True, False), ("", True, True), ("", False, False)],
+)
+def test_confirm_parses_tty_answer(monkeypatch, typed, default, expected):
+    monkeypatch.setattr(ui.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda *_: typed)
+    assert ui.confirm("go?", default=default) is expected
