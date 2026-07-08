@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from ladle import config
 from ladle.config import BookConfig
 
@@ -118,3 +120,24 @@ def test_load_book_config_empty_file_yields_empty_data(tmp_path):
     book = tmp_path / "book.yaml"
     book.write_text("", encoding="utf-8")
     assert config.load_book_config(str(book)).data == {}
+
+
+def test_load_book_config_missing_file_raises_no_book_error(tmp_path):
+    with pytest.raises(config.NoBookError):
+        config.load_book_config(str(tmp_path / "does-not-exist.yaml"))
+
+
+def test_load_book_config_malformed_yaml_raises_config_error(tmp_path):
+    # QA #1: a YAML syntax error becomes a clean ConfigError, not a raw traceback.
+    book = tmp_path / "book.yaml"
+    book.write_text('title: "unterminated\nbad: [1, 2\n', encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="invalid YAML"):
+        config.load_book_config(str(book))
+
+
+def test_load_book_config_non_mapping_raises_config_error(tmp_path):
+    # A top-level list/scalar isn't a book config.
+    book = tmp_path / "book.yaml"
+    book.write_text("- just\n- a\n- list\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="must be a mapping"):
+        config.load_book_config(str(book))

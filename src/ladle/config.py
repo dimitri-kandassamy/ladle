@@ -140,11 +140,25 @@ class NoBookError(FileNotFoundError):
     """Raised when the resolved book.yaml does not exist (mapped to exit code 3)."""
 
 
+class ConfigError(Exception):
+    """A book.yaml that exists but is unusable (bad YAML, wrong shape, or missing
+    a required field). Carries a one-line, user-facing message; dispatch turns it
+    into a clean ``error: …`` instead of a traceback."""
+
+
 def load_book_config(cli_value: str | None = None) -> BookConfig:
     path = resolve_book_path(cli_value)
     try:
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
         raise NoBookError(f"no book config found at {rel(path)}") from None
-    data = yaml.safe_load(text) or {}
+    try:
+        data = yaml.safe_load(text) or {}
+    except yaml.YAMLError as exc:
+        detail = getattr(exc, "problem", None) or "could not parse"
+        mark = getattr(exc, "problem_mark", None)
+        where = f" (line {mark.line + 1})" if mark is not None else ""
+        raise ConfigError(f"invalid YAML in {rel(path)}: {detail}{where}") from None
+    if not isinstance(data, dict):
+        raise ConfigError(f"{rel(path)} must be a mapping of book settings, not a {type(data).__name__}")
     return BookConfig(path=path, data=data)

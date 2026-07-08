@@ -279,6 +279,8 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     book_cfg = config.load_book_config(args.book)
     book = book_cfg.data
+    if not book.get("title"):
+        raise config.ConfigError(f"{config.rel(book_cfg.path)} is missing required field: title")
     book_root = book_cfg.root
     theme = book_cfg.theme_dir
     theme_manifest = config.load_theme(theme)
