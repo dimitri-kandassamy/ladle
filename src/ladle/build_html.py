@@ -273,6 +273,21 @@ def font_face_css(fonts_dir: Path, font_faces: list[dict]) -> str:
     return "\n".join(out)
 
 
+def warn_schema_issues(recipes_dir: Path) -> None:
+    """Emit a stderr warning per schema-invalid recipe, without failing the build.
+
+    Reuses ``validate.check_recipes`` so ``build`` and ``validate`` judge recipes
+    identically. Imported locally to keep this module standalone-importable.
+    """
+    from . import validate
+
+    for r in validate.check_recipes(recipes_dir):
+        if r["ok"] or not r["file"]:  # skip passes and the synthetic "no recipes" record
+            continue
+        loc = f":{r['loc']}" if r["loc"] else ""
+        ui.warn(f"{r['file']}{loc} {r['message']}")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = ui.command_parser("ladle html", __doc__, "ladle html --book books/pt/book.yaml")
     config.add_book_arg(ap)
@@ -309,6 +324,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     build.mkdir(parents=True, exist_ok=True)
     recipe_paths = sorted(book_cfg.recipes_dir.glob("*.md"))
+
+    # Surface schema problems the build itself tolerates (a bad category renders
+    # anyway; a missing title silently falls back to the slug). Warn, don't fail —
+    # `ladle validate` is the hard gate. (#4)
+    warn_schema_issues(book_cfg.recipes_dir)
 
     # ---- print HTML (absolute file:// assets for WeasyPrint) ----
     print_recipes = order_recipes(

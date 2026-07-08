@@ -145,3 +145,24 @@ def test_merged_labels_overrides_top_level_and_section_names():
 def test_merged_labels_does_not_mutate_module_defaults():
     bh.merged_labels({"labels": {"section_names": {"Savory": "X"}}})
     assert bh.DEFAULT_LABELS["section_names"]["Savory"] == "Savory"
+
+
+# ---- schema warnings at build time (#4) ------------------------------------
+def test_warn_schema_issues_warns_on_bad_recipe(tmp_path, capsys):
+    (tmp_path / "bad.md").write_text("---\ntitle: X\ncategory: Nonsense\n---\n", encoding="utf-8")
+    bh.warn_schema_issues(tmp_path)
+    err = capsys.readouterr().err
+    assert "warning:" in err
+    assert "bad.md" in err
+
+
+def test_warn_schema_issues_silent_on_clean_recipe(tmp_path, capsys):
+    (tmp_path / "ok.md").write_text("---\ntitle: X\ncategory: Desserts\n---\n", encoding="utf-8")
+    bh.warn_schema_issues(tmp_path)
+    assert capsys.readouterr().err == ""
+
+
+def test_warn_schema_issues_silent_on_empty_dir(tmp_path, capsys):
+    # 0-recipe books are valid — no synthetic "no recipes found" warning on build.
+    bh.warn_schema_issues(tmp_path)
+    assert capsys.readouterr().err == ""
