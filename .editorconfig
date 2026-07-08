@@ -1,0 +1,28 @@
+# Editor-agnostic whitespace baseline for the files Ruff doesn't format
+# (YAML, JSON, Makefile, CSS, SVG, Markdown). Python formatting is owned by
+# `ruff format` (see pyproject.toml / .vscode). https://editorconfig.org
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Python — matches ruff format (documented here so non-VS-Code editors agree).
+[*.py]
+indent_size = 4
+
+# Data / web / docs formats conventionally use 2-space indent.
+[*.{yml,yaml,json,jsonc,toml,css,html,svg,md}]
+indent_size = 2
+
+# Makefiles are tab-significant — never let an editor convert these to spaces.
+[{Makefile,makefile,*.mk}]
+indent_style = tab
+
+# Markdown: two trailing spaces are a hard line break — don't strip them.
+[*.md]
+trim_trailing_whitespace = false
