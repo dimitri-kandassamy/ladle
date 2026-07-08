@@ -4,7 +4,7 @@ BUILD := build
 BOOK      ?= examples/the-ladle-kitchen/book.yaml
 BOOK_FLAG := $(if $(BOOK),--book $(BOOK),)
 
-.PHONY: all pdf epub html assets validate test lint check doctor new-book clean
+.PHONY: all pdf epub html validate test lint check doctor new-book clean
 
 all: pdf epub
 
@@ -17,10 +17,6 @@ lint:
 	python3 -m ruff check src tests
 
 check: lint test
-
-# Raster brand assets the PDF consumes (cream/navy paper grain, line-art PNGs).
-assets:
-	$(LADLE) assets
 
 # Builds both build/cookbook.html (print) and build/epub.html (semantic).
 html:

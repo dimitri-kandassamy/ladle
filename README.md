@@ -131,7 +131,6 @@ for a complete, working template.
 | `ladle build`                 | build PDF + EPUB (`html` → `pdf` → `epub`)                     |
 | `ladle html` / `pdf` / `epub` | run a single stage                                             |
 | `ladle validate`              | recipe schema, PDF trim + page count, epubcheck, contact sheet |
-| `ladle assets [--theme DIR]`  | re-bake a theme's raster brand assets (paper grain, patterns)  |
 | `ladle doctor`                | check pandoc/poppler/WeasyPrint/Java are installed             |
 
 ## Build from source

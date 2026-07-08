@@ -31,8 +31,8 @@ h2 { bookmark-level: none; }
 
 /* Cream pages: a paper-grain texture for a premium printed-paper feel. Painted as
    the page background (not an overlay) so absolutely-positioned furniture keeps its
-   positioning. Both textures are pre-baked to raster images by `ladle assets`
-   (numpy noise composited onto the base colour) rather than blended live in CSS,
+   positioning. Both textures are pre-baked raster images committed with the theme
+   (noise composited onto the base colour) rather than blended live in CSS,
    which renderers handle inconsistently. Cream uses a full-page cover image; navy
    tiles a smaller, stronger grain that reads well on the dark colour. */
 .page.cream {

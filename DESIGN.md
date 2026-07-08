@@ -43,9 +43,10 @@ CI — locally it is optional and `ladle validate` falls back to a structural ch
 furniture (titles, columns, footer, sidebar) is absolutely positioned inside the
 page. Two patterns are worth noting because they keep the layout renderer-portable:
 
-- **Pre-baked raster backgrounds.** Paper grain and the navy line-art patterns are
-  baked to images (`ladle assets`, `src/ladle/bake_assets.py`) rather than composed
-  live with CSS blend modes or SVG backgrounds, which renderers handle inconsistently.
+- **Pre-baked raster backgrounds.** Paper grain and the navy line-art patterns ship
+  as pre-rendered raster files in the theme (`illustrations/patterns/`) rather than
+  composed live with CSS blend modes or SVG backgrounds, which renderers handle
+  inconsistently.
 - **Rotated sidebar via `transform`.** The vertical recipe label on the outer edge
   is a normal horizontal line rotated 90°, not `writing-mode`.
 
@@ -90,10 +91,9 @@ front-matter change. To stay coherent, keep the whole set in one locked style:
 > transparent PNG.
 
 Decorative **theme** art (cover/endpaper/back patterns, paper grain) belongs to
-the theme, not the book. `ladle assets` (`src/ladle/bake_assets.py`) rasterises
-the theme's navy patterns and bakes the paper grain that the PDF consumes,
-reading the theme's palette; rerun it after editing a theme's source SVGs or
-palette.
+the theme, not the book. It ships as pre-baked raster files under the theme's
+`illustrations/patterns/` (rasterised from the theme's source SVGs and committed),
+so the PDF build consumes ready-made backgrounds with no generation step.
 
 ## Validation
 
