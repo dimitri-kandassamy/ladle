@@ -1,4 +1,5 @@
 """Unit tests for the `ladle new` scaffolder."""
+
 from __future__ import annotations
 
 import pytest
@@ -26,9 +27,7 @@ def test_rejects_invalid_slug(tmp_path, monkeypatch, capsys):
 
 def test_scaffolds_a_runnable_book(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    rc = new_book.main(
-        ["--name", "pt", "--title", "Título", "--subtitle", "Sub", "--language", "pt"]
-    )
+    rc = new_book.main(["--name", "pt", "--title", "Título", "--subtitle", "Sub", "--language", "pt"])
     assert rc == 0
     book_dir = tmp_path / "books" / "pt"
     assert (book_dir / "book.yaml").exists()
@@ -44,8 +43,20 @@ def test_scaffolds_a_runnable_book(tmp_path, monkeypatch):
 def test_palette_overrides_are_applied(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     new_book.main(
-        ["--name", "pt", "--title", "T", "--subtitle", "S", "--language", "pt",
-         "--palette-navy", "#010203", "--palette-cream", "#fefefe"]
+        [
+            "--name",
+            "pt",
+            "--title",
+            "T",
+            "--subtitle",
+            "S",
+            "--language",
+            "pt",
+            "--palette-navy",
+            "#010203",
+            "--palette-cream",
+            "#fefefe",
+        ]
     )
     data = yaml.safe_load((tmp_path / "books" / "pt" / "book.yaml").read_text(encoding="utf-8"))
     assert data["palette"]["navy"] == "#010203"
@@ -73,8 +84,8 @@ def test_name_only_uses_defaults_without_prompting(tmp_path, monkeypatch):
     monkeypatch.setattr("builtins.input", lambda *a: pytest.fail("prompted in non-interactive mode"))
     assert new_book.main(["--name", "pt"]) == 0
     data = yaml.safe_load((tmp_path / "books" / "pt" / "book.yaml").read_text(encoding="utf-8"))
-    assert data["language"] == "en"                 # the default
-    assert data["title"] == "The Pt Cookbook"       # default derived from name
+    assert data["language"] == "en"  # the default
+    assert data["title"] == "The Pt Cookbook"  # default derived from name
 
 
 def test_missing_name_fails_fast_when_noninteractive(tmp_path, monkeypatch, capsys):

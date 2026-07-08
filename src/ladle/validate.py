@@ -10,6 +10,7 @@ Validation is *structural*, not pixel-based:
 
 Exit code is non-zero if any check fails. Run: ladle validate
 """
+
 from __future__ import annotations
 
 import json
@@ -135,16 +136,10 @@ def validate_pdf(recipes_dir: Path) -> None:
     if res.returncode != 0:
         bad("pdfinfo failed (is poppler installed?)")
         return
-    info = dict(
-        (k.strip(), v.strip())
-        for k, _, v in (line.partition(":") for line in res.stdout.splitlines())
-        if k
-    )
+    info = dict((k.strip(), v.strip()) for k, _, v in (line.partition(":") for line in res.stdout.splitlines()) if k)
 
     pages = int(info.get("Pages", "0"))
-    n_recipes = sum(
-        1 for p in recipes_dir.glob("*.md") if not front_matter(p).get("draft", False)
-    )
+    n_recipes = sum(1 for p in recipes_dir.glob("*.md") if not front_matter(p).get("draft", False))
     # cover + endpaper + contents + intro + endpaper + colophon = 6 fixed;
     # each recipe = opener/story + method
     expected = 6 + 2 * n_recipes
@@ -254,7 +249,8 @@ def contact_sheet() -> None:
         old.unlink()
     subprocess.run(
         ["pdftoppm", "-r", "70", "-png", str(pdf), str(pngdir / "c")],
-        check=True, capture_output=True,
+        check=True,
+        capture_output=True,
     )
     from PIL import Image
 
@@ -277,7 +273,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     book_cfg = config.load_book_config(args.book)
 
-    failures.clear()   # re-entrant: don't carry results across calls in one process
+    failures.clear()  # re-entrant: don't carry results across calls in one process
     validate_recipes(book_cfg.recipes_dir)
     validate_pdf(book_cfg.recipes_dir)
     validate_epub()

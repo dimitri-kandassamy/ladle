@@ -13,6 +13,7 @@ The contract (clig.dev):
 Color is emitted only when the target stream is a TTY and ``NO_COLOR`` is unset,
 unless a ``--color``/``--no-color`` flag forces it (see :class:`Console`).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -27,7 +28,7 @@ ERROR = 1
 USAGE = 2
 NO_BOOK = 3
 VALIDATION = 4
-INTERRUPTED = 130   # 128 + SIGINT, the conventional code for a Ctrl-C exit
+INTERRUPTED = 130  # 128 + SIGINT, the conventional code for a Ctrl-C exit
 
 _ANSI = {"bold": "1", "dim": "2", "red": "31", "green": "32", "yellow": "33"}
 
@@ -38,12 +39,12 @@ REPO = "https://github.com/dimitri-kandassamy/ladle"
 class Console:
     """Runtime output settings, configured once from the global flags."""
 
-    verbosity: int = 0          # -q -> -1 (errors only), default 0, -v -> +1
+    verbosity: int = 0  # -q -> -1 (errors only), default 0, -v -> +1
     json: bool = False
     plain: bool = False
-    color: bool | None = None   # None = auto (TTY + NO_COLOR); True/False = forced
+    color: bool | None = None  # None = auto (TTY + NO_COLOR); True/False = forced
     no_input: bool = False
-    debug: bool = False         # show full tracebacks instead of a one-line error
+    debug: bool = False  # show full tracebacks instead of a one-line error
 
 
 _console = Console()
@@ -69,10 +70,10 @@ def add_global_flags(parser: argparse.ArgumentParser) -> argparse.ArgumentParser
     g.add_argument("--debug", action="store_true", help="developer output + full tracebacks")
     g.add_argument("--json", action="store_true", help="machine-readable JSON (data commands)")
     g.add_argument("--plain", action="store_true", help="tab-separated output (data commands)")
-    g.add_argument("--no-color", dest="no_color", action="store_true",
-                   help="disable color (also honors NO_COLOR / non-TTY)")
-    g.add_argument("--no-input", dest="no_input", action="store_true",
-                   help="never prompt; use defaults or fail")
+    g.add_argument(
+        "--no-color", dest="no_color", action="store_true", help="disable color (also honors NO_COLOR / non-TTY)"
+    )
+    g.add_argument("--no-input", dest="no_input", action="store_true", help="never prompt; use defaults or fail")
     return parser
 
 
@@ -82,11 +83,7 @@ def global_flags_help() -> list[tuple[str, str]]:
     Derived from :func:`add_global_flags` so the help listing can't drift from
     the flags actually accepted.
     """
-    return [
-        (", ".join(a.option_strings), a.help or "")
-        for a in global_parser()._actions
-        if a.option_strings
-    ]
+    return [(", ".join(a.option_strings), a.help or "") for a in global_parser()._actions if a.option_strings]
 
 
 def global_parser() -> argparse.ArgumentParser:
@@ -108,8 +105,7 @@ def command_parser(description: str | None, *examples: str) -> argparse.Argument
     # Bold the labels only when stdout supports it (argparse prints help there).
     footer = [f"{style('home:', 'bold', stream=sys.stdout)} {REPO}"]
     if examples:
-        footer = [style("examples:", "bold", stream=sys.stdout),
-                  *(f"  {e}" for e in examples), "", *footer]
+        footer = [style("examples:", "bold", stream=sys.stdout), *(f"  {e}" for e in examples), "", *footer]
     return argparse.ArgumentParser(
         description=description,
         epilog="\n".join(footer),

@@ -8,6 +8,7 @@ renders the theme's print.html.j2 -> build/cookbook.html and epub.html.j2
 
 Run: ladle html
 """
+
 from __future__ import annotations
 
 import html
@@ -59,6 +60,7 @@ def merged_labels(book: dict) -> dict:
         else:
             labels[key] = value
     return labels
+
 
 # ---- tiny, dependency-free inline markdown ---------------------------------
 def inline(text: str) -> Markup:
@@ -334,8 +336,10 @@ def main(argv: list[str] | None = None) -> int:
 
     write_landing(book, build)
 
-    ui.success(f"Built {config.rel(build / 'cookbook.html')} and "
-               f"{config.rel(build / 'epub.html')} ({len(print_recipes)} recipes).")
+    ui.success(
+        f"Built {config.rel(build / 'cookbook.html')} and "
+        f"{config.rel(build / 'epub.html')} ({len(print_recipes)} recipes)."
+    )
     return 0
 
 

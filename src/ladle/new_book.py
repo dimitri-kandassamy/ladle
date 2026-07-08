@@ -11,6 +11,7 @@ Usage:
 
 Any field not passed as a flag is prompted for interactively.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -105,8 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         "introduction": "content/introduction.md",
     }
     (book_dir / "book.yaml").write_text(
-        f"# {title} — book-level configuration.\n"
-        + yaml.safe_dump(book_yaml, sort_keys=False, allow_unicode=True),
+        f"# {title} — book-level configuration.\n" + yaml.safe_dump(book_yaml, sort_keys=False, allow_unicode=True),
         encoding="utf-8",
     )
 

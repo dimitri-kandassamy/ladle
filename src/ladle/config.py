@@ -16,6 +16,7 @@ Two kinds of path live here, and they resolve against different roots:
 Which ``book.yaml`` a command operates on is resolved as:
 ``--book PATH`` flag  >  ``$BOOK_CONFIG``  >  ``book.yaml`` in the cwd.
 """
+
 from __future__ import annotations
 
 import argparse

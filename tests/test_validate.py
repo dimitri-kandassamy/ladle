@@ -1,4 +1,5 @@
 """Unit tests for the pure parsing helpers in ladle.validate."""
+
 from __future__ import annotations
 
 import pytest
@@ -56,10 +57,10 @@ def test_validate_recipes_reports_to_stderr_without_ansi(tmp_path, capsys):
     validate.validate_recipes(recipes)
 
     out = capsys.readouterr()
-    assert out.out == ""                     # nothing on stdout (the data channel)
-    assert "FAIL" in out.err                 # the diagnostic is on stderr
-    assert "\033" not in out.err             # color off -> no raw ANSI
-    assert validate.failures                 # the bad recipe was recorded
+    assert out.out == ""  # nothing on stdout (the data channel)
+    assert "FAIL" in out.err  # the diagnostic is on stderr
+    assert "\033" not in out.err  # color off -> no raw ANSI
+    assert validate.failures  # the bad recipe was recorded
 
 
 def test_validate_main_returns_exit_4_on_failure(tmp_path, monkeypatch):
@@ -67,5 +68,5 @@ def test_validate_main_returns_exit_4_on_failure(tmp_path, monkeypatch):
     book.write_text("title: X\nrecipes_dir: recipes\n", encoding="utf-8")
     (tmp_path / "recipes").mkdir()
     (tmp_path / "recipes" / "bad.md").write_text("no front matter\n", encoding="utf-8")
-    monkeypatch.setattr(validate, "BUILD", tmp_path / "build")   # empty -> pdf/epub missing
+    monkeypatch.setattr(validate, "BUILD", tmp_path / "build")  # empty -> pdf/epub missing
     assert validate.main(["--book", str(book)]) == ui.VALIDATION == 4

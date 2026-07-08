@@ -1,4 +1,5 @@
 """Unit tests for the dependency-free markdown/recipe parsing in ladle.build_html."""
+
 from __future__ import annotations
 
 from ladle import build_html as bh
@@ -134,9 +135,7 @@ def test_merged_labels_defaults_unchanged_without_labels_block():
 
 
 def test_merged_labels_overrides_top_level_and_section_names():
-    labels = bh.merged_labels(
-        {"labels": {"ingredients": "Ingrédients", "section_names": {"Savory": "Salé"}}}
-    )
+    labels = bh.merged_labels({"labels": {"ingredients": "Ingrédients", "section_names": {"Savory": "Salé"}}})
     assert labels["ingredients"] == "Ingrédients"
     assert labels["section_names"]["Savory"] == "Salé"
     # untouched section names keep their default

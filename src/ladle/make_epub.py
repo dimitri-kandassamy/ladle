@@ -6,6 +6,7 @@ fonts and EPUB CSS, and reuses the designed PDF cover (its first page rasterised
 as the EPUB cover when a PDF has already been built. EPUB validation lives in
 `ladle validate`.
 """
+
 from __future__ import annotations
 
 import os
@@ -44,8 +45,7 @@ def main(argv: list[str] | None = None) -> int:
     pdf = build / "cookbook.pdf"
     if pdf.exists() and shutil.which("pdftoppm"):
         subprocess.run(
-            ["pdftoppm", "-r", "150", "-png", "-f", "1", "-l", "1", "-singlefile",
-             str(pdf), str(build / "cover")],
+            ["pdftoppm", "-r", "150", "-png", "-f", "1", "-l", "1", "-singlefile", str(pdf), str(build / "cover")],
             capture_output=True,
         )
     cover_png = build / "cover.png"
@@ -69,14 +69,24 @@ def main(argv: list[str] | None = None) -> int:
     meta_args = [arg for key, value in meta for arg in ("--metadata", f"{key}={value}")]
 
     cmd = [
-        "pandoc", str(epub_html), "-o", str(out),
-        "--from", "html", "--to", "epub3",
+        "pandoc",
+        str(epub_html),
+        "-o",
+        str(out),
+        "--from",
+        "html",
+        "--to",
+        "epub3",
         *meta_args,
-        "--css", str(css),
+        "--css",
+        str(css),
         "--split-level=1",
-        "--resource-path", resource_path,
-        "--toc", "--toc-depth=1",
-        *cover_args, *font_args,
+        "--resource-path",
+        resource_path,
+        "--toc",
+        "--toc-depth=1",
+        *cover_args,
+        *font_args,
     ]
     res = subprocess.run(cmd)
     if res.returncode != 0:
