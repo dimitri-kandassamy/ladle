@@ -32,12 +32,29 @@ def test_scaffolds_a_runnable_book(tmp_path, monkeypatch):
     book_dir = tmp_path / "books" / "pt"
     assert (book_dir / "book.yaml").exists()
     assert (book_dir / "content" / "introduction.md").exists()
-    assert (book_dir / "recipes" / "_example-recipe.md").exists()
+    recipe = book_dir / "recipes" / "example-recipe.md"
+    assert recipe.exists()
 
     data = yaml.safe_load((book_dir / "book.yaml").read_text(encoding="utf-8"))
     assert data["title"] == "Título"
     assert data["language"] == "pt"
     assert data["theme"] == "default"
+
+
+def test_first_build_is_not_empty(tmp_path, monkeypatch):
+    # Activation guarantee: `new` then `build` must yield a populated book, not a
+    # blank Contents page. The example recipe ships non-draft, and its referenced
+    # illustration exists on disk (no missing-asset warning on the first build).
+    monkeypatch.chdir(tmp_path)
+    assert new_book.main(["--name", "pt", *FULL]) == 0
+    book_dir = tmp_path / "books" / "pt"
+
+    fm = yaml.safe_load((book_dir / "recipes" / "example-recipe.md").read_text(encoding="utf-8").split("---")[1])
+    assert fm["draft"] is False
+
+    illustration = book_dir / fm["illustration"]
+    assert illustration.exists()
+    assert illustration.read_text(encoding="utf-8").lstrip().startswith("<svg")
 
 
 def test_palette_overrides_are_applied(tmp_path, monkeypatch):
