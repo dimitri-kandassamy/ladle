@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Scaffold a new book under books/<name>/ (relative to the current directory).
 
-Creates books/<name>/book.yaml, books/<name>/content/introduction.md, and a
-single draft example recipe — enough to run `ladle build --book
-books/<name>/book.yaml` immediately. Nothing outside books/<name>/ is touched.
+Creates books/<name>/book.yaml, books/<name>/content/introduction.md, and one
+ready-to-build example recipe with a placeholder illustration — so `ladle build
+--book books/<name>/book.yaml` produces a real, populated cookbook (a filled
+Contents page and an illustrated recipe spread) on the very first run, before the
+author edits anything. Nothing outside books/<name>/ is touched.
 
 Usage:
   ladle new --name pt [--title ...] [--subtitle ...] [--language pt]
@@ -36,6 +38,22 @@ DEFAULT_PALETTE = {
     "rule": "#c9bfa6",
 }
 DEFAULT_FONTS = {"display": "Playfair Display", "body": "Bitter"}
+
+# A tasteful, on-theme placeholder illustration (a steaming bowl in ink line-art)
+# shipped with the scaffold so the first build renders a complete recipe page with
+# no missing-asset warning. Drop a raster sibling (example-recipe.png) next to it
+# to swap in real art with no front-matter change — see resolve_illustration().
+EXAMPLE_ILLUSTRATION_SVG = """\
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="45 95 370 250">
+  <ellipse cx="230" cy="288" rx="120" ry="16" fill="#000000" opacity="0.06"/>
+  <ellipse cx="230" cy="210" rx="100" ry="20" fill="#fffdf7" stroke="#3a2f25" stroke-width="2.4"/>
+  <path d="M 132 210 Q 230 300 328 210 Z" fill="#fdfaf3" stroke="#3a2f25" stroke-width="2.4" stroke-linejoin="round"/>
+  <ellipse cx="230" cy="210" rx="100" ry="20" fill="#f0e6cf" opacity="0.55"/>
+  <path d="M 205 150 q 12 -14 0 -28 q -12 -14 0 -28" fill="none" stroke="#cdbfa0" stroke-width="2.4" opacity="0.85"/>
+  <path d="M 230 150 q 12 -14 0 -28 q -12 -14 0 -28" fill="none" stroke="#cdbfa0" stroke-width="2.4" opacity="0.85"/>
+  <path d="M 255 150 q 12 -14 0 -28 q -12 -14 0 -28" fill="none" stroke="#cdbfa0" stroke-width="2.4" opacity="0.85"/>
+</svg>
+"""
 
 
 def prompt(label: str, default: str = "") -> str:
@@ -88,6 +106,8 @@ def main(argv: list[str] | None = None) -> int:
 
     (book_dir / "recipes").mkdir(parents=True, exist_ok=True)
     (book_dir / "content").mkdir(parents=True, exist_ok=True)
+    illustrations_dir = book_dir / "assets" / "illustrations" / "recipes"
+    illustrations_dir.mkdir(parents=True, exist_ok=True)
 
     book_yaml = {
         "title": title,
@@ -123,15 +143,17 @@ Welcome to *{title}* — replace this placeholder with your own story.
         encoding="utf-8",
     )
 
-    (book_dir / "recipes" / "_example-recipe.md").write_text(
+    (illustrations_dir / "example-recipe.svg").write_text(EXAMPLE_ILLUSTRATION_SVG, encoding="utf-8")
+
+    (book_dir / "recipes" / "example-recipe.md").write_text(
         """---
 title: Example Recipe
 slug: example-recipe
 category: Desserts            # Savory | Desserts | Beverages
 servings: "6 people"          # optional
 credits: "Your name here"     # optional
-illustration: assets/illustrations/recipes/example-recipe.svg  # add your own art here (SVG/PNG)
-draft: true                   # remove this line once you replace the recipe
+illustration: assets/illustrations/recipes/example-recipe.svg  # swap in your own art (SVG/PNG)
+draft: false                  # set true to leave a recipe out of the build
 # optional: page, story, author:{name,org}, headshot, attribution, tags, license
 ---
 
@@ -141,11 +163,12 @@ draft: true                   # remove this line once you replace the recipe
 
 ## DIRECTIONS
 
-1. Replace this file with your first real recipe.
+1. Replace this file with your first real recipe, then run `ladle build` again.
 
 ## NOTES
 
-- Optional notes go here.
+- This example recipe builds as-is so your first cookbook isn't empty — edit or
+  delete it once you've added your own.
 """,
         encoding="utf-8",
     )
