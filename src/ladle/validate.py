@@ -130,7 +130,7 @@ def validate_pdf(recipes_dir: Path) -> None:
     section("PDF structure")
     pdf = BUILD / "cookbook.pdf"
     if not pdf.exists():
-        bad("build/cookbook.pdf not found (run `make pdf`)")
+        bad("build/cookbook.pdf not found (run `ladle pdf`)")
         return
     res = subprocess.run(["pdfinfo", str(pdf)], capture_output=True, text=True)
     if res.returncode != 0:
@@ -214,7 +214,7 @@ def validate_epub() -> None:
     section("EPUB")
     epub = BUILD / "cookbook.epub"
     if not epub.exists():
-        bad("build/cookbook.epub not found (run `make epub`)")
+        bad("build/cookbook.epub not found (run `ladle epub`)")
         return
     jar = config.epubcheck_jar()
     java = find_java()
@@ -268,7 +268,7 @@ def contact_sheet() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = ui.command_parser(__doc__, "ladle validate", "ladle validate --book books/pt/book.yaml")
+    ap = ui.command_parser("ladle validate", __doc__, "ladle validate --book books/pt/book.yaml")
     config.add_book_arg(ap)
     args = ap.parse_args(argv)
     book_cfg = config.load_book_config(args.book)

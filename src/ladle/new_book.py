@@ -45,7 +45,7 @@ def prompt(label: str, default: str = "") -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = ui.command_parser(__doc__, "ladle new --name pt --title 'Cozinha PT' --language pt")
+    ap = ui.command_parser("ladle new", __doc__, "ladle new --name pt --title 'Cozinha PT' --language pt")
     ap.add_argument("--name", help="lowercase, hyphenated book id, e.g. 'pt' -> books/pt/")
     ap.add_argument("--title")
     ap.add_argument("--subtitle")

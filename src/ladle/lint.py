@@ -16,7 +16,7 @@ from . import config, ui, validate
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = ui.command_parser(__doc__, "ladle lint", "ladle lint --json | jq '.[] | select(.ok|not)'")
+    ap = ui.command_parser("ladle lint", __doc__, "ladle lint --json | jq '.[] | select(.ok|not)'")
     config.add_book_arg(ap)
     args = ap.parse_args(argv)
     book_cfg = config.load_book_config(args.book)

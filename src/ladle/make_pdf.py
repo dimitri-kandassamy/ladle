@@ -26,7 +26,7 @@ def open_outline(document, pdf) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = ui.command_parser(__doc__, "ladle pdf")
+    ap = ui.command_parser("ladle pdf", __doc__)
     config.add_book_arg(ap)  # accepted (so `ladle build --book X` threads through) but unused
     ap.parse_args(argv)
     build = config.build_dir()

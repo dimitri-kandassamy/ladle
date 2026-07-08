@@ -274,7 +274,7 @@ def font_face_css(fonts_dir: Path, font_faces: list[dict]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = ui.command_parser(__doc__, "ladle html", "ladle html --book books/pt/book.yaml")
+    ap = ui.command_parser("ladle html", __doc__, "ladle html --book books/pt/book.yaml")
     config.add_book_arg(ap)
     args = ap.parse_args(argv)
     book_cfg = config.load_book_config(args.book)
@@ -336,9 +336,10 @@ def main(argv: list[str] | None = None) -> int:
 
     write_landing(book, build)
 
+    n = len(print_recipes)
     ui.success(
         f"Built {config.rel(build / 'cookbook.html')} and "
-        f"{config.rel(build / 'epub.html')} ({len(print_recipes)} recipes)."
+        f"{config.rel(build / 'epub.html')} ({n} recipe{'s' if n != 1 else ''})."
     )
     return 0
 

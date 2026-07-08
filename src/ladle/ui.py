@@ -96,17 +96,20 @@ def global_parser() -> argparse.ArgumentParser:
     return add_global_flags(argparse.ArgumentParser(add_help=False, allow_abbrev=False))
 
 
-def command_parser(description: str | None, *examples: str) -> argparse.ArgumentParser:
+def command_parser(prog: str, description: str | None, *examples: str) -> argparse.ArgumentParser:
     """An ``ArgumentParser`` with a consistent examples + repo-link epilog.
 
     Every subcommand uses this so ``ladle <cmd> --help`` leads with usage and
-    ends with runnable examples and the project home.
+    ends with runnable examples and the project home. *prog* (e.g. ``"ladle
+    validate"``) fixes the usage line, which argparse otherwise derives from
+    ``sys.argv[0]`` (``__main__.py`` when run via ``python -m ladle``).
     """
     # Bold the labels only when stdout supports it (argparse prints help there).
     footer = [f"{style('home:', 'bold', stream=sys.stdout)} {REPO}"]
     if examples:
         footer = [style("examples:", "bold", stream=sys.stdout), *(f"  {e}" for e in examples), "", *footer]
     return argparse.ArgumentParser(
+        prog=prog,
         description=description,
         epilog="\n".join(footer),
         formatter_class=argparse.RawDescriptionHelpFormatter,
