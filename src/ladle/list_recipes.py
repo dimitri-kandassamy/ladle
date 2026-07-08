@@ -8,6 +8,7 @@ title), so the listing matches the table of contents.
 
 Run: ladle list
 """
+
 from __future__ import annotations
 
 import json
@@ -20,13 +21,15 @@ def gather(book_cfg: config.BookConfig) -> list[dict]:
     records: list[dict] = []
     for p in sorted(book_cfg.recipes_dir.glob("*.md")):
         fm, _ = build_html.split_front_matter(p.read_text(encoding="utf-8"))
-        records.append({
-            "slug": fm.get("slug") or p.stem,
-            "title": fm.get("title", p.stem),
-            "category": fm.get("category", ""),
-            "draft": bool(fm.get("draft", False)),
-            "tags": fm.get("tags", []) or [],
-        })
+        records.append(
+            {
+                "slug": fm.get("slug") or p.stem,
+                "title": fm.get("title", p.stem),
+                "category": fm.get("category", ""),
+                "draft": bool(fm.get("draft", False)),
+                "tags": fm.get("tags", []) or [],
+            }
+        )
     return records
 
 

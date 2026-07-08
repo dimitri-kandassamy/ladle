@@ -1,4 +1,5 @@
 """Unit tests for `ladle list` — the recipe-listing data command."""
+
 from __future__ import annotations
 
 import json
@@ -32,7 +33,7 @@ def test_lists_all_recipes_in_book_order(tmp_path, capsys):
     book = _book(tmp_path)
     assert list_recipes.main(["--book", str(book)]) == ui.OK
     out = capsys.readouterr()
-    assert out.err == ""                         # data command: stdout only
+    assert out.err == ""  # data command: stdout only
     lines = out.out.strip().splitlines()
     # Savory before Desserts (section order), so Stew precedes Cake.
     assert lines[0].startswith("stew")

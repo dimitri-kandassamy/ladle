@@ -1,4 +1,5 @@
 """Unit tests for the shared console (ui): color gating, stream split, exit codes."""
+
 from __future__ import annotations
 
 import pytest
@@ -8,7 +9,7 @@ from ladle import ui
 
 @pytest.fixture(autouse=True)
 def _reset_console():
-    ui.configure()          # defaults before each test
+    ui.configure()  # defaults before each test
     yield
     ui.configure()
 

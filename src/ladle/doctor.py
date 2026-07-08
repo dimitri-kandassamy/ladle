@@ -11,6 +11,7 @@ are warnings (validate.py already falls back to a structural check without them)
 
 Run: ladle doctor
 """
+
 from __future__ import annotations
 
 import importlib
@@ -144,7 +145,7 @@ def install_hints() -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ui.command_parser(__doc__, "ladle doctor").parse_args(argv)
-    required_failures.clear()   # re-entrant across calls in one process
+    required_failures.clear()  # re-entrant across calls in one process
     check_python()
     check_pandoc()
     check_poppler()

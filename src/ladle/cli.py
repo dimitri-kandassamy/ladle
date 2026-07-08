@@ -6,6 +6,7 @@ delegates to a tool module's ``main(argv)``; ``build`` chains html -> pdf ->
 epub. Book-scoped commands take ``--book PATH`` (default: ``$BOOK_CONFIG`` or
 ``./book.yaml``).
 """
+
 from __future__ import annotations
 
 import sys
@@ -46,7 +47,7 @@ def _build(argv: list[str]) -> int:
 class Command:
     fn: Callable[[list[str]], int]
     help: str
-    book: bool = False   # meaningfully uses --book (advertised in help)
+    book: bool = False  # meaningfully uses --book (advertised in help)
 
 
 COMMANDS: dict[str, Command] = {
@@ -67,6 +68,7 @@ def render_help() -> str:
     source of truth). Headings are bold only when stdout supports it (TTY, color
     not disabled) — :func:`ui.style` no-ops otherwise, so piped help stays plain.
     """
+
     def h(text: str) -> str:
         return ui.style(text, "bold", stream=sys.stdout)
 
@@ -107,17 +109,16 @@ def _dispatch(name: str, sub: list[str]) -> int:
     """Run a command, mapping its exceptions to exit codes so main() always returns."""
     command = COMMANDS.get(name)
     if command is None:
-        return ui.die(f"unknown command {name!r}", ui.USAGE,
-                      hint="run `ladle --help` for the command list")
+        return ui.die(f"unknown command {name!r}", ui.USAGE, hint="run `ladle --help` for the command list")
     try:
         return command.fn(sub)
-    except SystemExit as exc:      # a subcommand's argparse (bad flag, or --help) -> return, don't raise
+    except SystemExit as exc:  # a subcommand's argparse (bad flag, or --help) -> return, don't raise
         return exc.code if isinstance(exc.code, int) else ui.USAGE
     except config.NoBookError as exc:
         return ui.die(str(exc), ui.NO_BOOK, hint="run `ladle new` or pass --book PATH")
     except KeyboardInterrupt:
         return ui.INTERRUPTED
-    except Exception as exc:      # noqa: BLE001 — top-level guard: clean message, or traceback under --debug
+    except Exception as exc:  # noqa: BLE001 — top-level guard: clean message, or traceback under --debug
         if ui.get().debug:
             raise
         return ui.die(str(exc) or exc.__class__.__name__, ui.ERROR)
@@ -134,12 +135,12 @@ def main(argv: list[str] | None = None) -> int:
     ui.configure_from_args(gargs)
 
     if not rest or rest[0] in ("-h", "--help"):
-        print(render_help())          # requested help -> stdout, exit 0
+        print(render_help())  # requested help -> stdout, exit 0
         return ui.OK
     if rest[0] in ("-V", "--version"):
         print(f"ladle {__version__}")
         return ui.OK
-    if rest[0] == "help":             # `ladle help [command]`
+    if rest[0] == "help":  # `ladle help [command]`
         if len(rest) > 1 and rest[1] in COMMANDS:
             return _dispatch(rest[1], ["--help"])
         print(render_help())

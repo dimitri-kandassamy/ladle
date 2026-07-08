@@ -7,6 +7,7 @@ schema check can run on its own. Exit code 4 if any recipe fails.
 
 Run: ladle lint
 """
+
 from __future__ import annotations
 
 import json

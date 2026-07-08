@@ -1,4 +1,5 @@
 """Unit tests for command dispatch in ladle.cli."""
+
 from __future__ import annotations
 
 import pytest
@@ -84,7 +85,7 @@ def test_missing_book_returns_exit_3(capsys):
     assert rc == ui.NO_BOOK == 3
     err = capsys.readouterr().err
     assert "no book config found" in err
-    assert "ladle new" in err            # the next-step hint
+    assert "ladle new" in err  # the next-step hint
 
 
 def test_unexpected_error_maps_to_1_without_debug(monkeypatch, capsys):

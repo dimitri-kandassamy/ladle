@@ -1,4 +1,5 @@
 """Unit tests for path resolution and theme/colour helpers in ladle.config."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -22,9 +23,7 @@ def test_load_theme_missing_manifest_returns_defaults(tmp_path):
 
 
 def test_load_theme_merges_manifest_over_defaults(tmp_path):
-    (tmp_path / "theme.yaml").write_text(
-        "name: midnight\npalette:\n  navy: '#000'\n", encoding="utf-8"
-    )
+    (tmp_path / "theme.yaml").write_text("name: midnight\npalette:\n  navy: '#000'\n", encoding="utf-8")
     theme = config.load_theme(tmp_path)
     assert theme["name"] == "midnight"
     assert theme["palette"] == {"navy": "#000"}
