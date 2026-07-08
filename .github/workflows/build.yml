@@ -105,7 +105,6 @@ jobs:
         env:
           BOOK: examples/the-ladle-kitchen/book.yaml
         run: |
-          ladle illustrations --book "$BOOK"
           ladle build --book "$BOOK"
 
       - name: Validate
@@ -174,7 +173,6 @@ jobs:
       - name: Build + validate torture-test fixture
         run: |
           BOOK=tests/fixtures/torture-book/book.yaml
-          ladle illustrations --book "$BOOK"
           ladle build --book "$BOOK"
           ladle validate --book "$BOOK"
 

@@ -131,7 +131,6 @@ for a complete, working template.
 | `ladle build`                 | build PDF + EPUB (`html` → `pdf` → `epub`)                     |
 | `ladle html` / `pdf` / `epub` | run a single stage                                             |
 | `ladle validate`              | recipe schema, PDF trim + page count, epubcheck, contact sheet |
-| `ladle illustrations`         | (re)generate the SVG placeholder art                           |
 | `ladle assets [--theme DIR]`  | re-bake a theme's raster brand assets (paper grain, patterns)  |
 | `ladle doctor`                | check pandoc/poppler/WeasyPrint/Java are installed             |
 
@@ -159,11 +158,12 @@ or fork the theme and point `theme:` at your own directory. See
 
 ## Illustrations
 
-Each recipe ships with an on-brand **SVG placeholder** (`ladle illustrations`),
-so builds are always green. To add real artwork, generate it in any image model
-using the theme's locked style and save it as
-`assets/illustrations/recipes/<slug>.png` (transparent PNG) next to the
-placeholder — the build prefers the raster automatically, no front-matter change.
+Recipe artwork lives with your book, not in the tool. Point a recipe's
+`illustration:` front matter at a file under `assets/illustrations/recipes/`
+(SVG or a raster — PNG/WebP/JPEG), and drop the file in. If both an SVG and a
+raster sibling exist (e.g. `carrot-cake.svg` and `carrot-cake.png`), the build
+prefers the raster automatically — so you can start with a simple placeholder and
+swap in real art later with no front-matter change.
 
 ## Contributing
 
