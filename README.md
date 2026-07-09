@@ -19,11 +19,12 @@ inside a proprietary app.
 
 ![A spread from the example cookbook, built by ladle](https://raw.githubusercontent.com/dimitri-kandassamy/ladle/main/docs/assets/hero.png)
 
-*The example cookbook — a print-ready PDF from plain markdown.*
+_The example cookbook — a print-ready PDF from plain markdown._
 
-![Building a cookbook from the terminal](https://raw.githubusercontent.com/dimitri-kandassamy/ladle/main/docs/assets/demo.gif)
+<!-- markdownlint-disable-next-line MD033 -- inline <img> needed to size the demo GIF -->
+<img alt="Building a cookbook from the terminal" src="https://raw.githubusercontent.com/dimitri-kandassamy/ladle/main/docs/assets/demo.gif" width="600" />
 
-*One folder of markdown → a validated PDF + EPUB, from a single `ladle build`.*
+_One folder of markdown → a validated PDF + EPUB, from a single `ladle build`._
 
 ## Installation
 
