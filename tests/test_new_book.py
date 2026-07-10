@@ -15,11 +15,30 @@ def _reset_console():
     ui.configure()
 
 
-def test_rejects_invalid_slug(tmp_path, monkeypatch, capsys):
+def test_name_used_verbatim_including_spaces(tmp_path, monkeypatch):
+    # The name is the directory, as typed — no slugifying, no case-folding.
     monkeypatch.chdir(tmp_path)
-    assert new_book.main(["Bad Name"]) == ui.USAGE == 2
-    assert "must match" in capsys.readouterr().err
-    assert not (tmp_path / "Bad Name").exists()
+    assert new_book.main(["My Cookbook"]) == 0
+    book_dir = tmp_path / "My Cookbook"
+    assert book_dir.exists()
+    data = yaml.safe_load((book_dir / "book.yaml").read_text(encoding="utf-8"))
+    assert data["title"] == "My Cookbook"
+
+
+def test_unicode_and_non_latin_names_are_kept(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    assert new_book.main(["Café"]) == 0
+    assert (tmp_path / "Café").exists()  # accent preserved in the path
+    assert new_book.main(["日本料理"]) == 0
+    assert (tmp_path / "日本料理").exists()  # non-Latin scripts work too
+
+
+def test_rejects_path_unsafe_names(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    assert new_book.main(["a/b"]) == ui.USAGE == 2
+    assert "may not contain" in capsys.readouterr().err
+    assert new_book.main([".."]) == ui.USAGE == 2
+    assert not (tmp_path / "a").exists()
 
 
 def test_scaffolds_a_runnable_book(tmp_path, monkeypatch):
