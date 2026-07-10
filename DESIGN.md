@@ -12,9 +12,9 @@ its medium.
 
 ```text
 a book (book.yaml + recipes/*.md + content/introduction.md) + a theme
-        │  ladle html   (src/ladle/build_html.py, Jinja2)
-        ├──► build/cookbook.html  ──► ladle pdf   (make_pdf.py, WeasyPrint) ──► build/cookbook.pdf
-        └──► build/epub.html      ──► ladle epub  (make_epub.py, pandoc)    ──► build/cookbook.epub
+        │  ladle build → build_html.render  (src/ladle/build_html.py, Jinja2)
+        ├──► build/cookbook.html  ──► make_pdf.render   (WeasyPrint) ──► build/cookbook.pdf
+        └──► build/epub.html      ──► make_epub.render  (pandoc)     ──► build/cookbook.epub
 ```
 
 - `build/cookbook.html` is the art-directed print layout (the theme's

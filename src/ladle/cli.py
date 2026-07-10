@@ -33,14 +33,14 @@ def _build(argv: list[str]) -> int:
     ap = ui.command_parser("ladle build", _build.__doc__, "ladle build --book pt/book.yaml")
     config.add_book_arg(ap)
     args = ap.parse_args(argv)
-    # Forward only what the stages understand, so a future build-only flag can't
-    # break the chain by reaching a stage parser that doesn't define it.
-    stage_argv = ["--book", args.book] if args.book else []
-    for stage in (build_html.main, make_pdf.main, make_epub.main):
-        rc = stage(stage_argv)
-        if rc:
-            return rc
-    return ui.OK
+    # The stages are internal functions, not commands: html -> pdf -> epub.
+    rc = build_html.render(args.book)
+    if rc:
+        return rc
+    rc = make_pdf.render()
+    if rc:
+        return rc
+    return make_epub.render(args.book)
 
 
 @dataclass(frozen=True)
@@ -53,9 +53,6 @@ class Command:
 COMMANDS: dict[str, Command] = {
     "new": Command(new_book.main, "scaffold a new book in ./<name>/"),
     "build": Command(_build, "build PDF + EPUB (html -> pdf -> epub)", book=True),
-    "html": Command(build_html.main, "render print + epub HTML only", book=True),
-    "pdf": Command(make_pdf.main, "render build/cookbook.pdf from the HTML"),
-    "epub": Command(make_epub.main, "render build/cookbook.epub from the HTML", book=True),
     "lint": Command(lint.main, "validate recipe front matter (--json/--plain)", book=True),
     "list": Command(list_recipes.main, "list recipes (--json/--plain, --category, --tag)", book=True),
     "validate": Command(validate.main, "schema + PDF structure + epubcheck + contact sheet", book=True),

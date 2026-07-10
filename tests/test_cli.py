@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from ladle import cli, lint, make_pdf, ui
+from ladle import cli, lint, make_pdf, ui, validate
 
 
 @pytest.fixture(autouse=True)
@@ -92,7 +92,7 @@ def test_missing_title_returns_clean_error_not_traceback(capsys, tmp_path):
     # QA #1: a book.yaml missing `title` fails with a one-line message, no KeyError.
     book = tmp_path / "book.yaml"
     book.write_text("language: en\n", encoding="utf-8")
-    rc = cli.main(["html", "--book", str(book)])
+    rc = cli.main(["build", "--book", str(book)])
     assert rc == ui.ERROR
     err = capsys.readouterr().err
     assert "missing required field: title" in err
@@ -159,25 +159,16 @@ def test_subcommand_help_shows_examples(capsys):
     assert ui.REPO in out
 
 
-def test_pdf_help_exits_cleanly_instead_of_building(capsys):
-    # Regression: `ladle pdf --help` used to ignore argv and start a build.
-    with pytest.raises(SystemExit) as exc:
-        make_pdf.main(["--help"])
-    assert exc.value.code == 0
-    assert "usage:" in capsys.readouterr().out
-
-
 def test_subcommand_help_uses_ladle_prog_name(capsys):
     # QA #6: usage must read `ladle <sub>`, not argparse's argv[0] (`__main__.py`).
     with pytest.raises(SystemExit):
-        make_pdf.main(["--help"])
+        validate.main(["--help"])
     out = capsys.readouterr().out
-    assert "usage: ladle pdf" in out
+    assert "usage: ladle validate" in out
     assert "__main__" not in out
 
 
-def test_pdf_accepts_book_flag_from_build_chain(monkeypatch, tmp_path):
-    # `ladle build --book X` threads --book into make_pdf; it must accept (ignore)
-    # it and fail cleanly on the missing HTML, not argparse-error on --book.
+def test_pdf_render_fails_cleanly_without_html(monkeypatch, tmp_path):
+    # The internal pdf stage errors cleanly when build/cookbook.html is missing.
     monkeypatch.setattr(make_pdf.config, "build_dir", lambda: tmp_path)  # empty -> no cookbook.html
-    assert make_pdf.main(["--book", "any.yaml"]) == ui.ERROR
+    assert make_pdf.render() == ui.ERROR
