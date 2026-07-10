@@ -67,7 +67,7 @@ ladle doctor --install  # …and offer to install whatever's missing
 Scaffold a book, add recipes, and build:
 
 ```sh
-ladle new --name mybook          # scaffold ./mybook/ (prompts for title, subtitle, language)
+ladle new mybook                 # scaffold ./mybook/ (or `ladle new` -> ./book/)
 cd mybook
 # …add your recipes under recipes/…
 ladle build                      # -> build/cookbook.pdf and build/cookbook.epub
@@ -132,7 +132,7 @@ for a complete, working template.
 
 | Command                       | Does                                                           |
 | ----------------------------- | -------------------------------------------------------------- |
-| `ladle new [--name X]`        | scaffold a new book in `./X/`                                  |
+| `ladle new [X]`               | scaffold a new book in `./X/` (default `./book/`)              |
 | `ladle build`                 | build PDF + EPUB (`html` → `pdf` → `epub`)                     |
 | `ladle html` / `pdf` / `epub` | run a single stage                                             |
 | `ladle validate`              | recipe schema, PDF trim + page count, epubcheck, contact sheet |
