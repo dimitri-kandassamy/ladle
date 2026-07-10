@@ -7,11 +7,8 @@ recipe with a placeholder illustration, so `cd <name> && ladle build` produces a
 complete, populated cookbook on the very first run. Nothing outside <name>/ is
 touched.
 
-Usage:
-  ladle new [<name>] [--title ...] [--language ...] [--force]
-
-`new` never prompts: anything not passed uses a default. <name> defaults to
-`book`; the title defaults to the name in Title Case.
+`new` never prompts: <name> defaults to `book` and the title defaults to the
+name in Title Case, so any field not passed falls back to a sensible default.
 """
 
 from __future__ import annotations
@@ -76,12 +73,13 @@ def main(argv: list[str] | None = None) -> int:
     ap = ui.command_parser(
         "ladle new",
         __doc__,
-        "ladle new mybook",
-        "ladle new pt --title 'Cozinha PT' --language pt",
+        "ladle new                     # -> ./book/",
+        'ladle new the-ladle-kitchen   # -> ./the-ladle-kitchen/  (title "The Ladle Kitchen")',
+        'ladle new kitchen --title "The Ladle Kitchen" --language en',
     )
     ap.add_argument("name", nargs="?", default="book", help="book directory to create (default: book)")
     ap.add_argument("--title", help="cover title (default: the name in Title Case)")
-    ap.add_argument("--language", default="en", help="ISO 639-1 code, e.g. 'en', 'pt' (default: en)")
+    ap.add_argument("--language", default="en", help="ISO 639-1 language code (default: en)")
     ap.add_argument("--force", action="store_true", help="overwrite an existing ./<name>/")
     args = ap.parse_args(argv)
 

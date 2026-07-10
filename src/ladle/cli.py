@@ -95,7 +95,7 @@ def render_help() -> str:
         *(f"  {flags:<{fw}}  {desc}" for flags, desc in flag_rows),
         "",
         h("EXAMPLES"),
-        "  ladle new --name mybook      scaffold a book",
+        "  ladle new mybook             scaffold ./mybook/",
         "  ladle build                  build the PDF + EPUB",
         "  ladle lint --json            check recipes, machine-readable",
         "",
