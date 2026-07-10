@@ -33,24 +33,24 @@ def test_load_theme_merges_manifest_over_defaults(tmp_path):
     assert theme["font_faces"] == []
 
 
-def _book(data: dict, path: str = "/books/demo/book.yaml") -> BookConfig:
+def _book(data: dict, path: str = "/tmp/demo/book.yaml") -> BookConfig:
     return BookConfig(path=Path(path), data=data)
 
 
 def test_bookconfig_root_is_yaml_dir():
-    assert _book({}).root == Path("/books/demo")
+    assert _book({}).root == Path("/tmp/demo")
 
 
 def test_bookconfig_default_content_paths():
     cfg = _book({})
-    assert cfg.recipes_dir == Path("/books/demo/recipes")
-    assert cfg.introduction_path == Path("/books/demo/content/introduction.md")
+    assert cfg.recipes_dir == Path("/tmp/demo/recipes")
+    assert cfg.introduction_path == Path("/tmp/demo/content/introduction.md")
 
 
 def test_bookconfig_content_paths_are_overridable():
     cfg = _book({"recipes_dir": "src/recipes", "introduction": "intro.md"})
-    assert cfg.recipes_dir == Path("/books/demo/src/recipes")
-    assert cfg.introduction_path == Path("/books/demo/intro.md")
+    assert cfg.recipes_dir == Path("/tmp/demo/src/recipes")
+    assert cfg.introduction_path == Path("/tmp/demo/intro.md")
 
 
 def test_theme_dir_bare_name_resolves_into_package():
@@ -64,7 +64,7 @@ def test_theme_dir_defaults_to_default_theme():
 
 def test_theme_dir_relative_path_resolves_against_book():
     cfg = _book({"theme": "themes/mine"})
-    assert cfg.theme_dir == Path("/books/demo/themes/mine")
+    assert cfg.theme_dir == Path("/tmp/demo/themes/mine")
 
 
 def test_theme_dir_absolute_path_is_left_as_is():

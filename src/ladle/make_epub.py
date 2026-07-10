@@ -17,7 +17,7 @@ from . import config, ui
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = ui.command_parser("ladle epub", __doc__, "ladle epub --book books/pt/book.yaml")
+    ap = ui.command_parser("ladle epub", __doc__, "ladle epub --book pt/book.yaml")
     config.add_book_arg(ap)
     args = ap.parse_args(argv)
     book_cfg = config.load_book_config(args.book)

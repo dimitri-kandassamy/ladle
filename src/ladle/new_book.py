@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Scaffold a new book under books/<name>/ (relative to the current directory).
+"""Scaffold a new book in ./<name>/ (relative to the current directory).
 
-Creates books/<name>/book.yaml, books/<name>/content/introduction.md, and one
-ready-to-build example recipe with a placeholder illustration — so `ladle build
---book books/<name>/book.yaml` produces a real, populated cookbook (a filled
-Contents page and an illustrated recipe spread) on the very first run, before the
-author edits anything. Nothing outside books/<name>/ is touched.
+Creates <name>/book.yaml, <name>/content/introduction.md, and one
+ready-to-build example recipe with a placeholder illustration — so `cd <name> &&
+ladle build` produces a real, populated cookbook (a filled Contents page and an
+illustrated recipe spread) on the very first run, before the author edits
+anything. Nothing outside <name>/ is touched.
 
 Usage:
   ladle new --name pt [--title ...] [--subtitle ...] [--language pt]
@@ -64,13 +64,13 @@ def prompt(label: str, default: str = "") -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = ui.command_parser("ladle new", __doc__, "ladle new --name pt --title 'Cozinha PT' --language pt")
-    ap.add_argument("--name", help="lowercase, hyphenated book id, e.g. 'pt' -> books/pt/")
+    ap.add_argument("--name", help="lowercase, hyphenated book id, e.g. 'pt' -> ./pt/")
     ap.add_argument("--title")
     ap.add_argument("--subtitle")
     ap.add_argument("--language", help="ISO 639-1 code, e.g. 'en', 'pt'")
     ap.add_argument("--palette-navy", dest="palette_navy")
     ap.add_argument("--palette-cream", dest="palette_cream")
-    ap.add_argument("--force", action="store_true", help="overwrite an existing books/<name>/")
+    ap.add_argument("--force", action="store_true", help="overwrite an existing ./<name>/")
     args = ap.parse_args(argv)
 
     # Prompt only on a real TTY and unless --no-input; otherwise take flag/default.
@@ -90,9 +90,9 @@ def main(argv: list[str] | None = None) -> int:
         return ui.die(f"--name must match {SLUG_RE.pattern!r}, got {name!r}", ui.USAGE)
 
     out_root = Path.cwd()
-    book_dir = out_root / "books" / name
+    book_dir = out_root / name
     if book_dir.exists() and not args.force:
-        return ui.die(f"books/{name}/ already exists", ui.ERROR, hint="pass --force to overwrite")
+        return ui.die(f"{name}/ already exists", ui.ERROR, hint="pass --force to overwrite")
 
     title = ask(args.title, "Title", f"The {name.title()} Cookbook")
     subtitle = ask(args.subtitle, "Subtitle", "Stories & food from people who love to cook")
@@ -173,9 +173,9 @@ draft: false                  # set true to leave a recipe out of the build
         encoding="utf-8",
     )
 
-    ui.success(f"Scaffolded books/{name}/")
+    ui.success(f"Scaffolded {name}/")
     ui.step("Next steps:")
-    ui.step(f"  ladle build --book books/{name}/book.yaml && ladle validate --book books/{name}/book.yaml")
+    ui.step(f"  cd {name} && ladle build && ladle validate")
     return 0
 
 

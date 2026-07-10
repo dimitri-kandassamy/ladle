@@ -268,7 +268,7 @@ def contact_sheet() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = ui.command_parser("ladle validate", __doc__, "ladle validate --book books/pt/book.yaml")
+    ap = ui.command_parser("ladle validate", __doc__, "ladle validate --book pt/book.yaml")
     config.add_book_arg(ap)
     args = ap.parse_args(argv)
     book_cfg = config.load_book_config(args.book)
