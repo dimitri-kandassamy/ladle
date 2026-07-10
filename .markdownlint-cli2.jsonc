@@ -1,0 +1,4 @@
+{
+  // Rule config lives in .markdownlint.json; this file only scopes which files are linted.
+  "ignores": [".venv/**", "**/node_modules/**"]
+}
