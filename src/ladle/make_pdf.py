@@ -6,7 +6,7 @@ no browser. The print CSS uses CSS Paged Media (`@page`, fixed-size pages, page
 breaks) plus transforms and pre-rendered raster backgrounds, all of which
 WeasyPrint supports natively.
 
-Run: ladle pdf
+The PDF stage of `ladle build` (not a standalone command).
 """
 
 from __future__ import annotations
@@ -25,19 +25,13 @@ def open_outline(document, pdf) -> None:
     pdf.catalog["PageMode"] = "/UseOutlines"
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = ui.command_parser("ladle pdf", __doc__)
-    config.add_book_arg(ap)  # accepted (so `ladle build --book X` threads through) but unused
-    ap.parse_args(argv)
+def render() -> int:
+    """Render build/cookbook.html -> build/cookbook.pdf."""
     build = config.build_dir()
     inp = build / "cookbook.html"
     out = build / "cookbook.pdf"
     if not inp.exists():
-        return ui.die(f"missing {config.rel(inp)}", ui.ERROR, hint="run `ladle html` first")
+        return ui.die(f"missing {config.rel(inp)}", ui.ERROR, hint="run `ladle build`")
     HTML(filename=str(inp)).write_pdf(str(out), finisher=open_outline)
     ui.success(f"Wrote {config.rel(out)}")
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

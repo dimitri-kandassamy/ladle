@@ -4,9 +4,9 @@ BUILD := build
 BOOK      ?= examples/the-ladle-kitchen/book.yaml
 BOOK_FLAG := $(if $(BOOK),--book $(BOOK),)
 
-.PHONY: all pdf epub html validate test lint format check doctor new-book clean
+.PHONY: all build validate test lint format check doctor new-book clean
 
-all: pdf epub
+all: build
 
 # Unit tests + lint — the fast CI gate, no book toolchain required.
 # pytest resolves `ladle` from src/ via pyproject's pythonpath setting.
@@ -23,15 +23,9 @@ format:
 
 check: lint test
 
-# Builds both build/cookbook.html (print) and build/epub.html (semantic).
-html:
-	$(LADLE) html $(BOOK_FLAG)
-
-pdf: html
-	$(LADLE) pdf $(BOOK_FLAG)
-
-epub: html
-	$(LADLE) epub $(BOOK_FLAG)
+# Build the PDF + EPUB (html -> pdf -> epub) in one pass.
+build:
+	$(LADLE) build $(BOOK_FLAG)
 
 validate:
 	$(LADLE) validate $(BOOK_FLAG)
@@ -42,7 +36,7 @@ doctor:
 
 # Scaffold a new book: `make new-book NAME=pt`.
 new-book:
-	$(LADLE) new $(if $(NAME),--name $(NAME),)
+	$(LADLE) new $(NAME)
 
 clean:
 	rm -rf $(BUILD)/cookbook.html $(BUILD)/epub.html $(BUILD)/cookbook.pdf \

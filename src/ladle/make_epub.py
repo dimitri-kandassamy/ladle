@@ -16,11 +16,9 @@ import subprocess
 from . import config, ui
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = ui.command_parser("ladle epub", __doc__, "ladle epub --book pt/book.yaml")
-    config.add_book_arg(ap)
-    args = ap.parse_args(argv)
-    book_cfg = config.load_book_config(args.book)
+def render(book_path: str | None = None) -> int:
+    """Render build/epub.html -> build/cookbook.epub with pandoc."""
+    book_cfg = config.load_book_config(book_path)
     book = book_cfg.data
 
     if not shutil.which("pandoc"):
@@ -29,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     build = config.build_dir()
     epub_html = build / "epub.html"
     if not epub_html.exists():
-        return ui.die(f"missing {config.rel(epub_html)}", ui.ERROR, hint="run `ladle html` first")
+        return ui.die(f"missing {config.rel(epub_html)}", ui.ERROR, hint="run `ladle build`")
 
     theme = book_cfg.theme_dir
     css = theme / "css" / "epub.css"
@@ -93,7 +91,3 @@ def main(argv: list[str] | None = None) -> int:
         return res.returncode
     ui.success(f"Wrote {config.rel(out)}")
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

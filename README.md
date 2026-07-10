@@ -133,8 +133,7 @@ for a complete, working template.
 | Command                       | Does                                                           |
 | ----------------------------- | -------------------------------------------------------------- |
 | `ladle new [X]`               | scaffold a new book in `./X/` (default `./book/`)              |
-| `ladle build`                 | build PDF + EPUB (`html` → `pdf` → `epub`)                     |
-| `ladle html` / `pdf` / `epub` | run a single stage                                             |
+| `ladle build`                 | build the PDF + EPUB from your recipes                         |
 | `ladle validate`              | recipe schema, PDF trim + page count, epubcheck, contact sheet |
 | `ladle doctor`                | check pandoc/poppler/WeasyPrint/Java are installed             |
 

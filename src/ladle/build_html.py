@@ -6,14 +6,13 @@ front matter, parses each body into structured ingredients/directions/notes, and
 renders the theme's print.html.j2 -> build/cookbook.html and epub.html.j2
 -> build/epub.html.
 
-Run: ladle html
+The HTML stage of `ladle build` (not a standalone command).
 """
 
 from __future__ import annotations
 
 import html
 import re
-import sys
 from pathlib import Path
 
 import yaml
@@ -288,11 +287,9 @@ def warn_schema_issues(recipes_dir: Path) -> None:
         ui.warn(f"{r['file']}{loc} {r['message']}")
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = ui.command_parser("ladle html", __doc__, "ladle html --book pt/book.yaml")
-    config.add_book_arg(ap)
-    args = ap.parse_args(argv)
-    book_cfg = config.load_book_config(args.book)
+def render(book_path: str | None = None) -> int:
+    """Render build/cookbook.html (print) and build/epub.html (semantic)."""
+    book_cfg = config.load_book_config(book_path)
     book = book_cfg.data
     if not book.get("title"):
         raise config.ConfigError(f"{config.rel(book_cfg.path)} is missing required field: title")
@@ -396,7 +393,3 @@ def write_landing(book: dict, build: Path) -> None:
 </div></body></html>
 """
     (build / "index.html").write_text(html_doc, encoding="utf-8")
-
-
-if __name__ == "__main__":
-    sys.exit(main())
