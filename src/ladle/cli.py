@@ -31,12 +31,15 @@ def _build(argv: list[str]) -> int:
     config.add_book_arg(ap)
     args = ap.parse_args(argv)
     # The stages are internal functions, not commands: html -> pdf -> epub.
+    ui.detail("stage: html")
     rc = build_html.render(args.book)
     if rc:
         return rc
+    ui.detail("stage: pdf")
     rc = make_pdf.render()
     if rc:
         return rc
+    ui.detail("stage: epub")
     return make_epub.render(args.book)
 
 
@@ -75,7 +78,7 @@ def render_help() -> str:
         "build cookbooks (PDF + EPUB) from markdown.",
         "",
         h("USAGE"),
-        "  ladle [-v | -q] [--debug] [--color] [--no-input] <command> [args]",
+        "  ladle [-v | -q] [--color] [--no-input] <command> [args]",
         "  ladle (-V | --version)      print the version and exit",
         "  ladle (-h | --help)         show this help and exit",
         "",
@@ -111,8 +114,8 @@ def _dispatch(name: str, sub: list[str]) -> int:
         return ui.die(str(exc), ui.ERROR, hint="check book.yaml's syntax and required fields")
     except KeyboardInterrupt:
         return ui.INTERRUPTED
-    except Exception as exc:  # noqa: BLE001 — top-level guard: clean message, or traceback under --debug
-        if ui.get().debug:
+    except Exception as exc:  # noqa: BLE001 — top-level guard: clean message, or traceback under -v
+        if ui.get().verbosity >= 1:
             raise
         return ui.die(str(exc) or exc.__class__.__name__, ui.ERROR)
 
@@ -120,8 +123,8 @@ def _dispatch(name: str, sub: list[str]) -> int:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
 
-    # Pull the global flags out from anywhere in argv (so both `ladle --debug build`
-    # and `ladle build --debug` work), configure the console, and dispatch the rest.
+    # Pull the global flags out from anywhere in argv (so both `ladle -v build`
+    # and `ladle build -v` work), configure the console, and dispatch the rest.
     # --help/--version are top-level actions handled here (not stripped as globals),
     # so they act before a command: `ladle <cmd> --help` reaches the subcommand's
     # own parser, and `--version` is top-level only (matching git/cargo/pip).
