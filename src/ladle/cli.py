@@ -76,7 +76,7 @@ def render_help() -> str:
         "build cookbooks (PDF + EPUB) from markdown.",
         "",
         h("USAGE"),
-        "  ladle [-v | -q] [--debug] [--no-color] [--no-input] <command> [args]",
+        "  ladle [-v | -q] [--debug] [--color] [--no-input] <command> [args]",
         "  ladle (-V | --version)      print the version and exit",
         "  ladle (-h | --help)         show this help and exit",
         "",

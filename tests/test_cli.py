@@ -89,6 +89,15 @@ def test_global_flags_configure_console(monkeypatch):
     assert console.verbosity == 1
 
 
+def test_color_flag_forces_color_on(monkeypatch):
+    # #8: --color forces color on (the counterpart to --no-color); absent -> auto.
+    monkeypatch.setitem(cli.COMMANDS, "noop", _cmd(lambda argv: 0))
+    cli.main(["--color", "noop"])
+    assert ui.get().color is True
+    cli.main(["noop"])
+    assert ui.get().color is None
+
+
 def test_missing_book_returns_exit_3(capsys):
     rc = cli.main(["validate", "--book", "/no/such/book.yaml"])
     assert rc == ui.NO_BOOK == 3

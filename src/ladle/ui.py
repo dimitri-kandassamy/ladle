@@ -68,7 +68,10 @@ def add_global_flags(parser: argparse.ArgumentParser) -> argparse.ArgumentParser
     g.add_argument("-q", "--quiet", action="store_true", help="only errors on stderr")
     g.add_argument("--debug", action="store_true", help="developer output + full tracebacks")
     g.add_argument(
-        "--no-color", dest="no_color", action="store_true", help="disable color (also honors NO_COLOR / non-TTY)"
+        "--color",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="force color on/off (default: auto — honors TTY and NO_COLOR)",
     )
     g.add_argument("--no-input", dest="no_input", action="store_true", help="never prompt; use defaults or fail")
     return parser
@@ -116,7 +119,7 @@ def command_parser(prog: str, description: str | None, *examples: str) -> argpar
 def configure_from_args(args: argparse.Namespace) -> Console:
     """Build the console from parsed global flags (quiet wins over verbose)."""
     verbosity = -1 if getattr(args, "quiet", False) else getattr(args, "verbose", 0)
-    color = False if getattr(args, "no_color", False) else None
+    color = getattr(args, "color", None)  # True (--color) / False (--no-color) / None (auto)
     return configure(
         verbosity=verbosity,
         color=color,
