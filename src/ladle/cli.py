@@ -3,8 +3,7 @@
 A single command registry (:data:`COMMANDS`) is the source of truth for both
 dispatch and the generated top-level help, so the two can't drift. Each command
 delegates to a tool module's ``main(argv)``; ``build`` chains html -> pdf ->
-epub. Book-scoped commands take ``--book PATH`` (default: ``$BOOK_CONFIG`` or
-``./book.yaml``).
+epub. Book-scoped commands take ``--book PATH`` (default: ``./book.yaml``).
 """
 
 from __future__ import annotations
@@ -91,7 +90,7 @@ def render_help() -> str:
         "  ladle build                  build the PDF + EPUB",
         "  ladle validate               check recipes, PDF, EPUB",
         "",
-        f"--book PATH selects the book (default: $BOOK_CONFIG or ./book.yaml) for: {book_cmds}.",
+        f"--book PATH selects the book (default: ./book.yaml) for: {book_cmds}.",
         f"run `ladle <command> --help` for a command's options.  home: {ui.REPO}",
     ]
     return "\n".join(lines)

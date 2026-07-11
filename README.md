@@ -75,7 +75,7 @@ ladle validate                   # schema + PDF structure + epubcheck + contact 
 open build/contact-sheet.png     # a thumbnail grid of every page
 ```
 
-Book-scoped commands take `--book PATH` (default: `$BOOK_CONFIG` or `./book.yaml`),
+Book-scoped commands take `--book PATH` (default: `./book.yaml`),
 so you can keep several books side by side and build any of them.
 
 ### A recipe is just markdown
