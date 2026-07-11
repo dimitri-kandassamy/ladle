@@ -14,7 +14,7 @@ Two kinds of path live here, and they resolve against different roots:
   merely ``pip install``ed this tool — works with no special-casing.
 
 Which ``book.yaml`` a command operates on is resolved as:
-``--book PATH`` flag  >  ``$BOOK_CONFIG``  >  ``book.yaml`` in the cwd.
+``--book PATH`` flag  >  ``book.yaml`` in the cwd.
 """
 
 from __future__ import annotations
@@ -127,12 +127,12 @@ def add_book_arg(parser: argparse.ArgumentParser) -> None:
         "--book",
         metavar="PATH",
         default=None,
-        help="path to a book.yaml (default: $BOOK_CONFIG or ./book.yaml)",
+        help="path to a book.yaml (default: ./book.yaml)",
     )
 
 
 def resolve_book_path(cli_value: str | None = None) -> Path:
-    value = cli_value or os.environ.get("BOOK_CONFIG") or "book.yaml"
+    value = cli_value or "book.yaml"
     return Path(value).resolve()
 
 

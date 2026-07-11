@@ -77,18 +77,17 @@ def test_theme_path_joins_under_theme_dir():
     assert cfg.theme_path("css", "print.css") == config.THEMES_DIR / "default/css/print.css"
 
 
-def test_resolve_book_path_prefers_cli_value(monkeypatch):
-    monkeypatch.setenv("BOOK_CONFIG", "from-env.yaml")
+def test_resolve_book_path_prefers_cli_value():
     assert config.resolve_book_path("from-cli.yaml") == Path("from-cli.yaml").resolve()
 
 
-def test_resolve_book_path_falls_back_to_env(monkeypatch):
+def test_resolve_book_path_ignores_book_config_env(monkeypatch):
+    # #16: $BOOK_CONFIG was dropped — it must no longer affect resolution.
     monkeypatch.setenv("BOOK_CONFIG", "from-env.yaml")
-    assert config.resolve_book_path(None) == Path("from-env.yaml").resolve()
+    assert config.resolve_book_path(None) == Path("book.yaml").resolve()
 
 
-def test_resolve_book_path_defaults_to_cwd_book_yaml(monkeypatch):
-    monkeypatch.delenv("BOOK_CONFIG", raising=False)
+def test_resolve_book_path_defaults_to_cwd_book_yaml():
     assert config.resolve_book_path(None) == Path("book.yaml").resolve()
 
 
