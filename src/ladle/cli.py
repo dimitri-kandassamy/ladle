@@ -66,11 +66,9 @@ def render_help() -> str:
         return ui.style(text, "bold", stream=sys.stdout)
 
     cw = max(len(name) for name in COMMANDS)
-    flag_rows = [
-        ("-h, --help", "show this help and exit"),
-        ("--version", "show the version and exit"),
-        *ui.global_flags_help(),
-    ]
+    # --help/--version are top-level actions (shown in USAGE), not global flags:
+    # unlike the flags below, they don't apply after a command.
+    flag_rows = ui.global_flags_help()
     fw = max(len(flags) for flags, _ in flag_rows)
     book_cmds = ", ".join(name for name, c in COMMANDS.items() if c.book)
 
@@ -78,8 +76,9 @@ def render_help() -> str:
         "build cookbooks (PDF + EPUB) from markdown.",
         "",
         h("USAGE"),
-        "  ladle [--version] [-v | -q] [--debug] [--no-color] [--no-input]",
-        "        <command> [args]",
+        "  ladle [-v | -q] [--debug] [--no-color] [--no-input] <command> [args]",
+        "  ladle (-V | --version)      print the version and exit",
+        "  ladle (-h | --help)         show this help and exit",
         "",
         h("COMMANDS"),
         *(f"  {name:<{cw}}  {c.help}" for name, c in COMMANDS.items()),
@@ -124,8 +123,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # Pull the global flags out from anywhere in argv (so both `ladle --debug build`
     # and `ladle build --debug` work), configure the console, and dispatch the rest.
-    # --help/--version are handled here, not as global flags, so `ladle <cmd>
-    # --help` still reaches the subcommand's own parser.
+    # --help/--version are top-level actions handled here (not stripped as globals),
+    # so they act before a command: `ladle <cmd> --help` reaches the subcommand's
+    # own parser, and `--version` is top-level only (matching git/cargo/pip).
     gargs, rest = ui.global_parser().parse_known_args(argv)
     ui.configure_from_args(gargs)
 
