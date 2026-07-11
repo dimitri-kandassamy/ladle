@@ -18,7 +18,6 @@ from . import (
     build_html,
     config,
     doctor,
-    list_recipes,
     make_epub,
     make_pdf,
     new_book,
@@ -52,7 +51,6 @@ class Command:
 COMMANDS: dict[str, Command] = {
     "new": Command(new_book.main, "scaffold a new book in ./<name>/"),
     "build": Command(_build, "build PDF + EPUB (html -> pdf -> epub)", book=True),
-    "list": Command(list_recipes.main, "list recipes (--json/--plain, --category, --tag)", book=True),
     "validate": Command(validate.main, "schema + PDF structure + epubcheck + contact sheet", book=True),
     "doctor": Command(doctor.main, "check pandoc/poppler/WeasyPrint/Java installed"),
 }
@@ -80,8 +78,8 @@ def render_help() -> str:
         "build cookbooks (PDF + EPUB) from markdown.",
         "",
         h("USAGE"),
-        "  ladle [--version] [-v | -q] [--debug] [--json | --plain] [--no-color]",
-        "        [--no-input] <command> [args]",
+        "  ladle [--version] [-v | -q] [--debug] [--no-color] [--no-input]",
+        "        <command> [args]",
         "",
         h("COMMANDS"),
         *(f"  {name:<{cw}}  {c.help}" for name, c in COMMANDS.items()),
@@ -124,8 +122,8 @@ def _dispatch(name: str, sub: list[str]) -> int:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
 
-    # Pull the global flags out from anywhere in argv (so both `ladle --json list`
-    # and `ladle list --json` work), configure the console, and dispatch the rest.
+    # Pull the global flags out from anywhere in argv (so both `ladle --debug build`
+    # and `ladle build --debug` work), configure the console, and dispatch the rest.
     # --help/--version are handled here, not as global flags, so `ladle <cmd>
     # --help` still reaches the subcommand's own parser.
     gargs, rest = ui.global_parser().parse_known_args(argv)
