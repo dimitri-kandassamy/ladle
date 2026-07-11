@@ -127,7 +127,7 @@ def add_book_arg(parser: argparse.ArgumentParser) -> None:
         "--book",
         metavar="PATH",
         default=None,
-        help="Path to a book.yaml (default: $BOOK_CONFIG or ./book.yaml)",
+        help="path to a book.yaml (default: $BOOK_CONFIG or ./book.yaml)",
     )
 
 
