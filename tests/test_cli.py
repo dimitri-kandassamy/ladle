@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from ladle import cli, lint, make_pdf, ui, validate
+from ladle import cli, make_pdf, ui, validate
 
 
 @pytest.fixture(autouse=True)
@@ -137,7 +137,7 @@ def test_build_help_returns_0_through_dispatch(capsys):
 
 
 def test_help_command_shows_subcommand_help(capsys):
-    assert cli.main(["help", "lint"]) == ui.OK
+    assert cli.main(["help", "validate"]) == ui.OK
     assert "examples:" in capsys.readouterr().out
 
 
@@ -152,7 +152,7 @@ def test_keyboard_interrupt_maps_to_130(monkeypatch):
 def test_subcommand_help_shows_examples(capsys):
     # argparse prints help to stdout and exits 0.
     with pytest.raises(SystemExit) as exc:
-        lint.main(["--help"])
+        validate.main(["--help"])
     assert exc.value.code == 0
     out = capsys.readouterr().out
     assert "examples:" in out

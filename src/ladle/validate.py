@@ -77,8 +77,7 @@ def check_recipes(recipes_dir: Path) -> list[dict]:
     """Validate every recipe's front matter against the schema.
 
     Pure: returns one record per result — ``{file, ok, loc, message}`` — with no
-    printing, so both :func:`validate_recipes` (human report) and the ``lint``
-    command (human / ``--json`` / ``--plain``) can format the same data.
+    printing, so :func:`validate_recipes` can format the human report from it.
     """
     schema = json.loads(config.SCHEMA_PATH.read_text())
     Validator = jsonschema.validators.validator_for(schema)
