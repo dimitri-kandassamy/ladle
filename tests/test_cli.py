@@ -117,7 +117,7 @@ def test_missing_title_returns_clean_error_not_traceback(capsys, tmp_path):
     assert "Traceback" not in err
 
 
-def test_unexpected_error_maps_to_1_without_debug(monkeypatch, capsys):
+def test_unexpected_error_maps_to_1_with_clean_message(monkeypatch, capsys):
     def boom(argv):
         raise ValueError("kaboom")
 
@@ -126,13 +126,14 @@ def test_unexpected_error_maps_to_1_without_debug(monkeypatch, capsys):
     assert "kaboom" in capsys.readouterr().err
 
 
-def test_debug_reraises_for_tracebacks(monkeypatch):
+def test_verbose_reraises_for_tracebacks(monkeypatch):
+    # #19: -v folds in the old --debug behavior — re-raise for a full traceback.
     def boom(argv):
         raise ValueError("kaboom")
 
     monkeypatch.setitem(cli.COMMANDS, "boom", _cmd(boom))
     with pytest.raises(ValueError, match="kaboom"):
-        cli.main(["--debug", "boom"])
+        cli.main(["-v", "boom"])
 
 
 def test_help_lists_every_registered_command(capsys):

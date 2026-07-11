@@ -43,7 +43,6 @@ class Console:
     verbosity: int = 0  # -q -> -1 (errors only), default 0, -v -> +1
     color: bool | None = None  # None = auto (TTY + NO_COLOR); True/False = forced
     no_input: bool = False
-    debug: bool = False  # show full tracebacks instead of a one-line error
 
 
 _console = Console()
@@ -64,9 +63,8 @@ def get() -> Console:
 def add_global_flags(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     """Attach the clig.dev pragmatic-core global flags to *parser*."""
     g = parser.add_argument_group("global options")
-    g.add_argument("-v", "--verbose", action="count", default=0, help="more detail on stderr")
+    g.add_argument("-v", "--verbose", action="count", default=0, help="more detail on stderr; full traceback on error")
     g.add_argument("-q", "--quiet", action="store_true", help="only errors on stderr")
-    g.add_argument("--debug", action="store_true", help="developer output + full tracebacks")
     g.add_argument(
         "--color",
         action=argparse.BooleanOptionalAction,
@@ -124,7 +122,6 @@ def configure_from_args(args: argparse.Namespace) -> Console:
         verbosity=verbosity,
         color=color,
         no_input=getattr(args, "no_input", False),
-        debug=getattr(args, "debug", False),
     )
 
 

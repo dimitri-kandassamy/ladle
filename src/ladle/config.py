@@ -26,6 +26,8 @@ from pathlib import Path
 
 import yaml
 
+from . import ui
+
 # Tool/theme data bundled in the package (works in a checkout and in site-packages).
 PACKAGE_ROOT = Path(__file__).resolve().parent
 THEMES_DIR = PACKAGE_ROOT / "themes"
@@ -148,6 +150,7 @@ class ConfigError(Exception):
 
 def load_book_config(cli_value: str | None = None) -> BookConfig:
     path = resolve_book_path(cli_value)
+    ui.detail(f"book config: {rel(path)}")  # -v diagnostic: which book we resolved
     try:
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
