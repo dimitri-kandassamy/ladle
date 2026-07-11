@@ -54,6 +54,15 @@ def test_version_short_flag(capsys):
     assert cli.__version__ in capsys.readouterr().out
 
 
+def test_version_is_top_level_only(capsys):
+    # #6: --version/-V is a top-level action (like git/cargo/pip) — it prints
+    # before a command, but is not accepted after one.
+    assert cli.main(["--version", "build"]) == 0  # consumed at the top level
+    assert cli.__version__ in capsys.readouterr().out
+    assert cli.main(["build", "--version"]) == ui.USAGE  # unknown flag to `build`
+    assert "unrecognized arguments" in capsys.readouterr().err
+
+
 def test_unknown_command_returns_2(capsys):
     assert cli.main(["frobnicate"]) == 2
     assert "unknown command" in capsys.readouterr().err
