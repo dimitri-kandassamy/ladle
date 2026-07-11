@@ -52,13 +52,6 @@ def test_style_wraps_only_when_color_on():
 
 
 # ---- stream routing --------------------------------------------------------
-def test_data_goes_to_stdout(capsys):
-    ui.data("payload")
-    out = capsys.readouterr()
-    assert out.out == "payload\n"
-    assert out.err == ""
-
-
 def test_step_and_error_go_to_stderr(capsys):
     ui.configure(color=False)
     ui.step("working")

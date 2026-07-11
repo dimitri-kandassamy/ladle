@@ -5,10 +5,11 @@ output through here so streams, color, and verbosity stay consistent.
 
 The contract (clig.dev):
 
-* **stdout is the machine channel** — only a command's primary *data* (a data
-  command's table, or its ``--json``/``--plain`` output). Use :func:`data`.
-* **stderr carries everything else** — progress, status, warnings, errors. Use
-  :func:`step` / :func:`success` / :func:`warn` / :func:`error` / :func:`die`.
+* **stderr carries everything a command says** — progress, status, warnings,
+  errors. Use :func:`step` / :func:`success` / :func:`warn` / :func:`error` /
+  :func:`die`.
+* **stdout is reserved for machine output** — no command emits any today, so it
+  stays clean for piping (a future ``ingest``/``theme list`` would use it).
 
 Color is emitted only when the target stream is a TTY and ``NO_COLOR`` is unset,
 unless a ``--color``/``--no-color`` flag forces it (see :class:`Console`).
@@ -40,8 +41,6 @@ class Console:
     """Runtime output settings, configured once from the global flags."""
 
     verbosity: int = 0  # -q -> -1 (errors only), default 0, -v -> +1
-    json: bool = False
-    plain: bool = False
     color: bool | None = None  # None = auto (TTY + NO_COLOR); True/False = forced
     no_input: bool = False
     debug: bool = False  # show full tracebacks instead of a one-line error
@@ -68,8 +67,6 @@ def add_global_flags(parser: argparse.ArgumentParser) -> argparse.ArgumentParser
     g.add_argument("-v", "--verbose", action="count", default=0, help="more detail on stderr")
     g.add_argument("-q", "--quiet", action="store_true", help="only errors on stderr")
     g.add_argument("--debug", action="store_true", help="developer output + full tracebacks")
-    g.add_argument("--json", action="store_true", help="machine-readable JSON (data commands)")
-    g.add_argument("--plain", action="store_true", help="tab-separated output (data commands)")
     g.add_argument(
         "--no-color", dest="no_color", action="store_true", help="disable color (also honors NO_COLOR / non-TTY)"
     )
@@ -122,8 +119,6 @@ def configure_from_args(args: argparse.Namespace) -> Console:
     color = False if getattr(args, "no_color", False) else None
     return configure(
         verbosity=verbosity,
-        json=getattr(args, "json", False),
-        plain=getattr(args, "plain", False),
         color=color,
         no_input=getattr(args, "no_input", False),
         debug=getattr(args, "debug", False),
@@ -149,11 +144,6 @@ def style(text: str, *styles: str, stream=sys.stderr) -> str:
 
 
 # ---- routing --------------------------------------------------------------
-def data(text: str = "") -> None:
-    """Primary machine output → **stdout** (the scripting channel)."""
-    print(text)
-
-
 def step(msg: str = "") -> None:
     """Progress/status → stderr. Suppressed under ``-q`` (verbosity < 0)."""
     if _console.verbosity >= 0:

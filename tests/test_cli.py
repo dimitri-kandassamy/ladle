@@ -127,7 +127,7 @@ def test_help_lists_every_registered_command(capsys):
 
 def test_subcommand_bad_flag_returns_2_not_raises(capsys):
     # A subcommand argparse error becomes a returned exit code, not a SystemExit.
-    assert cli.main(["list", "--bogus"]) == ui.USAGE
+    assert cli.main(["validate", "--bogus"]) == ui.USAGE
     assert "unrecognized arguments" in capsys.readouterr().err
 
 
