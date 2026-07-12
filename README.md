@@ -53,10 +53,13 @@ libraries; pandoc builds the EPUB; poppler powers the PDF checks and EPUB cover.
 | Java    | 17+        | optional — only to run `epubcheck` in `ladle validate` |
 
 Then confirm everything is wired up. `ladle doctor` reports anything missing
-with per-OS install hints to copy and run:
+with per-OS install hints — or let `ladle doctor --install` run the right
+package-manager commands for you (Homebrew/apt + `pip`). It prints the exact
+commands and asks before running anything:
 
 ```sh
-ladle doctor  # check the toolchain, report what's missing
+ladle doctor            # check the toolchain
+ladle doctor --install  # …and offer to install whatever's missing
 ```
 
 ## Usage

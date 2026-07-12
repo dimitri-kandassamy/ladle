@@ -3,23 +3,22 @@
 fails opaquely three steps in.
 
 Checks pandoc, poppler (pdfinfo/pdftoppm), WeasyPrint (and its system libs),
-core Python packages, and Java/epubcheck (optional). Reports what's missing and
-prints actionable, per-OS install instructions — you run them.
+core Python packages, and Java/epubcheck (optional). Prints actionable, per-OS
+install instructions for anything missing.
+
+With ``--install`` it offers to install what's missing for you: it prints the
+exact package-manager commands (Homebrew on macOS, apt on Debian/Ubuntu, plus
+``pip`` for Python packages) and asks before running them — or ``--yes`` to skip
+the prompt. Nothing runs without your confirmation.
 
 Exit code is non-zero only if a *required* dependency is missing; Java/epubcheck
 are warnings (validate.py already falls back to a structural check without them).
 
-Run: ladle doctor
+Run: ladle doctor [--install [--yes]]
 """
-
-# Hidden capability: `--install` / `--yes` run the package-manager commands for
-# you (confirm-first on a TTY). Deliberately undocumented and kept out of the
-# module docstring, so it stays out of `ladle doctor --help` — the copy-paste
-# hints are the supported path.
 
 from __future__ import annotations
 
-import argparse
 import importlib
 import platform
 import shutil
@@ -189,6 +188,8 @@ def install_hints() -> None:
         ui.step("    pip install -r requirements.txt")
     else:
         ui.step(f"  {system}: see README.md's Requirements section for what to install.")
+    ui.step("")
+    ui.step("  Or let ladle run these for you:  ladle doctor --install")
 
 
 # ---- auto-install ---------------------------------------------------------
@@ -287,11 +288,9 @@ def run_checks() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = ui.command_parser("ladle doctor", __doc__, "ladle doctor")
-    # Hidden capability: run the install commands for you. Report-only is the
-    # documented path, so these stay functional but out of --help.
-    parser.add_argument("--install", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("--yes", "-y", action="store_true", help=argparse.SUPPRESS)
+    parser = ui.command_parser("ladle doctor", __doc__, "ladle doctor", "ladle doctor --install")
+    parser.add_argument("--install", action="store_true", help="offer to install anything missing (brew/apt + pip)")
+    parser.add_argument("--yes", "-y", action="store_true", help="with --install, don't prompt before running")
     args = parser.parse_args(argv)
 
     run_checks()
