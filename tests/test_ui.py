@@ -25,6 +25,7 @@ class _Stream:
 # ---- color gating ----------------------------------------------------------
 def test_color_auto_follows_tty(monkeypatch):
     monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setenv("TERM", "xterm-256color")
     ui.configure(color=None)
     assert ui.use_color(_Stream(tty=True)) is True
     assert ui.use_color(_Stream(tty=False)) is False
@@ -36,9 +37,17 @@ def test_no_color_env_disables_even_on_tty(monkeypatch):
     assert ui.use_color(_Stream(tty=True)) is False
 
 
+def test_term_dumb_disables_even_on_tty(monkeypatch):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.setenv("TERM", "dumb")
+    ui.configure(color=None)
+    assert ui.use_color(_Stream(tty=True)) is False
+
+
 def test_explicit_color_flag_overrides_tty_and_env(monkeypatch):
     monkeypatch.setenv("NO_COLOR", "1")
-    ui.configure(color=True)
+    monkeypatch.setenv("TERM", "dumb")
+    ui.configure(color=True)  # forced-on beats NO_COLOR and TERM=dumb
     assert ui.use_color(_Stream(tty=False)) is True
     ui.configure(color=False)
     assert ui.use_color(_Stream(tty=True)) is False

@@ -11,8 +11,9 @@ The contract (clig.dev):
 * **stdout is reserved for machine output** — no command emits any today, so it
   stays clean for piping (a future ``ingest``/``theme list`` would use it).
 
-Color is emitted only when the target stream is a TTY and ``NO_COLOR`` is unset,
-unless a ``--color``/``--no-color`` flag forces it (see :class:`Console`).
+Color is emitted only when the target stream is a TTY, ``NO_COLOR`` is unset, and
+``TERM`` isn't ``dumb`` — unless a ``--color``/``--no-color`` flag forces it (see
+:class:`Console`).
 """
 
 from __future__ import annotations
@@ -127,10 +128,18 @@ def configure_from_args(args: argparse.Namespace) -> Console:
 
 # ---- color ----------------------------------------------------------------
 def use_color(stream=sys.stderr) -> bool:
-    """Whether to emit ANSI on *stream* given the flags/env/TTY state."""
+    """Whether to emit ANSI on *stream* given the flags/env/TTY state.
+
+    Precedence (matches supports-color/Rich/termcolor): a forced ``--color`` /
+    ``--no-color`` wins; then ``NO_COLOR``; then ``TERM=dumb`` (a terminfo entry
+    with no color capability — e.g. Emacs' ``M-x shell`` runs on a real TTY but
+    exports it); finally the TTY test.
+    """
     if _console.color is not None:
         return _console.color
     if os.environ.get("NO_COLOR") is not None:
+        return False
+    if os.environ.get("TERM") == "dumb":
         return False
     return bool(getattr(stream, "isatty", lambda: False)())
 
