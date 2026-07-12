@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 # the plain `ladle` name is already registered on PyPI, so we publish as
 # `ladlebook` (users run `pip install ladlebook`, then the `ladle` command).
 name = "ladlebook"
-version = "0.1.0"
+version = "0.2.0"
 description = "Build art-directed cookbooks (PDF + EPUB) from markdown recipes."
 readme = "README.md"
 requires-python = ">=3.11"
