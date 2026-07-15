@@ -108,12 +108,13 @@ def test_missing_book_returns_exit_3(capsys):
 
 def test_missing_title_returns_clean_error_not_traceback(capsys, tmp_path):
     # QA #1: a book.yaml missing `title` fails with a one-line message, no KeyError.
+    # B1: schema validation now catches this at load, before the build starts.
     book = tmp_path / "book.yaml"
     book.write_text("language: en\n", encoding="utf-8")
     rc = cli.main(["build", "--book", str(book)])
     assert rc == ui.ERROR
     err = capsys.readouterr().err
-    assert "missing required field: title" in err
+    assert "'title' is a required property" in err
     assert "Traceback" not in err
 
 
