@@ -20,10 +20,12 @@ Which ``book.yaml`` a command operates on is resolved as:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
 
+import jsonschema
 import yaml
 
 from . import ui
@@ -32,6 +34,7 @@ from . import ui
 PACKAGE_ROOT = Path(__file__).resolve().parent
 THEMES_DIR = PACKAGE_ROOT / "themes"
 SCHEMA_PATH = PACKAGE_ROOT / "schema" / "recipe.schema.json"
+BOOK_SCHEMA_PATH = PACKAGE_ROOT / "schema" / "book.schema.json"
 
 
 def build_dir() -> Path:
@@ -148,6 +151,24 @@ class ConfigError(Exception):
     into a clean ``error: …`` instead of a traceback."""
 
 
+def validate_book_data(data: dict, path: Path) -> None:
+    """Check `data` against `book.schema.json`, raising a friendly `ConfigError`.
+
+    Turns the first schema violation into a one-line ``book.yaml: <loc>: <why>``
+    message — so a typo'd key (`recipes` for `recipes_dir`), a wrong type
+    (`sections` as a string), or a missing `title` fails at load with a clear
+    hint instead of a confusing failure deeper in the build.
+    """
+    schema = json.loads(BOOK_SCHEMA_PATH.read_text(encoding="utf-8"))
+    validator = jsonschema.validators.validator_for(schema)(schema)
+    errors = sorted(validator.iter_errors(data), key=lambda e: list(e.path))
+    if errors:
+        e = errors[0]
+        loc = "/".join(map(str, e.path))
+        where = f"{loc}: " if loc else ""
+        raise ConfigError(f"{rel(path)}: {where}{e.message}")
+
+
 def load_book_config(cli_value: str | None = None) -> BookConfig:
     path = resolve_book_path(cli_value)
     ui.detail(f"book config: {rel(path)}")  # -v diagnostic: which book we resolved
@@ -164,4 +185,5 @@ def load_book_config(cli_value: str | None = None) -> BookConfig:
         raise ConfigError(f"invalid YAML in {rel(path)}: {detail}{where}") from None
     if not isinstance(data, dict):
         raise ConfigError(f"{rel(path)} must be a mapping of book settings, not a {type(data).__name__}")
+    validate_book_data(data, path)
     return BookConfig(path=path, data=data)

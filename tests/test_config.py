@@ -115,10 +115,13 @@ def test_load_book_config_reads_yaml(tmp_path):
     assert cfg.root == tmp_path
 
 
-def test_load_book_config_empty_file_yields_empty_data(tmp_path):
+def test_load_book_config_empty_file_raises_missing_title(tmp_path):
+    # B1: an empty book.yaml is a valid mapping but has no `title` — the schema
+    # now fails it at load with a clear message, not deeper in the build.
     book = tmp_path / "book.yaml"
     book.write_text("", encoding="utf-8")
-    assert config.load_book_config(str(book)).data == {}
+    with pytest.raises(config.ConfigError, match="'title' is a required property"):
+        config.load_book_config(str(book))
 
 
 def test_load_book_config_missing_file_raises_no_book_error(tmp_path):
@@ -139,4 +142,67 @@ def test_load_book_config_non_mapping_raises_config_error(tmp_path):
     book = tmp_path / "book.yaml"
     book.write_text("- just\n- a\n- list\n", encoding="utf-8")
     with pytest.raises(config.ConfigError, match="must be a mapping"):
+        config.load_book_config(str(book))
+
+
+# ---- B1: book.yaml schema validation ---------------------------------------
+
+
+def test_load_book_config_unknown_key_raises_config_error(tmp_path):
+    # A typo'd key (`recipes` for `recipes_dir`) is caught, not silently ignored.
+    book = tmp_path / "book.yaml"
+    book.write_text("title: Demo\nrecipes: recipes\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="recipes"):
+        config.load_book_config(str(book))
+
+
+def test_load_book_config_wrong_type_raises_config_error(tmp_path):
+    # `sections` must be a list; a scalar is rejected with the field in the message.
+    book = tmp_path / "book.yaml"
+    book.write_text("title: Demo\nsections: Savory\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="sections: .*not of type 'array'"):
+        config.load_book_config(str(book))
+
+
+def test_load_book_config_missing_title_raises_config_error(tmp_path):
+    # A well-formed mapping that omits the one required field.
+    book = tmp_path / "book.yaml"
+    book.write_text("subtitle: no title here\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="'title' is a required property"):
+        config.load_book_config(str(book))
+
+
+def test_load_book_config_accepts_a_full_valid_book(tmp_path):
+    # Every documented key together validates cleanly (guards against an
+    # over-strict schema rejecting real books like the shipped example).
+    book = tmp_path / "book.yaml"
+    book.write_text(
+        "title: Demo\n"
+        "subtitle: A sample\n"
+        'volume: "1.0"\n'
+        "language: en\n"
+        "producer: me\n"
+        "rights: © 2026\n"
+        "content_license: CC-BY-SA-4.0\n"
+        "repo_url: https://example.com\n"
+        "theme: default\n"
+        "recipes_dir: recipes\n"
+        "illustrations_dir: assets/illustrations/recipes\n"
+        "introduction: content/introduction.md\n"
+        "sections: [Savory, Desserts, Beverages]\n"
+        "order: []\n"
+        'palette: {navy: "#16203a"}\n'
+        "fonts: {display: Playfair Display}\n"
+        "labels: {ingredients: Ingredientes, section_names: {Savory: Salgados}}\n",
+        encoding="utf-8",
+    )
+    cfg = config.load_book_config(str(book))
+    assert cfg.data["title"] == "Demo"
+
+
+def test_load_book_config_unknown_label_key_raises_config_error(tmp_path):
+    # The strictness extends into the labels block (typo'd sub-key is caught).
+    book = tmp_path / "book.yaml"
+    book.write_text("title: Demo\nlabels:\n  ingrediants: X\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="labels: .*ingrediants"):
         config.load_book_config(str(book))

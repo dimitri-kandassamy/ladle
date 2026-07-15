@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dimitri-kandassamy/ladle/schema/book.schema.json",
+  "title": "Book configuration",
+  "description": "Contract for a book.yaml: the single file that drives a ladle build.",
+  "type": "object",
+  "required": ["title"],
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Cover title. The only required field."
+    },
+    "subtitle": { "type": "string", "description": "Optional tagline shown on the cover." },
+    "volume": {
+      "type": ["string", "number"],
+      "description": "Optional edition/volume label (e.g. '1.0'). String or number."
+    },
+    "language": {
+      "type": "string",
+      "minLength": 1,
+      "default": "en",
+      "description": "BCP-47 language tag; sets the EPUB language and PDF lang."
+    },
+    "producer": { "type": "string", "description": "Who produced the book (colophon)." },
+    "rights": { "type": "string", "description": "Copyright/rights line shown in the footer + EPUB metadata." },
+    "content_license": {
+      "type": "string",
+      "default": "CC-BY-SA-4.0",
+      "description": "Default per-recipe content license; recipes inherit it when they omit `license`."
+    },
+    "repo_url": { "type": "string", "description": "Project URL for the 'Contribute a recipe' link." },
+    "author": { "type": "string", "description": "Optional author string for EPUB metadata (defaults to '<title> contributors')." },
+    "theme": {
+      "type": "string",
+      "minLength": 1,
+      "default": "default",
+      "description": "A bundled theme name (e.g. 'default') or a path to a book-local theme directory."
+    },
+    "introduction": {
+      "type": "string",
+      "minLength": 1,
+      "default": "content/introduction.md",
+      "description": "Path (relative to book.yaml) to the front-matter introduction page."
+    },
+    "recipes_dir": {
+      "type": "string",
+      "minLength": 1,
+      "default": "recipes",
+      "description": "Path (relative to book.yaml) to the recipe markdown files."
+    },
+    "illustrations_dir": {
+      "type": "string",
+      "minLength": 1,
+      "default": "assets/illustrations/recipes",
+      "description": "Path (relative to book.yaml) to per-recipe illustrations."
+    },
+    "sections": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Contents order; recipes group by their `category` front matter and appear in this order."
+    },
+    "order": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "default": [],
+      "description": "Explicit recipe order by slug; slugs not listed sort alphabetically within their section."
+    },
+    "palette": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Design-token colours overriding the theme's palette (name -> hex)."
+    },
+    "fonts": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Font-family overrides for the theme (role -> family name)."
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional chrome-string overrides for a non-English edition; any key omitted falls back to the English default.",
+      "properties": {
+        "ingredients": { "type": "string" },
+        "directions": { "type": "string" },
+        "notes": { "type": "string" },
+        "yields": { "type": "string" },
+        "recipe_by": { "type": "string" },
+        "recipe_from": { "type": "string" },
+        "contents": { "type": "string" },
+        "from": { "type": "string" },
+        "volume": { "type": "string" },
+        "produced_by": { "type": "string" },
+        "section_names": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Per-section display names (category -> translated name)."
+        }
+      }
+    }
+  }
+}
