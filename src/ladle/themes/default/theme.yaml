@@ -10,7 +10,13 @@
 # See docs/THEMING.md to author your own theme.
 
 name: default
+title: Default
 description: Didone display (Playfair) + Clarendon slab body (Bitter) on cream paper.
+version: "1.0.0"          # theme version (semver), independent of the ladle core
+license: Apache-2.0       # license for this theme's design assets (fonts carry their own, below)
+author:
+  name: Dimitri Kandassamy
+tags: [editorial, serif, classic, cream, warm]
 
 # Default design tokens (book.yaml overrides these per key).
 palette:
@@ -32,3 +38,8 @@ font_faces:
   - { family: "Playfair Display", file: "PlayfairDisplay-Italic.ttf", style: italic }
   - { family: "Bitter", file: "Bitter.ttf", style: normal }
   - { family: "Bitter", file: "Bitter-Italic.ttf", style: italic }
+
+# License provenance for the embedded fonts (see the OFL-*.txt files alongside them).
+fonts_meta:
+  - { family: "Playfair Display", license: "OFL-1.1", source: "https://fonts.google.com/specimen/Playfair+Display" }
+  - { family: "Bitter", license: "OFL-1.1", source: "https://fonts.google.com/specimen/Bitter" }

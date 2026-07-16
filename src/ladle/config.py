@@ -35,6 +35,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parent
 THEMES_DIR = PACKAGE_ROOT / "themes"
 SCHEMA_PATH = PACKAGE_ROOT / "schema" / "recipe.schema.json"
 BOOK_SCHEMA_PATH = PACKAGE_ROOT / "schema" / "book.schema.json"
+THEME_SCHEMA_PATH = PACKAGE_ROOT / "schema" / "theme.schema.json"
 
 
 def build_dir() -> Path:
@@ -61,6 +62,17 @@ def rel(path: Path) -> str:
         return str(path)
 
 
+class NoBookError(FileNotFoundError):
+    """Raised when the resolved book.yaml does not exist (mapped to exit code 3)."""
+
+
+class ConfigError(Exception):
+    """A config file (book.yaml or a theme's theme.yaml) that exists but is unusable
+    (bad YAML, wrong shape, or a missing required field). Carries a one-line,
+    user-facing message; dispatch turns it into a clean ``error: …`` instead of a
+    traceback."""
+
+
 # Shape a theme.yaml is normalized to, so callers can rely on the keys existing.
 _THEME_DEFAULTS: dict = {"name": "", "palette": {}, "fonts": {}, "font_faces": []}
 
@@ -75,6 +87,9 @@ def load_theme(theme_dir: Path) -> dict:
     data = {}
     if manifest.exists():
         data = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
+        if not isinstance(data, dict):
+            raise ConfigError(f"{rel(manifest)} must be a mapping of theme settings, not a {type(data).__name__}")
+        validate_theme_data(data, manifest)
     return {**_THEME_DEFAULTS, **data}
 
 
@@ -141,25 +156,14 @@ def resolve_book_path(cli_value: str | None = None) -> Path:
     return Path(value).resolve()
 
 
-class NoBookError(FileNotFoundError):
-    """Raised when the resolved book.yaml does not exist (mapped to exit code 3)."""
+def _validate_against_schema(data: dict, path: Path, schema_path: Path) -> None:
+    """Validate `data` against the JSON Schema at `schema_path`.
 
-
-class ConfigError(Exception):
-    """A book.yaml that exists but is unusable (bad YAML, wrong shape, or missing
-    a required field). Carries a one-line, user-facing message; dispatch turns it
-    into a clean ``error: …`` instead of a traceback."""
-
-
-def validate_book_data(data: dict, path: Path) -> None:
-    """Check `data` against `book.schema.json`, raising a friendly `ConfigError`.
-
-    Turns the first schema violation into a one-line ``book.yaml: <loc>: <why>``
-    message — so a typo'd key (`recipes` for `recipes_dir`), a wrong type
-    (`sections` as a string), or a missing `title` fails at load with a clear
-    hint instead of a confusing failure deeper in the build.
+    Turns the first violation into a one-line ``<file>: <loc>: <why>`` `ConfigError`
+    (a typo'd key, a wrong type, a missing required field), so config problems fail
+    at load with a clear message instead of deeper in the build.
     """
-    schema = json.loads(BOOK_SCHEMA_PATH.read_text(encoding="utf-8"))
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
     validator = jsonschema.validators.validator_for(schema)(schema)
     errors = sorted(validator.iter_errors(data), key=lambda e: list(e.path))
     if errors:
@@ -167,6 +171,24 @@ def validate_book_data(data: dict, path: Path) -> None:
         loc = "/".join(map(str, e.path))
         where = f"{loc}: " if loc else ""
         raise ConfigError(f"{rel(path)}: {where}{e.message}")
+
+
+def validate_book_data(data: dict, path: Path) -> None:
+    """Check a book.yaml `data` mapping against `book.schema.json` (strict surface).
+
+    A typo'd key (`recipes` for `recipes_dir`), a wrong type (`sections` as a
+    string), or a missing `title` becomes a friendly `ConfigError` at load.
+    """
+    _validate_against_schema(data, path, BOOK_SCHEMA_PATH)
+
+
+def validate_theme_data(data: dict, path: Path) -> None:
+    """Check a theme.yaml `data` mapping against `theme.schema.json` (strict surface).
+
+    A typo'd key or a malformed `font_faces` entry becomes a friendly `ConfigError`
+    at load, so a broken theme fails clearly instead of silently dropping tokens.
+    """
+    _validate_against_schema(data, path, THEME_SCHEMA_PATH)
 
 
 def load_book_config(cli_value: str | None = None) -> BookConfig:
