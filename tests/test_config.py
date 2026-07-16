@@ -33,6 +33,73 @@ def test_load_theme_merges_manifest_over_defaults(tmp_path):
     assert theme["font_faces"] == []
 
 
+# ---- theme.yaml schema validation ------------------------------------------
+
+
+def test_load_theme_unknown_key_raises_config_error(tmp_path):
+    # A typo'd key (`pallete` for `palette`) is caught, not silently dropped.
+    (tmp_path / "theme.yaml").write_text("name: midnight\npallete:\n  navy: '#000'\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="pallete"):
+        config.load_theme(tmp_path)
+
+
+def test_load_theme_missing_name_raises_config_error(tmp_path):
+    # `name` is the one required field: a manifest without it fails at load.
+    (tmp_path / "theme.yaml").write_text("description: no name here\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="'name' is a required property"):
+        config.load_theme(tmp_path)
+
+
+def test_load_theme_malformed_font_face_raises_config_error(tmp_path):
+    # A font_faces entry must carry a `file`; omitting it is rejected with the location.
+    (tmp_path / "theme.yaml").write_text("name: midnight\nfont_faces:\n  - {family: Bitter}\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="font_faces/0: .*'file' is a required property"):
+        config.load_theme(tmp_path)
+
+
+def test_load_theme_unknown_nested_key_raises_config_error(tmp_path):
+    # Strictness reaches into nested objects: a typo'd sub-key of `author` is caught.
+    (tmp_path / "theme.yaml").write_text("name: midnight\nauthor: {name: A. Cook, handel: '@cook'}\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="author: .*handel"):
+        config.load_theme(tmp_path)
+
+
+def test_load_theme_non_mapping_manifest_raises_config_error(tmp_path):
+    (tmp_path / "theme.yaml").write_text("- just\n- a\n- list\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="must be a mapping"):
+        config.load_theme(tmp_path)
+
+
+def test_load_theme_accepts_a_full_valid_manifest(tmp_path):
+    # Every documented key together validates cleanly (guards against an
+    # over-strict schema rejecting the shipped default theme).
+    (tmp_path / "theme.yaml").write_text(
+        "name: trattoria\n"
+        "title: Trattoria\n"
+        "description: Warm rustic serif.\n"
+        'version: "1.2.0"\n'
+        'ladle: ">=0.3,<1.0"\n'
+        "author: {name: A. Cook, handle: '@cook', url: https://example.com}\n"
+        "license: CC-BY-4.0\n"
+        "tags: [warm, rustic, serif]\n"
+        "preview: previews/cover.png\n"
+        'palette: {navy: "#16203a"}\n'
+        "fonts: {display: Bitter}\n"
+        "font_faces: [{family: Bitter, file: Bitter.ttf, style: normal}]\n"
+        "fonts_meta: [{family: Bitter, license: OFL-1.1, source: https://example.com}]\n",
+        encoding="utf-8",
+    )
+    theme = config.load_theme(tmp_path)
+    assert theme["name"] == "trattoria"
+    assert theme["tags"] == ["warm", "rustic", "serif"]
+
+
+def test_default_theme_manifest_validates():
+    # The shipped default theme must satisfy its own schema.
+    theme = config.load_theme(config.THEMES_DIR / "default")
+    assert theme["name"] == "default"
+
+
 def _book(data: dict, path: str = "/tmp/demo/book.yaml") -> BookConfig:
     return BookConfig(path=Path(path), data=data)
 

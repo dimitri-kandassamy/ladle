@@ -39,9 +39,28 @@ Two structural rules the build depends on:
 
 ## `theme.yaml`
 
+The manifest is validated on load against `schema/theme.schema.json`
+(`additionalProperties: false`), so a typo'd key or a malformed `font_faces`
+entry fails with a clear error instead of being silently dropped. **`name` is
+the only required field;** everything else is optional.
+
+The metadata fields below (`version`, `ladle`, `author`, `license`, `tags`,
+`preview`, `fonts_meta`) are validated for shape but **not yet consumed** — they
+declare a theme's provenance for forthcoming tooling (a gallery, compatibility
+checks, a linter). In particular `ladle:` does *not* yet gate on core version.
+
 ```yaml
-name: mytheme
+name: mytheme                   # required — the theme's identifier
+title: My Theme                 # optional — display name for listings
 description: One-line description of the look.
+
+# Optional metadata (portable, ownable bundle — used by tooling/galleries):
+version: "1.0.0"                # theme version (semver), independent of ladle core
+ladle: ">=0.2,<1.0"             # compatible ladle core version range
+author: { name: "You", handle: "@you", url: "https://…" }
+license: CC-BY-4.0              # license for the theme's design assets
+tags: [warm, rustic, serif]     # mood/style tags for gallery filtering
+preview: previews/cover.png     # generated preview image (path in this theme dir)
 
 # Default design tokens. A book.yaml overrides any key, so these are the
 # fallback a minimal book (just a title) renders with.
@@ -63,6 +82,11 @@ font_faces:
   - { family: "Playfair Display", file: "PlayfairDisplay-Italic.ttf", style: italic }
   - { family: "Bitter", file: "Bitter.ttf", style: normal }
   - { family: "Bitter", file: "Bitter-Italic.ttf", style: italic }
+
+# Optional license provenance per embedded font family.
+fonts_meta:
+  - { family: "Playfair Display", license: "OFL-1.1", source: "https://fonts.google.com/specimen/Playfair+Display" }
+  - { family: "Bitter", license: "OFL-1.1", source: "https://fonts.google.com/specimen/Bitter" }
 ```
 
 ### Token precedence
@@ -102,7 +126,7 @@ tooling (the reference implementation lives in the project's git history at
 
 ## Checklist for a new theme
 
-- [ ] `theme.yaml` with `palette`, `fonts`, and a `font_faces` entry per file
+- [ ] `theme.yaml` with a `name`, `palette`, `fonts`, and a `font_faces` entry per file
 - [ ] `fonts/` contains every file referenced in `font_faces` (+ their licenses)
 - [ ] `templates/print.html.j2` and `templates/epub.html.j2`
 - [ ] `css/common.css`, `css/print.css`, `css/epub.css`

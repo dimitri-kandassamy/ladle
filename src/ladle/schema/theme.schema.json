@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dimitri-kandassamy/ladle/schema/theme.schema.json",
+  "title": "Theme manifest",
+  "description": "Contract for a theme.yaml: the manifest that makes a theme a portable, ownable design bundle. Validated on load so a typo'd key fails clearly instead of being silently ignored.",
+  "type": "object",
+  "required": ["name"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Theme identifier (the slug a book selects with `theme: <name>`). The only required field."
+    },
+    "title": { "type": "string", "description": "Human-facing display name for galleries/listings (defaults to `name`)." },
+    "description": { "type": "string", "description": "One-line description of the theme's look." },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Theme version (semver recommended), independent of the ladle core version."
+    },
+    "ladle": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Compatible ladle core version range (e.g. '>=0.3,<1.0')."
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Theme author credit.",
+      "properties": {
+        "name": { "type": "string" },
+        "handle": { "type": "string" },
+        "url": { "type": "string" }
+      }
+    },
+    "license": {
+      "type": "string",
+      "description": "License for the theme's design assets (CSS/templates/patterns), distinct from any embedded font licenses."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Mood/style/use-case tags for gallery filtering (e.g. [warm, rustic, serif])."
+    },
+    "preview": {
+      "type": "string",
+      "description": "Path (relative to this theme dir) to a generated preview image used by the gallery."
+    },
+    "palette": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Default design-token colours (name -> hex); a book.yaml overrides any key."
+    },
+    "fonts": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Default font-family roles (role -> family name); a book.yaml overrides any key."
+    },
+    "font_faces": {
+      "type": "array",
+      "description": "Font files embedded in the PDF (@font-face) and EPUB.",
+      "items": {
+        "type": "object",
+        "required": ["family", "file"],
+        "additionalProperties": false,
+        "properties": {
+          "family": { "type": "string", "minLength": 1, "description": "CSS font-family name this file provides." },
+          "file": { "type": "string", "minLength": 1, "description": "Font file under this theme's fonts/ directory." },
+          "style": {
+            "type": "string",
+            "enum": ["normal", "italic"],
+            "default": "normal",
+            "description": "Font style this face covers (default: normal)."
+          }
+        }
+      }
+    },
+    "fonts_meta": {
+      "type": "array",
+      "description": "License provenance per embedded font family (name/license/source).",
+      "items": {
+        "type": "object",
+        "required": ["family", "license"],
+        "additionalProperties": false,
+        "properties": {
+          "family": { "type": "string", "minLength": 1, "description": "Font family this entry documents." },
+          "license": { "type": "string", "minLength": 1, "description": "Font license (e.g. 'OFL-1.1')." },
+          "source": { "type": "string", "description": "Where the font was obtained (URL or foundry)." }
+        }
+      }
+    }
+  }
+}
