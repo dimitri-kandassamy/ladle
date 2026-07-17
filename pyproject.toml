@@ -74,7 +74,7 @@ addopts = "--import-mode=importlib"
 [tool.ruff]
 # Must match the pinned `dev` extra above. Any other ruff (e.g. an editor's
 # bundled binary) errors out instead of silently reformatting to a different style.
-required-version = "==0.15.20"
+required-version = "==0.15.21"
 target-version = "py311"
 line-length = 120
 extend-exclude = ["build", "dist", ".venv"]
