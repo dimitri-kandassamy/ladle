@@ -67,10 +67,14 @@ Run the CLI directly from a checkout: `PYTHONPATH=src python3 -m ladle <cmd>`.
   `publish-pypi` job (`.github/workflows/build.yml`) fails. Creating the tag —
   `git push` a tag, or `gh release create` — triggers the OIDC PyPI publish, which
   is **irreversible** (PyPI versions can't be re-uploaded).
-- **`README.md` and `DESIGN.md` are tracked** — doc edits to those belong in the
-  PR (other design docs may be local-only and untracked).
+- **Tracked docs** — `README.md`, `CLAUDE.md`, `DESIGN.md`, `PLAN.md`,
+  `CHANGELOG.md`, `docs/THEMING.md`: edits to these belong in the PR. Product
+  scope/roadmap/decisions live in `PLAN.md`; the old local planning docs
+  (SPEC/VISION/decisions/tasks/*) were superseded by it and archived under
+  `.plan-archive/` (git-ignored).
 
 ## See also
 
+- `PLAN.md` — product scope, roadmap, and locked decisions (start here for _why_ / _what's next_).
 - `DESIGN.md` — architecture and the build stages in depth.
 - `README.md` — user-facing install/usage.
