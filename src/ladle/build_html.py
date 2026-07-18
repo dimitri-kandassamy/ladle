@@ -16,7 +16,9 @@ import re
 from pathlib import Path
 
 import yaml
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import FileSystemLoader
+from jinja2.exceptions import SecurityError
+from jinja2.sandbox import SandboxedEnvironment
 from markupsafe import Markup
 
 from . import config, ui
@@ -287,6 +289,33 @@ def warn_schema_issues(recipes_dir: Path) -> None:
         ui.warn(f"{r['file']}{loc} {r['message']}")
 
 
+def make_env(templates_dir: Path) -> SandboxedEnvironment:
+    """Jinja environment for theme templates.
+
+    Sandboxed on purpose: a theme is untrusted *data*, never code. Community
+    themes ship executable Jinja, so rendering runs in a `SandboxedEnvironment`
+    that blocks private-attribute access, imports, and unsafe callables. The
+    bundled default theme stays well within these limits.
+    """
+    return SandboxedEnvironment(
+        loader=FileSystemLoader(str(templates_dir)),
+        autoescape=True,
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+
+
+def render_template(env: SandboxedEnvironment, name: str, **context: object) -> str:
+    """Render a theme template, turning a sandbox trip into a friendly error."""
+    try:
+        return env.get_template(name).render(**context)
+    except SecurityError as e:
+        raise config.ConfigError(
+            f"theme template {name} was blocked by the sandbox: {e}. Themes may not "
+            "access private attributes, imports, or unsafe callables."
+        ) from e
+
+
 def render(book_path: str | None = None) -> int:
     """Render build/cookbook.html (print) and build/epub.html (semantic)."""
     book_cfg = config.load_book_config(book_path)
@@ -313,12 +342,7 @@ def render(book_path: str | None = None) -> int:
     book["title_article"], book["title_rest"] = split_title_article(book["title"])
     book["labels"] = merged_labels(book)
 
-    env = Environment(
-        loader=FileSystemLoader(str(templates_dir)),
-        autoescape=True,
-        trim_blocks=True,
-        lstrip_blocks=True,
-    )
+    env = make_env(templates_dir)
     build.mkdir(parents=True, exist_ok=True)
     recipe_paths = sorted(book_cfg.recipes_dir.glob("*.md"))
 
@@ -332,7 +356,9 @@ def render(book_path: str | None = None) -> int:
         [load_recipe(p, absolute_assets=True, book_root=book_root) for p in recipe_paths], book
     )
     print_recipes = [r for r in print_recipes if not r["draft"]]
-    print_html = env.get_template("print.html.j2").render(
+    print_html = render_template(
+        env,
+        "print.html.j2",
         book=book,
         intro=load_intro(book, absolute_assets=True, book_root=book_root),
         recipes=print_recipes,
@@ -346,7 +372,9 @@ def render(book_path: str | None = None) -> int:
         [load_recipe(p, absolute_assets=False, book_root=book_root) for p in recipe_paths], book
     )
     epub_recipes = [r for r in epub_recipes if not r["draft"]]
-    epub_html = env.get_template("epub.html.j2").render(
+    epub_html = render_template(
+        env,
+        "epub.html.j2",
         book=book,
         intro=load_intro(book, absolute_assets=False, book_root=book_root),
         recipes=epub_recipes,

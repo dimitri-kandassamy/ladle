@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
+from jinja2.exceptions import SecurityError
+
 from ladle import build_html as bh
+from ladle import config
 
 
 # ---- inline markdown -------------------------------------------------------
@@ -166,3 +172,28 @@ def test_warn_schema_issues_silent_on_empty_dir(tmp_path, capsys):
     # 0-recipe books are valid — no synthetic "no recipes found" warning on build.
     bh.warn_schema_issues(tmp_path)
     assert capsys.readouterr().err == ""
+
+
+# ---- theme template sandbox (untrusted themes are data, not code) ----------
+def test_make_env_blocks_private_attribute_access():
+    # A theme reaching for dunder internals is a sandbox escape attempt.
+    env = bh.make_env(Path("."))
+    with pytest.raises(SecurityError):
+        env.from_string("{{ ().__class__.__bases__ }}").render()
+
+
+def test_make_env_allows_ordinary_theme_expressions():
+    # The idioms the bundled templates rely on (dict.get, |length, |upper).
+    env = bh.make_env(Path("."))
+    out = env.from_string("{{ d.get('k', 'x')|upper }}-{{ items|length }}").render(d={"k": "hi"}, items=[1, 2, 3])
+    assert out == "HI-3"
+
+
+def test_render_template_converts_security_error_to_config_error(tmp_path):
+    # A blocked template surfaces as a friendly ConfigError, not a raw traceback.
+    (tmp_path / "evil.html.j2").write_text("{{ ().__class__.__bases__ }}", encoding="utf-8")
+    env = bh.make_env(tmp_path)
+    with pytest.raises(config.ConfigError) as excinfo:
+        bh.render_template(env, "evil.html.j2")
+    assert "evil.html.j2" in str(excinfo.value)
+    assert "sandbox" in str(excinfo.value)
