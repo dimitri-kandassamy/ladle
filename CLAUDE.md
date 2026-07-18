@@ -17,7 +17,7 @@ command and the import package are both `ladle`.
 pip install -e '.[dev]'   # dev deps: pytest + ruff (pinned ==0.15.21)
 
 make test     # python3 -m pytest  (src/ layout; pytest finds `ladle` via pyproject pythonpath)
-make lint     # ruff check + ruff format --check, on src/ and tests/
+make lint     # ruff check + ruff format --check (src/ + tests/) + markdownlint on docs
 make format   # ruff format in place (the canonical style)
 make check    # lint + test — the fast CI gate
 
