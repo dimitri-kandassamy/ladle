@@ -20,6 +20,7 @@ from . import (
     make_epub,
     make_pdf,
     new_book,
+    theme,
     ui,
     validate,
 )
@@ -54,6 +55,7 @@ COMMANDS: dict[str, Command] = {
     "new": Command(new_book.main, "scaffold a new book in ./<name>/"),
     "build": Command(_build, "build PDF + EPUB (html -> pdf -> epub)", book=True),
     "validate": Command(validate.main, "schema + PDF structure + epubcheck + contact sheet", book=True),
+    "theme": Command(theme.main, "work with themes (theme lint: schema + sandbox + fonts)"),
     "doctor": Command(doctor.main, "check pandoc/poppler/WeasyPrint/Java installed"),
 }
 

@@ -111,6 +111,27 @@ cp -r "$(python3 -c 'import ladle,pathlib;print(pathlib.Path(ladle.__file__).par
 ladle build --book book.yaml && ladle validate --book book.yaml
 ```
 
+### Linting a theme
+
+You may build and use *any* theme at your own risk — themes install by path,
+with no gate. A theme shown in the **community gallery**, though, must lint
+clean:
+
+```sh
+ladle theme lint themes/mine   # or a bundled name: ladle theme lint default
+```
+
+`theme lint` runs three checks:
+
+- **manifest** — `theme.yaml` exists and validates against the theme schema;
+- **sandbox** — `print.html.j2`/`epub.html.j2` are present and load in the Jinja
+  sandbox (theme templates are rendered as untrusted data, never code);
+- **fonts** — every family in `font_faces` names a file that exists and has a
+  documented, redistribution-friendly license in `fonts_meta` (OFL, Apache,
+  UFL, MIT, …).
+
+It exits non-zero if any check fails, so it drops straight into CI.
+
 ### Paper textures
 
 The cream/navy paper grain and the cover/endpaper line-art are pre-baked raster
@@ -131,4 +152,6 @@ tooling (the reference implementation lives in the project's git history at
 - [ ] `templates/print.html.j2` and `templates/epub.html.j2`
 - [ ] `css/common.css`, `css/print.css`, `css/epub.css`
 - [ ] `illustrations/patterns/` with `cover.svg`/`endpaper.svg` and baked rasters
+- [ ] `fonts_meta` documents each family's license (required by `ladle theme lint`)
+- [ ] `ladle theme lint` passes (schema + sandbox + fonts)
 - [ ] `ladle build` + `ladle validate` pass against a test book

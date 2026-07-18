@@ -93,6 +93,20 @@ def load_theme(theme_dir: Path) -> dict:
     return {**_THEME_DEFAULTS, **data}
 
 
+def resolve_theme_dir(name_or_path: str, root: Path | None = None) -> Path:
+    """Resolve a theme name or path to its directory.
+
+    A bare name (``default``) resolves to a theme shipped in the package; a path
+    (containing a separator, e.g. ``themes/mine``) resolves relative to ``root``
+    — a book's directory for a book-selected theme, the cwd for a standalone
+    command like ``ladle theme lint``. Absolute paths are used as-is.
+    """
+    p = Path(name_or_path)
+    if len(p.parts) > 1 or p.is_absolute():
+        return p if p.is_absolute() else (root or Path.cwd()) / p
+    return THEMES_DIR / name_or_path
+
+
 def hex_to_rgb(value: str) -> tuple[int, int, int]:
     h = value.lstrip("#")
     return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
@@ -128,11 +142,7 @@ class BookConfig:
         package; a path (``theme: themes/mine``) resolves relative to the book,
         so a book can carry its own theme without touching the package.
         """
-        theme = self.data.get("theme", "default")
-        p = Path(theme)
-        if len(p.parts) > 1 or p.is_absolute():
-            return p if p.is_absolute() else (self.root / p)
-        return THEMES_DIR / theme
+        return resolve_theme_dir(self.data.get("theme", "default"), root=self.root)
 
     def theme_path(self, *parts: str) -> Path:
         return self.theme_dir.joinpath(*parts)

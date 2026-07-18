@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `ladle theme lint <theme>` — the featured-gallery gate: checks that a theme's
+  `theme.yaml` validates against the schema, that its templates load in the Jinja
+  sandbox, and that every embedded font family names a present file with a
+  documented, redistribution-friendly license. Exits non-zero on failure (CI-ready).
+
+### Changed
+
+- Theme templates now render in a `jinja2.sandbox.SandboxedEnvironment`, so an
+  untrusted community theme is treated as data, never code; a template that trips
+  the sandbox surfaces as a friendly error naming the file.
+
 ## [0.2.0] - 2026-07-12
 
 This release sharpens `ladle` around its one job — building a book. The CLI is
