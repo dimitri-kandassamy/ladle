@@ -38,9 +38,9 @@ Run the CLI directly from a checkout: `PYTHONPATH=src python3 -m ladle <cmd>`.
   token, matching git/cargo/pip), then dispatches to a command's `main(argv)`.
 - **Commands:** `new` (`new_book.py`), `build` (`cli._build` → `build_html.render`
   → `make_pdf.render` → `make_epub.render`), `validate` (`validate.py`), `theme`
-  (`theme.py` — a subcommand group; `theme lint` gates a gallery theme on schema
-  + template sandbox + font licenses), `doctor` (`doctor.py` — toolchain preflight;
-  `doctor --install` offers a confirm-first dependency install).
+  (`theme.py` — a subcommand group; `theme lint` gates a gallery theme on its
+  schema, template sandbox, and font licenses), `doctor` (`doctor.py` — toolchain
+  preflight; `doctor --install` offers a confirm-first dependency install).
 - **`config.py`** — path + book resolution. Two path roots: **package data**
   (`schema/`, `themes/`, resolves against the installed package) vs **user book
   content** (`recipes`/illustrations/intro, relative to the book.yaml's dir via
