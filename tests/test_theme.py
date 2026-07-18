@@ -1,8 +1,11 @@
-"""Unit tests for `ladle theme lint` (theme.py)."""
+"""Unit tests for `ladle theme lint` and `ladle theme preview` (theme.py)."""
 
 from __future__ import annotations
 
 from pathlib import Path
+
+import pytest
+import yaml
 
 from ladle import config, theme
 
@@ -132,3 +135,43 @@ def test_main_no_args_prints_group_help():
 
 def test_lint_missing_theme_dir_errors():
     assert theme._lint_main(["/no/such/theme/dir"]) == 1  # ui.ERROR
+
+
+# ---- the canonical sample book must stay buildable --------------------------
+def test_sample_book_is_a_valid_book_config():
+    # `theme preview` renders this; if it stops validating, previews break.
+    book = config.load_book_config(str(config.SAMPLE_BOOK))
+    assert book.data["title"]
+    recipes = sorted(book.recipes_dir.glob("*.md"))
+    assert len(recipes) >= 3
+
+
+# ---- theme preview ---------------------------------------------------------
+def test_write_preview_book_overrides_theme_and_absolutizes_paths(tmp_path):
+    theme_dir = config.THEMES_DIR / "default"
+    out = theme._write_preview_book(config.SAMPLE_BOOK, theme_dir, tmp_path)
+    data = yaml.safe_load(out.read_text(encoding="utf-8"))
+    assert data["theme"] == str(theme_dir.resolve())
+    assert Path(data["recipes_dir"]) == (config.SAMPLE_BOOK.parent / "recipes").resolve()
+    assert Path(data["introduction"]).is_absolute()
+    assert Path(data["introduction"]).name == "introduction.md"
+
+
+def test_preview_missing_book_raises_no_book_error(tmp_path):
+    with pytest.raises(config.NoBookError):
+        theme.preview(config.THEMES_DIR / "default", str(tmp_path / "nope.yaml"))
+
+
+def test_preview_main_missing_theme_dir_errors():
+    assert theme._preview_main(["/no/such/theme/dir"]) == 1  # ui.ERROR
+
+
+def test_rasterize_preview_skips_without_poppler(tmp_path, monkeypatch):
+    import shutil
+
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    assert theme._rasterize_preview(tmp_path / "cookbook.pdf", tmp_path) == []
+
+
+# The full `theme preview` render (WeasyPrint + poppler) is exercised end-to-end
+# by the CI `build` job, not here, to keep the unit suite fast.

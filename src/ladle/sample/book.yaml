@@ -1,0 +1,27 @@
+# Canonical sample book, shipped in the package and rendered by
+# `ladle theme preview` to show what a theme looks like.
+#
+# Intentionally minimal and asset-free — no palette, fonts, or illustrations —
+# so the *previewed theme's* own tokens and art direction drive the look. It has
+# one short recipe per section so the Contents page, section grouping, a recipe
+# opener, and a method page all appear in the preview.
+
+title: A Ladle Sampler
+subtitle: A tiny book for previewing themes
+volume: "1.0"
+language: en
+producer: The ladle project
+rights: "Sample content, CC0-1.0"
+content_license: CC0-1.0
+
+# `theme preview` overrides this with the theme being previewed; it stays here so
+# the sample also builds on its own (`ladle build --book src/ladle/sample/book.yaml`).
+theme: default
+
+sections:
+  - Savory
+  - Desserts
+  - Beverages
+order: []
+
+introduction: content/introduction.md

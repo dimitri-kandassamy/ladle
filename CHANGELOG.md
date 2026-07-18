@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `theme.yaml` validates against the schema, that its templates load in the Jinja
   sandbox, and that every embedded font family names a present file with a
   documented, redistribution-friendly license. Exits non-zero on failure (CI-ready).
+- `ladle theme preview <theme>` — renders a theme against the bundled canonical
+  sample book into `build/preview/<theme>/`: a PDF plus, when poppler is present, a
+  `cover.png` and `contact-sheet.png` for eyeballing or a gallery card. Pass
+  `--book` to preview against your own book. Adds a small sample book to the package.
 
 ### Changed
 

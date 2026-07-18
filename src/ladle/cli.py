@@ -55,7 +55,7 @@ COMMANDS: dict[str, Command] = {
     "new": Command(new_book.main, "scaffold a new book in ./<name>/"),
     "build": Command(_build, "build PDF + EPUB (html -> pdf -> epub)", book=True),
     "validate": Command(validate.main, "schema + PDF structure + epubcheck + contact sheet", book=True),
-    "theme": Command(theme.main, "work with themes (theme lint: schema + sandbox + fonts)"),
+    "theme": Command(theme.main, "work with themes (theme lint / theme preview)"),
     "doctor": Command(doctor.main, "check pandoc/poppler/WeasyPrint/Java installed"),
 }
 
