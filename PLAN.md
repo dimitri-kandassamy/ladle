@@ -35,13 +35,19 @@ without a separate authoring door. **Not a recipe manager.**
 
 1. **Core** (done) — `build`/`new`/`validate`/`doctor`, themes, the
    `book.yaml` + recipe-markdown contracts, PDF + EPUB output.
-2. **Theme ecosystem** — finish Phase 0 (Jinja sandbox, `theme lint`,
-   `theme preview`); more bundled themes; a **community gallery** in the
+2. **Theme ecosystem** — Phase 0 done (Jinja sandbox, `theme lint`,
+   `theme preview`); next: more bundled themes; **overlay override** (a book tweaks
+   one template/CSS file/block without forking — the MkDocs `custom_dir` + Jinja
+   `{% block %}` model, the one thing every SSG has that ladle lacks); enforce the
+   `theme.yaml` `ladle` **version-compat range** at load (Hugo `min_version` model,
+   already declared but unenforced); a **community gallery** in the
    static-site-generator mold. Safety model: anyone may build/use their own theme
    _at their own risk_ (path-based, no gate); **featured gallery themes must pass
    `ladle theme lint`** (schema + sandbox + font-license). The tool repo owns the
-   safety machinery; the **gallery lives in its own repo**. No marketplace, no
-   paid themes, no rev-share.
+   safety machinery; the **gallery lives in its own repo** — a git-based theme +
+   static index, _not_ a language package manager (a ladle theme is a data bundle,
+   not importable code; validated against Hugo/Jekyll/MkDocs/Docusaurus/Zola).
+   No marketplace, no paid themes, no rev-share.
 3. **Self-publishing depth** — front/back matter (dedication, foreword,
    acknowledgments, about); book-level `contributors: {name, role}`; a nested
    `metadata:` block (ISBN/identifier, description, publisher, date, subjects);
@@ -71,8 +77,10 @@ presence + distribution come first — they _are_ the launch prerequisites.
   few themes to show range → audit the README's install claim for accuracy → **the
   launch post.** _First step (recommended): brand/identity + a landing skeleton,
   since it gates the visual work; Homebrew/install runs as a parallel track._
-- **Phase 2 — Theme ecosystem.** Finish Phase 0 (sandbox/lint/preview) + the
-  community-contribution path + `theme use/list/show` + `themes add/search`.
+- **Phase 2 — Theme ecosystem.** Phase 0 done (sandbox/lint/preview). Next:
+  **overlay override** (customize a theme without forking) + `theme.yaml`
+  version-compat enforcement + more bundled themes + the community-contribution
+  path + `theme use/list/show` + `themes add/search`.
 - **Phase 3 — Self-publishing depth.** Front/back matter, contributors,
   `metadata:`/ISBN, accessibility, print-aware `@page`.
 - **Phase 4 — Ingestion scraper.** `ladle scoop <url>`, deterministic, CI-safe.
@@ -92,6 +100,13 @@ search (stop at `.git`), hatch-vcs (git tag → version).
   network/LLM.
 - **`book.yaml` + `theme.yaml` validated by strict schemas at load** (typos fail
   fast, not silently).
+- **Themes distribute git-based + a static gallery index — not via a language
+  package manager** (PyPI/npm/gems). A theme is a data bundle (Jinja, CSS, fonts,
+  rasters), not importable code, so wrapping it as a package buys nothing; the
+  Hugo/Zola model fits. Native `themes`/`theme` commands, not host-PM delegation.
+- **Theme templates are untrusted; fonts are embedded/redistributed** — hence the
+  `SandboxedEnvironment` + per-font-license `theme lint` gate (a differentiator vs
+  SSGs, which serve web fonts and leave licensing to the site author).
 - **Self-publishing metadata is a nested `metadata:` block**; `contributors:` are
   `{name, role}`; accessibility `auto`.
 - **Trim/page size stays theme-owned** (no per-book override); print bleed/safe
@@ -100,7 +115,8 @@ search (stop at `.git`), hatch-vcs (git tag → version).
 ## Not doing (and why)
 
 - **Theme marketplace / paid themes / revenue share** — the gallery is free and
-  community-run, not a store.
+  community-run, not a store (aligned with Hugo/Jekyll/Pelican/Zola; Astro's paid
+  marketplace is the outlier and a JS-ecosystem play, not a print-tool one).
 - **AI theme generation** — out.
 - **LLM / Ollama in ingestion** — the scraper is deterministic; no model.
 - **Hosted SaaS/web-app builder as the focus** — possible someday, but the plan
