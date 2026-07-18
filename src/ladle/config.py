@@ -33,6 +33,8 @@ from . import ui
 # Tool/theme data bundled in the package (works in a checkout and in site-packages).
 PACKAGE_ROOT = Path(__file__).resolve().parent
 THEMES_DIR = PACKAGE_ROOT / "themes"
+# Canonical sample book (shipped in the package) rendered by `ladle theme preview`.
+SAMPLE_BOOK = PACKAGE_ROOT / "sample" / "book.yaml"
 SCHEMA_PATH = PACKAGE_ROOT / "schema" / "recipe.schema.json"
 BOOK_SCHEMA_PATH = PACKAGE_ROOT / "schema" / "book.schema.json"
 THEME_SCHEMA_PATH = PACKAGE_ROOT / "schema" / "theme.schema.json"

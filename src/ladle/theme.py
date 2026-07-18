@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Work with themes. Today: `ladle theme lint` — the featured-gallery gate.
+"""Work with themes: `ladle theme lint` and `ladle theme preview`.
 
-The safety model (PLAN.md): anyone may build and use their own theme *at their
-own risk* (themes install by path, no gate), but a theme shown in the community
-gallery must lint clean. `ladle theme lint <theme>` runs the three Phase 0
-checks that make a theme a trustworthy, portable bundle:
+`theme lint` is the featured-gallery gate. The safety model (PLAN.md): anyone
+may build and use their own theme *at their own risk* (themes install by path,
+no gate), but a theme shown in the community gallery must lint clean. It runs the
+three Phase 0 checks that make a theme a trustworthy, portable bundle:
 
   1. **manifest** — theme.yaml exists and validates against theme.schema.json;
   2. **sandbox** — the print/epub templates exist and load in the Jinja
@@ -12,7 +12,11 @@ checks that make a theme a trustworthy, portable bundle:
   3. **fonts** — every embedded font family names a file that exists and carries
      a documented, redistribution-friendly license.
 
-Exit code is non-zero if any check fails. Run: ladle theme lint <theme>
+`theme preview` renders a theme against the bundled canonical sample book (or a
+`--book` of your own) into `build/preview/<theme>/` — a PDF plus, when poppler is
+available, a cover PNG and a contact sheet to eyeball or drop into a gallery.
+
+Exit code is non-zero if a check or a build step fails.
 """
 
 from __future__ import annotations
@@ -21,6 +25,7 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
 from jinja2 import TemplateError
 
 from . import build_html, config, ui
@@ -159,7 +164,110 @@ def _lint_main(argv: list[str]) -> int:
     return _report(theme_dir, lint(theme_dir))
 
 
-_SUBCOMMANDS = {"lint": _lint_main}
+# ---- theme preview ---------------------------------------------------------
+def _write_preview_book(book_src: Path, theme_dir: Path, out_dir: Path) -> Path:
+    """Write a book.yaml that renders book_src's content with theme_dir.
+
+    Content paths (recipes/intro/illustrations) become absolute so they resolve
+    from the preview build dir, and `theme` is overridden to the previewed theme.
+    The file lands in out_dir.
+    """
+    data = yaml.safe_load(book_src.read_text(encoding="utf-8")) or {}
+    root = book_src.parent
+    data["theme"] = str(theme_dir.resolve())
+    data["recipes_dir"] = str((root / data.get("recipes_dir", "recipes")).resolve())
+    data["illustrations_dir"] = str((root / data.get("illustrations_dir", "assets/illustrations/recipes")).resolve())
+    data["introduction"] = str((root / data.get("introduction", "content/introduction.md")).resolve())
+    out = out_dir / "book.yaml"
+    out.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    return out
+
+
+def _rasterize_preview(pdf: Path, out_dir: Path) -> list[Path]:
+    """Rasterize the preview PDF to a cover PNG + a contact sheet (needs poppler).
+
+    Returns the images written; empty (with a warning) when poppler's `pdftoppm`
+    is unavailable, so the PDF-only preview still succeeds.
+    """
+    import shutil
+    import subprocess
+
+    if not shutil.which("pdftoppm"):
+        ui.warn("poppler (pdftoppm) not found — wrote the PDF only; skipped preview images")
+        return []
+    pages_dir = out_dir / "pages"
+    pages_dir.mkdir(exist_ok=True)
+    for old in pages_dir.glob("p-*.png"):
+        old.unlink()
+    subprocess.run(["pdftoppm", "-r", "96", "-png", str(pdf), str(pages_dir / "p")], check=True, capture_output=True)
+
+    from PIL import Image
+
+    pages = [Image.open(p) for p in sorted(pages_dir.glob("p-*.png"))]
+    cover = out_dir / "cover.png"
+    pages[0].save(cover)
+
+    cols, pad = 4, 8
+    rows = (len(pages) + cols - 1) // cols
+    w, h = pages[0].size
+    canvas = Image.new("RGB", (cols * w + pad * (cols + 1), rows * h + pad * (rows + 1)), "#d8d2c4")
+    for k, im in enumerate(pages):
+        canvas.paste(im, (pad + (k % cols) * (w + pad), pad + (k // cols) * (h + pad)))
+    sheet = out_dir / "contact-sheet.png"
+    canvas.save(sheet)
+    return [cover, sheet]
+
+
+def preview(theme_dir: Path, book_path: str | None = None) -> int:
+    """Render a book with the theme into build/preview/<theme>/ (PDF + images)."""
+    import os
+
+    from . import make_pdf  # lazy: pulls in WeasyPrint only when actually previewing
+
+    book_src = Path(book_path).resolve() if book_path else config.SAMPLE_BOOK
+    if not book_src.exists():
+        raise config.NoBookError(f"no book config found at {config.rel(book_src)}")
+    out_dir = config.build_dir() / "preview" / theme_dir.name
+    out_dir.mkdir(parents=True, exist_ok=True)
+    preview_book = _write_preview_book(book_src, theme_dir, out_dir)
+
+    # build_html/make_pdf write to config.build_dir() ($LADLE_BUILD); point that at
+    # the per-theme preview dir for this run, then restore it.
+    saved = os.environ.get("LADLE_BUILD")
+    os.environ["LADLE_BUILD"] = str(out_dir)
+    try:
+        rc = build_html.render(str(preview_book)) or make_pdf.render()
+        if rc:
+            return rc
+    finally:
+        if saved is None:
+            os.environ.pop("LADLE_BUILD", None)
+        else:
+            os.environ["LADLE_BUILD"] = saved
+
+    images = _rasterize_preview(out_dir / "cookbook.pdf", out_dir)
+    made = ", ".join(config.rel(p) for p in [out_dir / "cookbook.pdf", *images])
+    ui.success(f"Previewed theme {theme_dir.name!r} → {made}")
+    return ui.OK
+
+
+def _preview_main(argv: list[str]) -> int:
+    ap = ui.command_parser(
+        "ladle theme preview",
+        "Render a theme against the sample book (or --book) into a PDF + cover/contact-sheet preview.",
+        "ladle theme preview default",
+    )
+    ap.add_argument("theme", help="theme name (bundled) or path to a theme directory")
+    ap.add_argument("--book", metavar="PATH", default=None, help="book to render (default: the bundled sample book)")
+    args = ap.parse_args(argv)
+    theme_dir = config.resolve_theme_dir(args.theme)
+    if not theme_dir.is_dir():
+        hint = "pass a theme name or a path to a theme dir"
+        return ui.die(f"theme not found: {config.rel(theme_dir)}", ui.ERROR, hint=hint)
+    return preview(theme_dir, args.book)
+
+
+_SUBCOMMANDS = {"lint": _lint_main, "preview": _preview_main}
 
 
 def main(argv: list[str] | None = None) -> int:

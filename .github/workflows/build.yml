@@ -112,6 +112,16 @@ jobs:
       - name: Validate
         run: ladle validate --book examples/the-ladle-kitchen/book.yaml
 
+      # End-to-end smoke test of `theme preview`: render the default theme against
+      # the bundled sample book and confirm the PDF + rasterised images (poppler)
+      # all land where the gallery/authors expect them.
+      - name: Preview a theme
+        run: |
+          ladle theme preview default
+          test -f build/preview/default/cookbook.pdf
+          test -f build/preview/default/cover.png
+          test -f build/preview/default/contact-sheet.png
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -120,6 +130,7 @@ jobs:
             build/cookbook.pdf
             build/cookbook.epub
             build/contact-sheet.png
+            build/preview/default/cover.png
 
       # The example-book build above is an end-to-end smoke test of the tool; its
       # PDF/EPUB are kept only as CI artifacts (see "Upload build artifacts"). This

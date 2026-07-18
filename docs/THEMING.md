@@ -132,6 +132,25 @@ ladle theme lint themes/mine   # or a bundled name: ladle theme lint default
 
 It exits non-zero if any check fails, so it drops straight into CI.
 
+### Previewing a theme
+
+To see what a theme actually looks like, render it against the bundled canonical
+sample book — a tiny, asset-free book with one recipe per section, so the cover,
+contents, a recipe opener, and a method page all appear:
+
+```sh
+ladle theme preview themes/mine   # or a bundled name: ladle theme preview default
+```
+
+It writes to `build/preview/<theme>/`:
+
+- `cookbook.pdf` — the full render (the print art direction, ladle's differentiator);
+- `cover.png` and `contact-sheet.png` — quick images for eyeballing or a gallery
+  card (produced when poppler's `pdftoppm` is available; skipped otherwise, PDF
+  still written).
+
+Pass `--book PATH` to preview a theme against your own book instead of the sample.
+
 ### Paper textures
 
 The cream/navy paper grain and the cover/endpaper line-art are pre-baked raster

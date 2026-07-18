@@ -39,8 +39,10 @@ Run the CLI directly from a checkout: `PYTHONPATH=src python3 -m ladle <cmd>`.
 - **Commands:** `new` (`new_book.py`), `build` (`cli._build` → `build_html.render`
   → `make_pdf.render` → `make_epub.render`), `validate` (`validate.py`), `theme`
   (`theme.py` — a subcommand group; `theme lint` gates a gallery theme on its
-  schema, template sandbox, and font licenses), `doctor` (`doctor.py` — toolchain
-  preflight; `doctor --install` offers a confirm-first dependency install).
+  schema, template sandbox, and font licenses; `theme preview` renders a theme
+  against the bundled sample book — `src/ladle/sample/` — into `build/preview/`),
+  `doctor` (`doctor.py` — toolchain preflight; `doctor --install` offers a
+  confirm-first dependency install).
 - **`config.py`** — path + book resolution. Two path roots: **package data**
   (`schema/`, `themes/`, resolves against the installed package) vs **user book
   content** (`recipes`/illustrations/intro, relative to the book.yaml's dir via
