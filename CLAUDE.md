@@ -14,7 +14,7 @@ command and the import package are both `ladle`.
 ## Commands
 
 ```sh
-pip install -e '.[dev]'   # dev deps: pytest + ruff (pinned ==0.15.20)
+pip install -e '.[dev]'   # dev deps: pytest + ruff (pinned ==0.15.21)
 
 make test     # python3 -m pytest  (src/ layout; pytest finds `ladle` via pyproject pythonpath)
 make lint     # ruff check + ruff format --check, on src/ and tests/
@@ -56,7 +56,7 @@ Run the CLI directly from a checkout: `PYTHONPATH=src python3 -m ladle <cmd>`.
 - **One PR per change**, branched off `main`.
 - **No raw tracebacks to users:** raise `ConfigError`/`NoBookError` or
   `return ui.die(msg, code, hint=…)`; the top-level guard only re-raises under `-v`.
-- ruff pinned `==0.15.20`, `line-length = 120`.
+- ruff pinned `==0.15.21`, `line-length = 120`.
 
 ## Gotchas
 
