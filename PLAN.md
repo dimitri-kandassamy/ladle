@@ -77,10 +77,30 @@ presence + distribution come first — they _are_ the launch prerequisites.
   few themes to show range → audit the README's install claim for accuracy → **the
   launch post.** _First step (recommended): brand/identity + a landing skeleton,
   since it gates the visual work; Homebrew/install runs as a parallel track._
-- **Phase 2 — Theme ecosystem.** Phase 0 done (sandbox/lint/preview). Next:
-  **overlay override** (customize a theme without forking) + `theme.yaml`
-  version-compat enforcement + more bundled themes + the community-contribution
-  path + `theme use/list/show` + `themes add/search`.
+- **Phase 2 — Theme ecosystem.** Phase 0 done (sandbox/lint/preview). Next,
+  the customization model — five moves, drawn from how Hugo/MkDocs/Zola implement
+  themes (three engines that converged on the same override architecture):
+  1. **Overlay override (file-level)** — a book's `theme_overrides/` dir shadows
+     theme templates/CSS by relative path via a layered Jinja `FileSystemLoader`,
+     first match wins (MkDocs `custom_dir`). Small change, highest leverage; stays
+     inside the sandbox.
+  2. **Block contract (partial override)** — refactor the bundled theme into a
+     `base.html.j2` + named blocks (`cover`/`contents`/`recipe_card`/…) so a book
+     overrides one block via `{% extends %}` without copying the file; publish the
+     block set as a stable contract, marking Safe vs internal blocks (the
+     Docusaurus swizzle-tier idea).
+  3. **Theme `params` namespace** — generalize the palette/fonts token-merge to
+     arbitrary theme-declared knobs with defaults, book-overridable (MkDocs
+     `config.theme.*` / Hugo `.Site.Params` / Zola `[extra]`). The substrate for
+     parametric themes (§gallery).
+  4. **Theme-local preview content** — `theme preview` prefers a theme's own
+     `sample/` if present, else the canonical sample (Zola's "a theme is a site":
+     the author frames it with flattering content).
+  5. **Enforce the `theme.yaml` `ladle` version-compat range at load** (Hugo/Zola
+     `min_version`) — already declared in the schema, currently unenforced.
+
+  Then: more bundled themes + the community-contribution path + `theme
+  use/list/show` + `themes add/search`.
 - **Phase 3 — Self-publishing depth.** Front/back matter, contributors,
   `metadata:`/ISBN, accessibility, print-aware `@page`.
 - **Phase 4 — Ingestion scraper.** `ladle scoop <url>`, deterministic, CI-safe.
@@ -124,6 +144,12 @@ search (stop at `.git`), hatch-vcs (git tag → version).
 - **CMYK / PDF-X output + print-shop proof-copy testing** — the pro-print rabbit
   hole (partly beyond WeasyPrint). ladle stops at sellable RGB files.
 - **Running the LLM/network in CI** — CI consumes only committed markdown.
+- **A Hugo-style template lookup-order engine** — ladle has a fixed two-template
+  contract (print + epub); a layered loader gives overrides without the lookup
+  machinery Hugo needs for thousands of heterogeneous pages.
+- **A Sass/asset pipeline (Hugo Pipes, Zola Sass)** — ladle stays dependency-light
+  and hands print CSS straight to WeasyPrint; no libsass/fingerprinting unless
+  theme authors actually ask.
 - Also out: framework churn (TOML/pydantic/Typer for their own sake);
   `extract-template` (distill a theme from an EPUB); photos/OCR/vision ingestion;
   unit conversion & nutrition; full ONIX/price trade feed; series/collection
