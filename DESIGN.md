@@ -70,6 +70,13 @@ The look lives in a **theme** (see [docs/THEMING.md](docs/THEMING.md)). A theme'
 A `book.yaml` overrides any token per key, so one theme backs many books and a
 minimal book still renders. The tool hardcodes no fonts or colours.
 
+A theme ships executable Jinja, so it is treated as untrusted **data, never
+code**: `build_html.make_env` renders every theme template in a
+`jinja2.sandbox.SandboxedEnvironment`, which blocks private-attribute access,
+imports, and unsafe callables. A template that trips the sandbox surfaces as a
+friendly `ConfigError` naming the file, not a traceback. This is the security
+gate that lets community themes install by path without a review step.
+
 Defaults for the built-in `default` theme:
 
 - Trim: `6.75in × 9.5in` portrait.
