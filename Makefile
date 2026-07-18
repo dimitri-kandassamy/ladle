@@ -4,7 +4,7 @@ BUILD := build
 BOOK      ?= examples/the-ladle-kitchen/book.yaml
 BOOK_FLAG := $(if $(BOOK),--book $(BOOK),)
 
-.PHONY: all build validate test lint format check doctor new-book clean
+.PHONY: all build validate test lint lint-md format check doctor new-book clean
 
 all: build
 
@@ -13,9 +13,19 @@ all: build
 test:
 	python3 -m pytest
 
-lint:
+lint: lint-md
 	python3 -m ruff check src tests
 	python3 -m ruff format --check src tests
+
+# Markdown lint over all docs (config + ignores in .markdownlint*.json), matching
+# the CI globs. Runs markdownlint-cli2 via npx; skips with a note when Node/npx is
+# absent, so a Python-only `make lint` still works. CI enforces it regardless.
+lint-md:
+	@if command -v npx >/dev/null 2>&1; then \
+		npx --yes markdownlint-cli2 "**/*.md"; \
+	else \
+		echo "note: npx not found — skipping markdown lint (CI still checks it)"; \
+	fi
 
 # Auto-format the tree in place (ruff format, the canonical style).
 format:
