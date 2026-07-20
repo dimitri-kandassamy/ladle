@@ -43,7 +43,7 @@ dependencies = [
 test = ["pytest>=8.0"]
 # ruff is pinned exactly: its formatter output changes across releases, so an
 # unpinned range drifts between a contributor's ruff and CI's. Bump deliberately.
-dev = ["pytest>=8.0", "ruff==0.15.21"]
+dev = ["pytest>=8.0", "ruff==0.15.22"]
 
 [project.urls]
 Homepage = "https://github.com/dimitri-kandassamy/ladle"
