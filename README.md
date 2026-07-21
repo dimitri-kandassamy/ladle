@@ -71,7 +71,7 @@ ladle new mybook                 # scaffold ./mybook/ (or `ladle new` -> ./book/
 cd mybook
 # …add your recipes under recipes/…
 ladle build                      # -> build/cookbook.pdf and build/cookbook.epub
-ladle validate                   # schema + PDF structure + epubcheck + contact sheet
+ladle validate                   # schema + body + PDF structure + epubcheck + contact sheet
 open build/contact-sheet.png     # a thumbnail grid of every page
 ```
 
@@ -111,6 +111,23 @@ A recipe with a non-empty `story:` gets a full story page (with an optional
 `headshot`); without one it gets a compact opener. Every recipe is validated
 against [`recipe.schema.json`](https://github.com/dimitri-kandassamy/ladle/blob/main/src/ladle/schema/recipe.schema.json).
 
+The body has a contract too, and only these shapes are rendered:
+
+| Under            | ladle reads                                              |
+| ---------------- | -------------------------------------------------------- |
+| `## INGREDIENTS` | `- item` lines, optionally split by `### group` headings |
+| `## DIRECTIONS`  | numbered `1.` steps, one per line                        |
+| `## NOTES`       | free prose                                               |
+
+The headings are matched literally, so they stay in English even in a
+translated book (`labels:` controls what is _printed_). Anything else — a step
+wrapped onto a second line, an ingredient without its `-`, a section under
+another heading — is content ladle cannot place. It is reported by `build` and
+by `ladle validate`, as `file:line`, rather than silently dropped; use
+`ladle validate --strict` to make it fail the run.
+
+`illustration:` is optional. A recipe without one simply renders no hero image.
+
 ### A book is a folder
 
 ```text
@@ -134,7 +151,7 @@ for a complete, working template.
 | ----------------------------- | -------------------------------------------------------------- |
 | `ladle new [X]`               | scaffold a new book in `./X/` (default `./book/`)              |
 | `ladle build`                 | build the PDF + EPUB from your recipes                         |
-| `ladle validate`              | recipe schema, PDF trim + page count, epubcheck, contact sheet |
+| `ladle validate`              | recipe schema + body, PDF trim + page count, epubcheck, sheet  |
 | `ladle doctor`                | check pandoc/poppler/WeasyPrint/Java are installed             |
 
 ## Build from source

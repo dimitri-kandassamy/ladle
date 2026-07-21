@@ -17,12 +17,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sample book into `build/preview/<theme>/`: a PDF plus, when poppler is present, a
   `cover.png` and `contact-sheet.png` for eyeballing or a gallery card. Pass
   `--book` to preview against your own book. Adds a small sample book to the package.
+- `ladle validate --strict` — fails the run when a recipe body contains content
+  the parser cannot place, for CI and for anyone who wants the guarantee.
 
 ### Changed
 
 - Theme templates now render in a `jinja2.sandbox.SandboxedEnvironment`, so an
   untrusted community theme is treated as data, never code; a template that trips
   the sandbox surfaces as a friendly error naming the file.
+- `build` and `validate` now report recipe body content that no parser rule
+  claims, instead of dropping it silently. The parsers only understand `- item`
+  and `### group` under `## INGREDIENTS`, numbered `1.` steps under
+  `## DIRECTIONS`, and free prose under `## NOTES`; anything else — a step
+  wrapped onto a second line, an unbulleted ingredient, a section under a
+  heading ladle does not read — used to vanish with no warning, and a truncated
+  step still looks like a complete sentence on the page. Diagnostics are
+  `file:line: message`; `build` caps them and points at `validate` for the full
+  list.
+- A recipe whose front matter opens with `---` but never closes it now fails
+  with a message naming the file, instead of a raw `ValueError` traceback.
+- A `##` heading repeated within one recipe now accumulates its blocks; the
+  earlier block used to be discarded.
+
+### Fixed
+
+- The bundled sample book had a direction step wrapped onto a second line, so
+  `ladle theme preview` rendered it truncated mid-clause.
 
 ## [0.2.0] - 2026-07-12
 
