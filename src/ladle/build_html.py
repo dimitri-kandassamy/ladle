@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import html
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
@@ -106,30 +107,87 @@ def paragraphs(text: str) -> list[str]:
 
 
 # ---- recipe parsing --------------------------------------------------------
-def split_front_matter(raw: str) -> tuple[dict, str]:
-    if raw.startswith("---"):
-        _, fm, body = raw.split("---", 2)
-        return yaml.safe_load(fm) or {}, body.strip()
-    return {}, raw.strip()
+def split_front_matter(raw: str, *, where: str = "") -> tuple[dict, str]:
+    """Split `---` front matter from the body.
+
+    An opening `---` with no closing one is a real authoring mistake (and used to
+    surface as a raw ValueError), so it fails with a message naming the file
+    rather than a traceback.
+    """
+    if not raw.startswith("---"):
+        return {}, raw.strip()
+    parts = raw.split("---", 2)
+    if len(parts) < 3:
+        label = f"{where}: " if where else ""
+        raise config.ConfigError(f"{label}front matter is opened with '---' but never closed")
+    _, fm, body = parts
+    return yaml.safe_load(fm) or {}, body.strip()
 
 
-def sections_of(body: str) -> dict[str, list[str]]:
-    out: dict[str, list[str]] = {}
+def body_start_line(raw: str) -> int:
+    """1-based line in *raw* where :func:`split_front_matter`'s body begins.
+
+    Diagnostics report ``file:line`` so an author can jump straight to the
+    offending line, which means the offset lost by stripping the front matter
+    (and the blank lines after it) has to be recovered. Kept separate from
+    :func:`split_front_matter` so the render path stays untouched.
+    """
+    parts = raw.split("---", 2)
+    if raw.startswith("---") and len(parts) == 3:
+        head, fm, body = parts
+        consumed = f"{head}---{fm}---"
+    else:
+        consumed, body = "", raw
+    lead = body[: len(body) - len(body.lstrip())]
+    return consumed.count("\n") + lead.count("\n") + 1
+
+
+# A body line paired with its 1-based line number in the source file.
+Line = tuple[int, str]
+
+# The `## HEADING`s the body parser understands. Content under any other heading
+# is not rendered, so it is reported (see `unparsed_content`) rather than dropped.
+KNOWN_SECTIONS = ("INGREDIENTS", "DIRECTIONS", "NOTES")
+
+# Shared by the splitter and the diagnostics so "what counts as a heading" has
+# exactly one definition.
+HEADING_RE = re.compile(r"^##\s+(.*\S)\s*$")
+
+
+def sections_of(body: str, *, start: int = 1) -> dict[str, list[Line]]:
+    """Split a recipe body into `## HEADING` -> numbered lines.
+
+    A heading repeated in one file accumulates rather than resetting, so the
+    earlier block is not silently discarded.
+    """
+    out: dict[str, list[Line]] = {}
     current = None
-    for line in body.splitlines():
-        m = re.match(r"^##\s+(.*\S)\s*$", line)
+    for offset, line in enumerate(body.splitlines()):
+        m = HEADING_RE.match(line)
         if m:
             current = m.group(1).strip().upper()
-            out[current] = []
+            out.setdefault(current, [])
         elif current is not None:
-            out[current].append(line)
+            out[current].append((start + offset, line))
     return out
 
 
-def parse_ingredients(lines: list[str]) -> list[dict]:
+def section_text(lines: list[Line]) -> str:
+    """Numbered lines back to plain text, for the prose sections."""
+    return "\n".join(text for _, text in lines)
+
+
+def parse_ingredients(lines: list[Line]) -> tuple[list[dict], list[Line]]:
+    """Numbered lines -> ingredient groups, plus the lines no rule consumed.
+
+    Returning the leftovers (rather than letting a separate checker re-derive
+    them) keeps one rule set: a line is unparsed precisely when *this* function
+    did not use it, so the two can never drift apart.
+    """
     groups: list[dict] = []
+    unclaimed: list[Line] = []
     current = {"label": "", "lines": []}
-    for line in lines:
+    for n, line in lines:
         h = re.match(r"^###\s+(.*\S)\s*$", line)
         item = re.match(r"^\s*[-*]\s+(.*\S)\s*$", line)
         if h:
@@ -138,18 +196,24 @@ def parse_ingredients(lines: list[str]) -> list[dict]:
             current = {"label": h.group(1).strip(), "lines": []}
         elif item:
             current["lines"].append(inline(item.group(1)))
+        elif line.strip():
+            unclaimed.append((n, line))
     if current["lines"]:
         groups.append(current)
-    return groups
+    return groups, unclaimed
 
 
-def parse_directions(lines: list[str]) -> list[str]:
+def parse_directions(lines: list[Line]) -> tuple[list[str], list[Line]]:
+    """Numbered lines -> numbered steps, plus the lines no rule consumed."""
     steps: list[str] = []
-    for line in lines:
+    unclaimed: list[Line] = []
+    for n, line in lines:
         m = re.match(r"^\s*\d+\.\s+(.*\S)\s*$", line)
         if m:
             steps.append(inline(m.group(1)))
-    return steps
+        elif line.strip():
+            unclaimed.append((n, line))
+    return steps, unclaimed
 
 
 def split_title_article(title: str) -> tuple[str, str]:
@@ -199,8 +263,9 @@ def asset_url(path_str: str, *, absolute: bool, book_root: Path) -> str:
 
 
 def load_recipe(path: Path, *, absolute_assets: bool, book_root: Path) -> dict:
-    fm, body = split_front_matter(path.read_text(encoding="utf-8"))
-    sec = sections_of(body)
+    raw = path.read_text(encoding="utf-8")
+    fm, body = split_front_matter(raw, where=path.name)
+    sec = sections_of(body, start=body_start_line(raw))
     slug = fm.get("slug") or path.stem
     author = fm.get("author") or {}
     story = (fm.get("story") or "").strip()
@@ -228,9 +293,9 @@ def load_recipe(path: Path, *, absolute_assets: bool, book_root: Path) -> dict:
             absolute=absolute_assets,
             book_root=book_root,
         ),
-        "ingredient_groups": parse_ingredients(sec.get("INGREDIENTS", [])),
-        "directions": parse_directions(sec.get("DIRECTIONS", [])),
-        "notes_html": paragraphs("\n".join(sec.get("NOTES", []))),
+        "ingredient_groups": parse_ingredients(sec.get("INGREDIENTS", []))[0],
+        "directions": parse_directions(sec.get("DIRECTIONS", []))[0],
+        "notes_html": paragraphs(section_text(sec.get("NOTES", []))),
         "draft": bool(fm.get("draft", False)),
     }
 
@@ -251,7 +316,7 @@ def load_intro(book: dict, *, absolute_assets: bool, book_root: Path) -> dict:
     path = book_root / book.get("introduction", "content/introduction.md")
     if not path.exists():
         return {"title": "Introduction", "from_name": "", "from_org": "", "body_html": []}
-    fm, body = split_front_matter(path.read_text(encoding="utf-8"))
+    fm, body = split_front_matter(path.read_text(encoding="utf-8"), where=config.rel(path))
     frm = fm.get("from") or {}
     return {
         "title": fm.get("title", "Introduction"),
@@ -272,6 +337,95 @@ def font_face_css(fonts_dir: Path, font_faces: list[dict]) -> str:
             f"font-weight:100 900;font-style:{style};font-display:swap;}}"
         )
     return "\n".join(out)
+
+
+@dataclass(frozen=True)
+class Dropped:
+    """One piece of recipe body content that will not appear in the built book."""
+
+    file: str
+    line: int
+    message: str
+
+    def __str__(self) -> str:
+        return f"{self.file}:{self.line}: {self.message}"
+
+
+def excerpt(text: str, limit: int = 60) -> str:
+    """A single-line, length-capped quote of *text* for a diagnostic."""
+    s = " ".join(text.split())
+    return s if len(s) <= limit else f"{s[: limit - 1]}…"
+
+
+def unparsed_content(path: Path) -> list[Dropped]:
+    """Body content in *path* that no parser rule claimed, so nothing renders it.
+
+    The parsers report their own leftovers, so this cannot drift from what the
+    build actually does. Covers both halves of the problem:
+
+    * a line inside a known section that matched no rule (a step wrapped onto a
+      second line, an unbulleted ingredient, a prose lead-in);
+    * a whole section under a heading ladle does not read — which is what a book
+      written in another language hits, since the headings are matched literally.
+
+    Blank lines are not content and are never reported.
+    """
+    raw = path.read_text(encoding="utf-8")
+    _, body = split_front_matter(raw, where=path.name)
+    start = body_start_line(raw)
+    sec = sections_of(body, start=start)
+    out: list[Dropped] = []
+
+    for offset, line in enumerate(body.splitlines()):
+        if HEADING_RE.match(line):
+            break
+        if line.strip():
+            out.append(
+                Dropped(
+                    path.name,
+                    start + offset,
+                    f'text before the first "##" heading is not rendered: "{excerpt(line)}"',
+                )
+            )
+
+    for name, lines in sec.items():
+        if name == "INGREDIENTS":
+            unclaimed = parse_ingredients(lines)[1]
+            for n, line in unclaimed:
+                out.append(
+                    Dropped(path.name, n, f'line in INGREDIENTS is not an item or "###" group: "{excerpt(line)}"')
+                )
+        elif name == "DIRECTIONS":
+            unclaimed = parse_directions(lines)[1]
+            for n, line in unclaimed:
+                out.append(Dropped(path.name, n, f'line in DIRECTIONS is not a numbered step: "{excerpt(line)}"'))
+        elif name != "NOTES":  # NOTES renders as free prose, so nothing is dropped
+            content = [(n, line) for n, line in lines if line.strip()]
+            if content:
+                known = ", ".join(KNOWN_SECTIONS)
+                out.append(
+                    Dropped(
+                        path.name,
+                        content[0][0],
+                        f'"## {name}" is not a section ladle renders ({known}) — '
+                        f"{len(content)} line{'s' if len(content) != 1 else ''} dropped",
+                    )
+                )
+    return sorted(out, key=lambda d: d.line)
+
+
+def warn_unparsed_content(recipes_dir: Path, *, limit: int = 10) -> None:
+    """Warn about dropped body content at build time, capped so it stays readable.
+
+    A build should say what it threw away, but a large import can produce dozens
+    of these; past *limit* it summarises and points at ``validate`` for the full
+    list — the same shape a compiler uses for repeated diagnostics.
+    """
+    found = [d for p in sorted(recipes_dir.glob("*.md")) for d in unparsed_content(p)]
+    for d in found[:limit]:
+        ui.warn(str(d))
+    if len(found) > limit:
+        ui.warn(f"… and {len(found) - limit} more — run `ladle validate` to see all of them.")
 
 
 def warn_schema_issues(recipes_dir: Path) -> None:
@@ -350,6 +504,10 @@ def render(book_path: str | None = None) -> int:
     # anyway; a missing title silently falls back to the slug). Warn, don't fail —
     # `ladle validate` is the hard gate. (#4)
     warn_schema_issues(book_cfg.recipes_dir)
+    # Body content no parser rule claimed renders as nothing at all, and a
+    # half-eaten step still *looks* complete on the page — so say so here rather
+    # than letting a silently-wrong book get printed.
+    warn_unparsed_content(book_cfg.recipes_dir)
 
     # ---- print HTML (absolute file:// assets for WeasyPrint) ----
     print_recipes = order_recipes(

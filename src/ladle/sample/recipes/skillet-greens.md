@@ -18,8 +18,7 @@ draft: false
 ## DIRECTIONS
 
 1. Strip the greens from their stems and tear the leaves into wide pieces.
-2. Warm the oil over medium heat, then add the garlic and chili and cook until
-   fragrant but not browned.
+2. Warm the oil over medium heat, then add the garlic and chili and cook until fragrant but not browned.
 3. Add the greens with a splash of water and toss until just wilted and glossy.
 4. Season with salt and finish with a squeeze of lemon.
 

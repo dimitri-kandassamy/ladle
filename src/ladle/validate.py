@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Validate the cookbook: recipe schema, PDF structure, EPUB (epubcheck), contact sheet.
+"""Validate the cookbook: recipe schema + body, PDF structure, EPUB (epubcheck), contact sheet.
 
 Validation is *structural*, not pixel-based:
 
   1. every recipes/*.md front matter conforms to schema/recipe.schema.json;
-  2. build/cookbook.pdf has the right trim (6.75x9.5in) and page count;
-  3. build/cookbook.epub passes epubcheck (or a structural fallback if no Java);
-  4. a build/contact-sheet.png thumbnail grid is produced for eyeballing.
+  2. every recipe body parses, with nothing silently dropped (--strict to fail);
+  3. build/cookbook.pdf has the right trim (6.75x9.5in) and page count;
+  4. build/cookbook.epub passes epubcheck (or a structural fallback if no Java);
+  5. a build/contact-sheet.png thumbnail grid is produced for eyeballing.
 
 Exit code is non-zero if any check fails. Run: ladle validate
 """
@@ -122,6 +123,32 @@ def validate_recipes(recipes_dir: Path) -> None:
             ok(r["file"])
         else:
             bad(_format_result(r))
+
+
+# ---- 1b. recipe body -------------------------------------------------------
+def validate_bodies(recipes_dir: Path, *, strict: bool = False) -> None:
+    """Report body content that no parser rule claimed, so the book won't show it.
+
+    Reuses ``build_html.unparsed_content`` so ``build`` and ``validate`` agree on
+    what gets dropped. A note by default (plenty of hand-written corpora have
+    stray lines, and the build still succeeds); a failure under ``--strict``, for
+    CI and for anyone who wants the guarantee.
+    """
+    from . import build_html
+
+    section("Recipe body")
+    found = [d for p in sorted(recipes_dir.glob("*.md")) for d in build_html.unparsed_content(p)]
+    if not found:
+        ok("all body content was parsed")
+        return
+    for d in found:
+        bad(str(d)) if strict else note(str(d))
+    n = len(found)
+    summary = f"{n} item{'s' if n != 1 else ''} of body content will not appear in the book"
+    if strict:
+        return
+    note(summary)
+    note("re-run with --strict to treat these as failures")
 
 
 # ---- 2. PDF structure ------------------------------------------------------
@@ -267,13 +294,24 @@ def contact_sheet() -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = ui.command_parser("ladle validate", __doc__, "ladle validate --book pt/book.yaml")
+    ap = ui.command_parser(
+        "ladle validate",
+        __doc__,
+        "ladle validate --book pt/book.yaml",
+        "ladle validate --strict",
+    )
     config.add_book_arg(ap)
+    ap.add_argument(
+        "--strict",
+        action="store_true",
+        help="fail if any recipe body content could not be parsed",
+    )
     args = ap.parse_args(argv)
     book_cfg = config.load_book_config(args.book)
 
     failures.clear()  # re-entrant: don't carry results across calls in one process
     validate_recipes(book_cfg.recipes_dir)
+    validate_bodies(book_cfg.recipes_dir, strict=args.strict)
     validate_pdf(book_cfg.recipes_dir)
     validate_epub()
     contact_sheet()
