@@ -131,3 +131,46 @@ def test_validate_main_returns_exit_4_on_failure(tmp_path, monkeypatch):
     (tmp_path / "recipes" / "bad.md").write_text("no front matter\n", encoding="utf-8")
     monkeypatch.setattr(validate, "BUILD", tmp_path / "build")  # empty -> pdf/epub missing
     assert validate.main(["--book", str(book)]) == ui.VALIDATION == 4
+
+
+# ---- contact sheet: page-range split + sheet pagination --------------------
+
+
+@pytest.mark.parametrize(
+    "n_pages, workers, expected",
+    [
+        (0, 4, []),  # unknown count -> single whole-document render
+        (1, 4, [(1, 1)]),
+        (6, 4, [(1, 2), (3, 4), (5, 6)]),  # 6 pages, ceil(6/4)=2 each -> 3 slices
+        (224, 4, [(1, 56), (57, 112), (113, 168), (169, 224)]),
+    ],
+)
+def test_page_ranges_are_contiguous_and_cover_every_page(n_pages, workers, expected):
+    ranges = validate._page_ranges(n_pages, workers)
+    assert ranges == expected
+    if n_pages > 0:
+        assert ranges[0][0] == 1 and ranges[-1][1] == n_pages
+        assert len(ranges) <= workers
+        for (_, prev_last), (next_first, _) in zip(ranges, ranges[1:], strict=False):
+            assert next_first == prev_last + 1  # no gaps, no overlaps
+
+
+def _solid(n, size=(160, 225)):
+    from PIL import Image
+
+    return [Image.new("RGB", size, (i, i, i)) for i in range(n)]
+
+
+def test_compose_sheets_paginates_and_bounds_height():
+    per_sheet = validate.CONTACT_COLS * validate.CONTACT_ROWS_PER_SHEET
+    # One full sheet + one leftover page -> two sheets, and no sheet is a giant strip.
+    sheets = validate._compose_sheets(_solid(per_sheet + 1))
+    assert len(sheets) == 2
+    assert [s.size[1] for s in sheets]  # both have real height
+    for s in sheets:
+        assert s.size[1] < 16384  # under the canvas dimension that leaves it unopenable
+
+
+def test_compose_sheets_single_page_is_one_sheet():
+    sheets = validate._compose_sheets(_solid(1))
+    assert len(sheets) == 1

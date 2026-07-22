@@ -7,7 +7,9 @@ Validation is *structural*, not pixel-based:
   2. every recipe body parses, with nothing silently dropped (--strict to fail);
   3. build/cookbook.pdf has the right trim (6.75x9.5in) and page count;
   4. build/cookbook.epub passes epubcheck (or a structural fallback if no Java);
-  5. a build/contact-sheet.png thumbnail grid is produced for eyeballing.
+  5. build/contact-sheet.png thumbnail grid(s) are produced for eyeballing (a
+     long book paginates into contact-sheet-02.png … so no single image exceeds
+     the ~16384px canvas limit that leaves it unopenable).
 
 Exit code is non-zero if any check fails. Run: ladle validate
 """
@@ -263,6 +265,86 @@ def validate_epub() -> None:
 
 
 # ---- 4. contact sheet ------------------------------------------------------
+# Rasterize small (160px-wide thumbnails, not reading-resolution) and in parallel
+# page-range slices — a 224pp book went 147s -> ~9s in measurement. Compose into
+# one or more fixed-height sheets so a long book never yields a single strip taller
+# than the ~16384px canvas dimension most viewers can open.
+CONTACT_COLS = 6
+CONTACT_PAD = 8
+CONTACT_ROWS_PER_SHEET = 15  # 15×6 = 90 thumbnails/sheet, ~3500px tall — safely openable
+CONTACT_WORKERS = 4
+CONTACT_SCALE_X = 160
+CONTACT_BG = "#d8d2c4"
+
+
+def _pdf_page_count(pdf: Path) -> int:
+    """Page count via pdfinfo; 0 if unavailable (caller renders as a single slice)."""
+    res = subprocess.run(["pdfinfo", str(pdf)], capture_output=True, text=True)
+    if res.returncode != 0:
+        return 0
+    for line in res.stdout.splitlines():
+        key, _, val = line.partition(":")
+        if key.strip() == "Pages":
+            return int(val.strip() or 0)
+    return 0
+
+
+def _page_ranges(n_pages: int, workers: int) -> list[tuple[int, int]]:
+    """Split 1..n_pages into up to *workers* contiguous (first, last) slices.
+
+    Empty when the count is unknown (<=0), signalling a single whole-document render.
+    """
+    if n_pages <= 0:
+        return []
+    workers = max(1, min(workers, n_pages))
+    per = -(-n_pages // workers)  # ceil
+    ranges = []
+    start = 1
+    while start <= n_pages:
+        last = min(start + per - 1, n_pages)
+        ranges.append((start, last))
+        start = last + 1
+    return ranges
+
+
+def _rasterize_parallel(pdf: Path, pngdir: Path, n_pages: int) -> list[Path]:
+    """Render every page to pngdir/c-*.png via concurrent page-range workers.
+
+    poppler zero-pads the page-number suffix against the whole document (not the
+    slice), so every worker agrees on width and sorted(glob) is global page order.
+    """
+    base = ["pdftoppm", "-scale-to-x", str(CONTACT_SCALE_X), "-scale-to-y", "-1", "-png"]
+    ranges = _page_ranges(n_pages, CONTACT_WORKERS)
+    cmds = (
+        [base + ["-f", str(first), "-l", str(last), str(pdf), str(pngdir / "c")] for first, last in ranges]
+        if ranges
+        else [base + [str(pdf), str(pngdir / "c")]]
+    )
+    procs = [subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE) for cmd in cmds]
+    for proc in procs:
+        _, err = proc.communicate()
+        if proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, proc.args, stderr=err)
+    return sorted(pngdir.glob("c-*.png"))
+
+
+def _compose_sheets(images: list) -> list:
+    """Paste uniform page thumbnails into fixed-height contact sheets (grid, paginated)."""
+    from PIL import Image
+
+    cols, pad, per_sheet = CONTACT_COLS, CONTACT_PAD, CONTACT_COLS * CONTACT_ROWS_PER_SHEET
+    sheets = []
+    for base in range(0, len(images), per_sheet):
+        chunk = images[base : base + per_sheet]
+        w, h = chunk[0].size
+        rows = (len(chunk) + cols - 1) // cols
+        canvas = Image.new("RGB", (cols * w + pad * (cols + 1), rows * h + pad * (rows + 1)), CONTACT_BG)
+        for k, im in enumerate(chunk):
+            canvas.paste(im, (pad + (k % cols) * (w + pad), pad + (k // cols) * (h + pad)))
+        sheets.append(canvas)
+    return sheets
+
+
 def contact_sheet() -> None:
     section("Contact sheet")
     pdf = BUILD / "cookbook.pdf"
@@ -273,24 +355,30 @@ def contact_sheet() -> None:
     pngdir.mkdir(exist_ok=True)
     for old in pngdir.glob("c-*.png"):
         old.unlink()
-    subprocess.run(
-        ["pdftoppm", "-r", "70", "-png", str(pdf), str(pngdir / "c")],
-        check=True,
-        capture_output=True,
-    )
+
+    try:
+        pages = _rasterize_parallel(pdf, pngdir, _pdf_page_count(pdf))
+    except (OSError, subprocess.CalledProcessError):
+        bad("pdftoppm failed (is poppler installed?)")
+        return
+    if not pages:
+        bad("pdftoppm produced no page images")
+        return
+
     from PIL import Image
 
-    pages = sorted(pngdir.glob("c-*.png"))
-    ims = [Image.open(p) for p in pages]
-    cols, pad = 6, 8
-    rows = (len(ims) + cols - 1) // cols
-    w, h = ims[0].size
-    canvas = Image.new("RGB", (cols * w + pad * (cols + 1), rows * h + pad * (rows + 1)), "#d8d2c4")
-    for k, im in enumerate(ims):
-        canvas.paste(im, (pad + (k % cols) * (w + pad), pad + (k // cols) * (h + pad)))
-    out = BUILD / "contact-sheet.png"
-    canvas.save(out)
-    ok(f"wrote {config.rel(out)} ({len(ims)} pages)")
+    sheets = _compose_sheets([Image.open(p) for p in pages])
+    # Sheet 1 keeps the canonical name (landing page, docs, CI all point at it);
+    # overflow sheets are numbered from 02 so a long book stays openable.
+    for old in BUILD.glob("contact-sheet-*.png"):
+        old.unlink()
+    outs = [BUILD / "contact-sheet.png", *(BUILD / f"contact-sheet-{i:02d}.png" for i in range(2, len(sheets) + 1))]
+    for sheet, out in zip(sheets, outs, strict=True):
+        sheet.save(out)
+    if len(sheets) == 1:
+        ok(f"wrote {config.rel(outs[0])} ({len(pages)} pages)")
+    else:
+        ok(f"wrote {len(sheets)} sheets ({config.rel(outs[0])} + …-{len(sheets):02d}.png, {len(pages)} pages)")
 
 
 def main(argv: list[str] | None = None) -> int:
