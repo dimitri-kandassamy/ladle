@@ -24,7 +24,7 @@ make check    # lint + test — the fast CI gate
 make build    # build PDF+EPUB (defaults BOOK=examples/the-ladle-kitchen/book.yaml)
 make validate # schema + PDF structure + epubcheck + contact sheet
 make doctor   # preflight: is pandoc/poppler/WeasyPrint/Java installed
-make new-book NAME=pt   # scaffold ./pt/
+make new-book NAME=desserts   # scaffold ./desserts/
 ```
 
 Run the CLI directly from a checkout: `PYTHONPATH=src python3 -m ladle <cmd>`.

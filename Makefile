@@ -44,7 +44,7 @@ validate:
 doctor:
 	$(LADLE) doctor
 
-# Scaffold a new book: `make new-book NAME=pt`.
+# Scaffold a new book: `make new-book NAME=desserts`.
 new-book:
 	$(LADLE) new $(NAME)
 
