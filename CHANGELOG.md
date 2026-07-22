@@ -38,8 +38,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with a message naming the file, instead of a raw `ValueError` traceback.
 - A `##` heading repeated within one recipe now accumulates its blocks; the
   earlier block used to be discarded.
+- `validate`'s contact sheet is ~16x faster (a 224-page book went 147s -> ~9s in
+  measurement): it rasterizes small glancing-resolution thumbnails instead of
+  reading-resolution pages, across concurrent page-range workers.
 
 ### Fixed
+
+- `validate`'s contact sheet for a long book (~145+ pages) used to be a single
+  image taller than the ~16384px canvas dimension many viewers can open — it now
+  paginates into `contact-sheet.png`, `contact-sheet-02.png`, … so every sheet
+  stays openable.
 
 - The bundled sample book had a direction step wrapped onto a second line, so
   `ladle theme preview` rendered it truncated mid-clause.
