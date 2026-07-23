@@ -88,6 +88,32 @@ def test_notes_line_count_is_case_insensitive(tmp_path):
     assert validate.notes_line_count(p) == 1
 
 
+# ---- pdfinfo ---------------------------------------------------------------
+def test_pdfinfo_parses_key_value_fields(tmp_path, monkeypatch):
+    class Result:
+        returncode = 0
+        stdout = "Pages:          16\nPage size:      486 x 684 pts\n"
+
+    monkeypatch.setattr(validate.subprocess, "run", lambda *a, **k: Result())
+
+    info = validate._pdfinfo(tmp_path / "x.pdf")
+    assert info["Pages"] == "16"
+    assert info["Page size"] == "486 x 684 pts"  # only the first colon splits
+    assert validate._pdf_page_count(tmp_path / "x.pdf") == 16
+
+
+def test_pdfinfo_is_empty_when_poppler_is_missing(tmp_path, monkeypatch):
+    """An absent binary raises FileNotFoundError; it does not return non-zero."""
+
+    def boom(*args, **kwargs):
+        raise FileNotFoundError(2, "No such file or directory", "pdfinfo")
+
+    monkeypatch.setattr(validate.subprocess, "run", boom)
+
+    assert validate._pdfinfo(tmp_path / "x.pdf") == {}
+    assert validate._pdf_page_count(tmp_path / "x.pdf") == 0
+
+
 # ---- report routing (T1: stderr + gated color) -----------------------------
 def test_validate_recipes_reports_to_stderr_without_ansi(tmp_path, capsys):
     recipes = tmp_path / "recipes"
