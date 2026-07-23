@@ -22,19 +22,21 @@
 {% if r.illustration_url %}<figure class="hero"><img src="{{ r.illustration_url }}" alt="{{ r.title }}"></figure>{% endif %}
 
 <h2>{{ book.labels.ingredients }}</h2>
-{% for g in r.ingredient_groups %}
-{% if g.label %}<h3>{{ g.label }}</h3>{% endif %}
-<ul>{% for item in g.lines %}<li>{{ item }}</li>{% endfor %}</ul>
-{% endfor %}
+{{ r.ingredients_html }}
 {% if r.servings %}<p class="yields"><strong>{{ book.labels.yields }}:</strong> {{ r.servings }}</p>{% endif %}
 
 <h2>{{ book.labels.directions }}</h2>
-<ol>{% for step in r.directions %}<li>{{ step }}</li>{% endfor %}</ol>
+{{ r.directions_html }}
 
 {% if r.notes_html %}
 <h2>{{ book.labels.notes }}</h2>
-{% for p in r.notes_html %}<p>{{ p }}</p>{% endfor %}
+{{ r.notes_html }}
 {% endif %}
+
+{% for s in r.extra_sections %}
+<h2>{{ s.title }}</h2>
+{{ s.html }}
+{% endfor %}
 
 {% if r.attribution %}<p class="attribution">{{ r.attribution }}</p>{% endif %}
 {% endfor %}

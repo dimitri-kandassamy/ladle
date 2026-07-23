@@ -31,14 +31,7 @@
 {# Ingredients column body, shared by the story method page and the single page. #}
 {% macro ingredients_col(r) -%}
 <h2 class="label">{{ book.labels.ingredients }}</h2>
-{% for g in r.ingredient_groups %}
-<div class="ing-group">
-  {% if g.label %}<div class="group-label">{{ g.label }}</div>{% endif %}
-  <ul class="ing-list">
-    {% for item in g.lines %}<li>{{ item }}</li>{% endfor %}
-  </ul>
-</div>
-{% endfor %}
+<div class="ing-body">{{ r.ingredients_html }}</div>
 {% if r.servings %}
 <div class="serves">
   <span class="label">{{ book.labels.yields }}</span>
@@ -48,9 +41,15 @@
 {% if r.notes_html %}
 <div class="notes">
   <h2 class="label">{{ book.labels.notes }}</h2>
-  <div class="prose">{% for p in r.notes_html %}<p>{{ p }}</p>{% endfor %}</div>
+  <div class="prose">{{ r.notes_html }}</div>
 </div>
 {% endif %}
+{% for s in r.extra_sections %}
+<div class="notes extra">
+  <h2 class="label">{{ s.title }}</h2>
+  <div class="prose">{{ s.html }}</div>
+</div>
+{% endfor %}
 {%- endmacro %}
 
 {# Full story page — used only when a recipe has a story to tell. #}
@@ -105,9 +104,7 @@
     <div class="columns">
       <div class="col directions">
         <h2 class="label">{{ book.labels.directions }}</h2>
-        <ol class="steps">
-          {% for step in r.directions %}<li>{{ step }}</li>{% endfor %}
-        </ol>
+        <div class="steps">{{ r.directions_html }}</div>
       </div>
       <div class="col ingredients">{{ ingredients_col(r) }}</div>
     </div>

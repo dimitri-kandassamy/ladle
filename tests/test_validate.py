@@ -132,11 +132,16 @@ def test_validate_recipes_reports_to_stderr_without_ansi(tmp_path, capsys):
 
 # ---- recipe body -----------------------------------------------------------
 def lossy_recipes(tmp_path):
-    """A book whose one recipe has a step wrapped onto a second line."""
+    """A book whose one recipe uses a heading ladle does not know.
+
+    A wrapped step used to belong here; it now renders correctly, so the
+    remaining reportable case is structural — content that renders somewhere the
+    author did not intend.
+    """
     recipes = tmp_path / "recipes"
     recipes.mkdir()
     (recipes / "r.md").write_text(
-        "---\ntitle: X\ncategory: Savory\n---\n\n## DIRECTIONS\n1. Beat the butter,\nthen fold in the flour.\n",
+        "---\ntitle: X\ncategory: Savory\n---\n\n## PREPARAÇÃO\nMexe-se tudo.\n",
         encoding="utf-8",
     )
     return recipes
@@ -148,7 +153,7 @@ def test_validate_bodies_notes_dropped_content_without_failing(tmp_path, capsys)
 
     out = capsys.readouterr()
     assert out.out == ""  # stdout stays clean for piping
-    assert "r.md:8:" in out.err  # file:line: message, so it's clickable
+    assert "r.md:7:" in out.err  # file:line: message, so it's clickable
     assert "will not appear in the book" in out.err
     assert "--strict" in out.err  # tells the user how to escalate
     assert not validate.failures  # a note by default, not a failure
