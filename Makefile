@@ -50,4 +50,4 @@ new-book:
 
 clean:
 	rm -rf $(BUILD)/cookbook.html $(BUILD)/epub.html $(BUILD)/cookbook.pdf \
-	       $(BUILD)/cookbook.epub $(BUILD)/contact-sheet.png $(BUILD)/pdf_png
+	       $(BUILD)/cookbook.epub $(BUILD)/contact-sheet*.png $(BUILD)/pdf_png
