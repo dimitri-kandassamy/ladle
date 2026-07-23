@@ -106,6 +106,70 @@ def paragraphs(text: str) -> list[str]:
     return out
 
 
+# The markdown a recipe section body may use. Deliberately small and documented
+# (see docs/RECIPES.md): `###` sub-headings, `-`/`*` and `1.` lists, and the
+# inline set `inline()` handles. Anything else renders as prose rather than being
+# dropped — which is the whole point of rendering bodies instead of matching them
+# against a line grammar.
+_MD_H3 = re.compile(r"^\s{0,3}###\s+(.*\S)\s*$")
+_MD_UL = re.compile(r"^\s*[-*]\s+(.*\S)\s*$")
+_MD_OL = re.compile(r"^\s*\d+\.\s+(.*\S)\s*$")
+
+
+def render_markdown(text: str) -> Markup:
+    """Render a recipe section body to HTML.
+
+    The single seam between recipe source and rendered output: one parse feeds
+    both builds, because pandoc reads the EPUB HTML this produces. Swapping the
+    in-repo renderer for a markdown library later means replacing this function
+    and nothing else.
+
+    Blocks are separated by blank lines. A non-blank line that starts no new
+    block continues whatever is open — so a step wrapped onto a second line joins
+    its step instead of being discarded, which is the failure this replaces.
+    """
+    out: list[str] = []
+    para: list[str] = []
+    items: list[str] = []
+    tag = ""
+
+    def flush() -> None:
+        nonlocal tag
+        if para:
+            out.append(f"<p>{inline(' '.join(para))}</p>")
+            para.clear()
+        if items:
+            body = "".join(f"<li>{inline(i)}</li>" for i in items)
+            out.append(f"<{tag}>{body}</{tag}>")
+            items.clear()
+        tag = ""
+
+    for line in (text or "").splitlines():
+        if not line.strip():
+            flush()
+            continue
+        if m := _MD_H3.match(line):
+            flush()
+            out.append(f"<h3>{inline(m.group(1))}</h3>")
+            continue
+        for pattern, kind in ((_MD_UL, "ul"), (_MD_OL, "ol")):
+            if m := pattern.match(line):
+                if para or tag != kind:
+                    flush()
+                tag = kind
+                items.append(m.group(1))
+                break
+        else:
+            # No marker. Continue the open list item or paragraph rather than
+            # starting a block, matching markdown's lazy continuation.
+            if items:
+                items[-1] += " " + line.strip()
+            else:
+                para.append(line.strip())
+    flush()
+    return Markup("\n".join(out))
+
+
 # ---- recipe parsing --------------------------------------------------------
 def split_front_matter(raw: str, *, where: str = "") -> tuple[dict, str]:
     """Split `---` front matter from the body.
@@ -177,43 +241,25 @@ def section_text(lines: list[Line]) -> str:
     return "\n".join(text for _, text in lines)
 
 
-def parse_ingredients(lines: list[Line]) -> tuple[list[dict], list[Line]]:
-    """Numbered lines -> ingredient groups, plus the lines no rule consumed.
+def extra_sections(sec: dict[str, list[Line]]) -> list[dict]:
+    """Sections under a heading ladle does not know, rendered generically.
 
-    Returning the leftovers (rather than letting a separate checker re-derive
-    them) keeps one rule set: a line is unparsed precisely when *this* function
-    did not use it, so the two can never drift apart.
+    A book written to another project's conventions will have headings ladle has
+    never heard of. Rendering them as a titled block means nothing is dropped for
+    being unrecognised, and themes need no per-heading slot contract: the build
+    still warns (see :func:`unparsed_content`) so the author can rename them.
+
+    Headings arrive uppercased from :func:`sections_of`; title case reads better
+    in the EPUB, and the print theme's ``.label`` re-uppercases it anyway.
     """
-    groups: list[dict] = []
-    unclaimed: list[Line] = []
-    current = {"label": "", "lines": []}
-    for n, line in lines:
-        h = re.match(r"^###\s+(.*\S)\s*$", line)
-        item = re.match(r"^\s*[-*]\s+(.*\S)\s*$", line)
-        if h:
-            if current["lines"]:
-                groups.append(current)
-            current = {"label": h.group(1).strip(), "lines": []}
-        elif item:
-            current["lines"].append(inline(item.group(1)))
-        elif line.strip():
-            unclaimed.append((n, line))
-    if current["lines"]:
-        groups.append(current)
-    return groups, unclaimed
-
-
-def parse_directions(lines: list[Line]) -> tuple[list[str], list[Line]]:
-    """Numbered lines -> numbered steps, plus the lines no rule consumed."""
-    steps: list[str] = []
-    unclaimed: list[Line] = []
-    for n, line in lines:
-        m = re.match(r"^\s*\d+\.\s+(.*\S)\s*$", line)
-        if m:
-            steps.append(inline(m.group(1)))
-        elif line.strip():
-            unclaimed.append((n, line))
-    return steps, unclaimed
+    out: list[dict] = []
+    for name, lines in sec.items():
+        if name in KNOWN_SECTIONS:
+            continue
+        html = render_markdown(section_text(lines))
+        if html:
+            out.append({"title": name.title(), "html": html})
+    return out
 
 
 def split_title_article(title: str) -> tuple[str, str]:
@@ -293,9 +339,14 @@ def load_recipe(path: Path, *, absolute_assets: bool, book_root: Path) -> dict:
             absolute=absolute_assets,
             book_root=book_root,
         ),
-        "ingredient_groups": parse_ingredients(sec.get("INGREDIENTS", []))[0],
-        "directions": parse_directions(sec.get("DIRECTIONS", []))[0],
-        "notes_html": paragraphs(section_text(sec.get("NOTES", []))),
+        # Rendered HTML, not structured data. The keys are deliberately renamed
+        # from `ingredient_groups`/`directions`: a theme still iterating the old
+        # names now raises on an undefined variable instead of silently walking a
+        # string one character at a time.
+        "ingredients_html": render_markdown(section_text(sec.get("INGREDIENTS", []))),
+        "directions_html": render_markdown(section_text(sec.get("DIRECTIONS", []))),
+        "notes_html": render_markdown(section_text(sec.get("NOTES", []))),
+        "extra_sections": extra_sections(sec),
         "draft": bool(fm.get("draft", False)),
     }
 
@@ -358,15 +409,17 @@ def excerpt(text: str, limit: int = 60) -> str:
 
 
 def unparsed_content(path: Path) -> list[Dropped]:
-    """Body content in *path* that no parser rule claimed, so nothing renders it.
+    """Body content in *path* that lands somewhere the author probably didn't mean.
 
-    The parsers report their own leftovers, so this cannot drift from what the
-    build actually does. Covers both halves of the problem:
+    Now that section bodies render as markdown, no *line* can go unrendered — the
+    per-line checks over INGREDIENTS/DIRECTIONS are gone with the line grammar
+    they policed. What remains is structural, and both cases still render their
+    content rather than dropping it:
 
-    * a line inside a known section that matched no rule (a step wrapped onto a
-      second line, an unbulleted ingredient, a prose lead-in);
-    * a whole section under a heading ladle does not read — which is what a book
-      written in another language hits, since the headings are matched literally.
+    * text before the first ``##`` heading, which belongs to no section and so
+      appears in no template slot;
+    * a heading ladle does not know, which renders as a generic titled block
+      instead of the section the author intended (see :func:`extra_sections`).
 
     Blank lines are not content and are never reported.
     """
@@ -389,28 +442,20 @@ def unparsed_content(path: Path) -> list[Dropped]:
             )
 
     for name, lines in sec.items():
-        if name == "INGREDIENTS":
-            unclaimed = parse_ingredients(lines)[1]
-            for n, line in unclaimed:
-                out.append(
-                    Dropped(path.name, n, f'line in INGREDIENTS is not an item or "###" group: "{excerpt(line)}"')
+        if name in KNOWN_SECTIONS:
+            continue
+        content = [(n, line) for n, line in lines if line.strip()]
+        if content:
+            known = ", ".join(KNOWN_SECTIONS)
+            out.append(
+                Dropped(
+                    path.name,
+                    content[0][0],
+                    f'"## {name}" is not a section ladle knows ({known}) — '
+                    f"rendered as a generic block, {len(content)} line"
+                    f"{'s' if len(content) != 1 else ''}",
                 )
-        elif name == "DIRECTIONS":
-            unclaimed = parse_directions(lines)[1]
-            for n, line in unclaimed:
-                out.append(Dropped(path.name, n, f'line in DIRECTIONS is not a numbered step: "{excerpt(line)}"'))
-        elif name != "NOTES":  # NOTES renders as free prose, so nothing is dropped
-            content = [(n, line) for n, line in lines if line.strip()]
-            if content:
-                known = ", ".join(KNOWN_SECTIONS)
-                out.append(
-                    Dropped(
-                        path.name,
-                        content[0][0],
-                        f'"## {name}" is not a section ladle renders ({known}) — '
-                        f"{len(content)} line{'s' if len(content) != 1 else ''} dropped",
-                    )
-                )
+            )
     return sorted(out, key=lambda d: d.line)
 
 

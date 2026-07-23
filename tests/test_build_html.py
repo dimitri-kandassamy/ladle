@@ -100,37 +100,47 @@ def test_sections_of_merges_a_repeated_heading():
     assert [text for _, text in sec["NOTES"]] == ["first", "second"]
 
 
-def test_parse_ingredients_groups_by_subheading():
-    lines = numbered("### For the base", "- flour", "- butter", "### Topping", "- sugar")
-    groups, unclaimed = bh.parse_ingredients(lines)
-    assert [g["label"] for g in groups] == ["For the base", "Topping"]
-    assert [str(x) for x in groups[0]["lines"]] == ["flour", "butter"]
-    assert unclaimed == []
+# ---- markdown section bodies -----------------------------------------------
+def test_render_markdown_joins_a_wrapped_step():
+    """The field report's worst case: 25 files, steps truncated mid-sentence."""
+    html = bh.render_markdown("1. Beat the butter,\nthen fold in the flour.")
+    assert str(html) == "<ol><li>Beat the butter, then fold in the flour.</li></ol>"
 
 
-def test_parse_ingredients_ungrouped():
-    groups, _ = bh.parse_ingredients(numbered("- salt", "- pepper"))
-    assert len(groups) == 1
-    assert groups[0]["label"] == ""
-    assert [str(x) for x in groups[0]["lines"]] == ["salt", "pepper"]
+def test_render_markdown_emits_ordered_and_unordered_lists():
+    assert str(bh.render_markdown("1. First\n2. Second")) == "<ol><li>First</li><li>Second</li></ol>"
+    assert str(bh.render_markdown("- salt\n- pepper")) == "<ul><li>salt</li><li>pepper</li></ul>"
 
 
-def test_parse_ingredients_returns_unclaimed_lines():
-    # A numbered ingredient list and a dash with no space: both seen in the field.
-    _, unclaimed = bh.parse_ingredients(numbered("- salt", "1. 2 bifes", "-(para 10 pessoas)", ""))
-    assert unclaimed == [(2, "1. 2 bifes"), (3, "-(para 10 pessoas)")]
+def test_render_markdown_subheading_starts_a_new_block_without_a_blank_line():
+    html = bh.render_markdown("### Sauce\n- butter\n- flour")
+    assert str(html) == "<h3>Sauce</h3>\n<ul><li>butter</li><li>flour</li></ul>"
 
 
-def test_parse_directions_extracts_numbered_steps():
-    lines = numbered("1. Preheat the oven", "2. **Whisk** the eggs", "not a step")
-    steps, unclaimed = bh.parse_directions(lines)
-    assert [str(s) for s in steps] == ["Preheat the oven", "<strong>Whisk</strong> the eggs"]
-    assert unclaimed == [(3, "not a step")]
+def test_render_markdown_switching_marker_starts_a_new_list():
+    html = bh.render_markdown("- salt\n1. First")
+    assert str(html) == "<ul><li>salt</li></ul>\n<ol><li>First</li></ol>"
 
 
-def test_parse_directions_ignores_blank_lines():
-    _, unclaimed = bh.parse_directions(numbered("1. mix", "", "   "))
-    assert unclaimed == []
+def test_render_markdown_keeps_prose_the_parsers_used_to_drop():
+    """Each shape below was silently discarded by the old line grammar."""
+    assert "<p>For the base:</p>" in str(bh.render_markdown("For the base:\n\n- flour"))
+    assert str(bh.render_markdown("-(para 10 pessoas)")) == "<p>-(para 10 pessoas)</p>"
+    assert str(bh.render_markdown("NOTA: use cold butter.")) == "<p>NOTA: use cold butter.</p>"
+
+
+def test_render_markdown_inline_spans_a_wrapped_line():
+    html = bh.render_markdown("1. Use **very cold\nbutter** here.")
+    assert str(html) == "<ol><li>Use <strong>very cold butter</strong> here.</li></ol>"
+
+
+def test_render_markdown_escapes_html():
+    assert "&lt;script&gt;" in str(bh.render_markdown("- <script>alert(1)</script>"))
+
+
+def test_render_markdown_empty_input():
+    assert str(bh.render_markdown("")) == ""
+    assert str(bh.render_markdown(None)) == ""
 
 
 # ---- unparsed body content -------------------------------------------------
@@ -163,23 +173,28 @@ def test_body_start_line_without_front_matter():
     assert bh.body_start_line("## INGREDIENTS\n- salt\n") == 1
 
 
-def test_unparsed_content_reports_a_wrapped_step(tmp_path):
-    # The dangerous case: the step renders as a complete-looking sentence with
-    # the rest of the instruction gone, and a reader cannot tell.
+def test_unparsed_content_is_silent_on_a_wrapped_step(tmp_path):
+    """The report's worst case is now rendered, not reported — nothing is lost."""
     p = write_recipe(tmp_path, "## DIRECTIONS\n1. Beat the butter and sugar,\nthen fold in the flour.\n")
-    (d,) = bh.unparsed_content(p)
-    assert d.line == 8
-    assert "not a numbered step" in d.message
-    assert "then fold in the flour." in d.message
+    assert bh.unparsed_content(p) == []
+
+
+def test_unparsed_content_is_silent_on_shapes_the_old_grammar_rejected(tmp_path):
+    """Numbered ingredients, an unbulleted line, a prose lead-in: all render now."""
+    p = write_recipe(
+        tmp_path,
+        "## INGREDIENTS\nFor the base:\n\n1. 2 bifes\n-(para 10 pessoas)\n\n## DIRECTIONS\n1. mix\n",
+    )
+    assert bh.unparsed_content(p) == []
 
 
 def test_unparsed_content_reports_an_unknown_section(tmp_path):
-    # What a non-English book hits: headings are matched literally, so the whole
-    # section renders as nothing.
+    # A book written to another project's conventions. The content still renders,
+    # as a generic titled block — the warning is so the author can rename it.
     p = write_recipe(tmp_path, "## PREPARAÇÃO\nMexe-se tudo.\nDeixa-se repousar.\n")
     (d,) = bh.unparsed_content(p)
     assert '"## PREPARAÇÃO"' in d.message
-    assert "2 lines dropped" in d.message
+    assert "generic block" in d.message
 
 
 def test_unparsed_content_reports_text_before_the_first_heading(tmp_path):
@@ -200,8 +215,8 @@ def test_unparsed_content_does_not_flag_notes_prose(tmp_path):
 
 
 def test_unparsed_content_is_sorted_by_line(tmp_path):
-    p = write_recipe(tmp_path, "## DIRECTIONS\n1. mix\nstray one\n\n## INGREDIENTS\nstray two\n")
-    assert [d.line for d in bh.unparsed_content(p)] == [8, 11]
+    p = write_recipe(tmp_path, "Uma receita da avó.\n\n## DIRECTIONS\n1. mix\n\n## PREPARAÇÃO\nMexe-se tudo.\n")
+    assert [d.line for d in bh.unparsed_content(p)] == [6, 12]
 
 
 @pytest.mark.parametrize(
@@ -232,8 +247,8 @@ def test_excerpt_caps_length_and_collapses_whitespace():
 
 
 def test_warn_unparsed_content_caps_output(tmp_path, capsys):
-    body = "## DIRECTIONS\n1. mix\n" + "".join(f"stray {i}\n" for i in range(12))
-    write_recipe(tmp_path, body)
+    for i in range(12):
+        write_recipe(tmp_path, f"## SECTION {i}\ncontent\n", name=f"r{i}.md")
     bh.warn_unparsed_content(tmp_path, limit=3)
     err = capsys.readouterr().err
     assert err.count("warning:") == 4  # 3 findings + the summary line
