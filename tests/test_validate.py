@@ -20,6 +20,47 @@ def test_front_matter_reads_yaml_block(tmp_path):
     assert validate.front_matter(p) == {"title": "Soup", "draft": True}
 
 
+def test_front_matter_is_empty_without_a_front_matter_block(tmp_path):
+    """Used to raise IndexError, surfacing as `error: list index out of range`."""
+    p = tmp_path / "r.md"
+    p.write_text("## INGREDIENTS\n\n- salt\n", encoding="utf-8")
+    assert validate.front_matter(p) == {}
+
+
+def test_front_matter_is_empty_when_front_matter_is_unclosed(tmp_path):
+    """validate reports a malformed recipe (see check_recipes); it must not abort on one."""
+    p = tmp_path / "r.md"
+    p.write_text("---\ntitle: X\n\n## INGREDIENTS\n\n- salt\n", encoding="utf-8")
+    assert validate.front_matter(p) == {}
+    assert validate.notes_line_count(p) == 0
+
+
+def test_check_recipes_reports_unclosed_front_matter_per_file(tmp_path):
+    recipes = tmp_path / "recipes"
+    recipes.mkdir()
+    (recipes / "good.md").write_text("---\ntitle: Soup\ncategory: Savory\n---\n\n## NOTES\nfine\n", encoding="utf-8")
+    (recipes / "unclosed.md").write_text("---\ntitle: X\n\n## NOTES\nnope\n", encoding="utf-8")
+
+    results = {r["file"]: r for r in validate.check_recipes(recipes)}
+
+    assert results["good.md"]["ok"] is True
+    assert results["unclosed.md"]["ok"] is False
+    assert "never closed" in results["unclosed.md"]["message"]
+
+
+def test_validate_bodies_survives_an_unsplittable_recipe(tmp_path, capsys):
+    """One malformed file must not abort the body check for every other recipe."""
+    recipes = tmp_path / "recipes"
+    recipes.mkdir()
+    (recipes / "unclosed.md").write_text("---\ntitle: X\n\n## NOTES\nnope\n", encoding="utf-8")
+    (recipes / "good.md").write_text("---\ntitle: Soup\ncategory: Savory\n---\n\n## NOTES\nfine\n", encoding="utf-8")
+
+    validate.failures.clear()
+    validate.validate_bodies(recipes)
+
+    assert "all body content was parsed" in capsys.readouterr().err
+
+
 def test_notes_line_count_counts_non_empty_lines_under_notes(tmp_path):
     p = tmp_path / "r.md"
     p.write_text(
