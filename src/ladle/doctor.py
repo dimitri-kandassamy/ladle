@@ -133,9 +133,7 @@ def check_python_packages() -> None:
         "yaml": "PyYAML",
         "jinja2": "Jinja2",
         "jsonschema": "jsonschema",
-        "cairosvg": "cairosvg",
         "PIL": "Pillow",
-        "numpy": "numpy",
     }
     missing = []
     for module, pip_name in packages.items():
