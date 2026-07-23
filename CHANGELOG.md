@@ -52,6 +52,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The bundled sample book had a direction step wrapped onto a second line, so
   `ladle theme preview` rendered it truncated mid-clause.
 
+- `validate` no longer aborts on the very files it exists to report. A recipe
+  with no front matter used to end the run with `error: list index out of range`,
+  naming no file; an unclosed `---` block did the same. Both are now reported per
+  file, and the remaining checks still run.
+
+- `validate` without poppler installed used to die on a raw
+  `[Errno 2] No such file or directory: 'pdfinfo'`, making its own "is poppler
+  installed?" message unreachable. It now reports that check as failed and
+  carries on to the EPUB check.
+
 ### Removed
 
 - `cairosvg` and `numpy` are no longer runtime dependencies. Both existed only
