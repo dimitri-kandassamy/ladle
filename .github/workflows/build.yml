@@ -129,7 +129,7 @@ jobs:
           path: |
             build/cookbook.pdf
             build/cookbook.epub
-            build/contact-sheet.png
+            build/contact-sheet*.png
             build/preview/default/cover.png
 
       # The example-book build above is an end-to-end smoke test of the tool; its
