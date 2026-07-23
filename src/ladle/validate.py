@@ -53,14 +53,34 @@ def note(msg: str) -> None:
     ui.step(f"  note {msg}")
 
 
+def _split_or_empty(path: Path) -> tuple[dict, str]:
+    """Front matter + body, or ``({}, "")`` when the file cannot be split.
+
+    Two jobs in one place. It delegates to :func:`build_html.split_front_matter`
+    so ``validate`` and ``build`` agree on what front matter *is* — this file
+    used to split on ``---`` by hand in three different ways, one of which raised
+    a bare ``IndexError`` on a recipe with no front matter.
+
+    And it sets the policy for the structural checks downstream: ``validate``
+    *reports* a malformed recipe (:func:`check_recipes` names it, strictly) and
+    keeps going, rather than aborting the run on the one file the author most
+    needs a report about.
+    """
+    from . import build_html
+
+    try:
+        return build_html.split_front_matter(path.read_text(encoding="utf-8"), where=path.name)
+    except (config.ConfigError, yaml.YAMLError):
+        return {}, ""
+
+
 def front_matter(path: Path) -> dict:
-    return yaml.safe_load(path.read_text(encoding="utf-8").split("---", 2)[1]) or {}
+    return _split_or_empty(path)[0]
 
 
 def notes_line_count(path: Path) -> int:
     """Non-empty line count of a recipe's `## NOTES` body, for the page-count diagnostic."""
-    raw = path.read_text(encoding="utf-8")
-    body = raw.split("---", 2)[-1] if raw.startswith("---") else raw
+    body = _split_or_empty(path)[1]
     in_notes = False
     count = 0
     for line in body.splitlines():
@@ -82,6 +102,8 @@ def check_recipes(recipes_dir: Path) -> list[dict]:
     Pure: returns one record per result — ``{file, ok, loc, message}`` — with no
     printing, so :func:`validate_recipes` can format the human report from it.
     """
+    from . import build_html
+
     schema = json.loads(config.SCHEMA_PATH.read_text())
     Validator = jsonschema.validators.validator_for(schema)
     Validator.check_schema(schema)
@@ -97,9 +119,13 @@ def check_recipes(recipes_dir: Path) -> list[dict]:
             results.append({"file": p.name, "ok": False, "loc": "", "message": "missing front matter"})
             continue
         try:
-            fm = yaml.safe_load(raw.split("---", 2)[1]) or {}
+            fm = build_html.split_front_matter(raw, where=p.name)[0]
         except yaml.YAMLError as e:
             results.append({"file": p.name, "ok": False, "loc": "", "message": f"invalid YAML: {e}"})
+            continue
+        except config.ConfigError as e:
+            # Unclosed `---`: reported per file so one bad recipe doesn't abort the run.
+            results.append({"file": p.name, "ok": False, "loc": "", "message": str(e).split(": ", 1)[-1]})
             continue
         errors = sorted(validator.iter_errors(fm), key=lambda e: list(e.path))
         if errors:
@@ -139,7 +165,12 @@ def validate_bodies(recipes_dir: Path, *, strict: bool = False) -> None:
     from . import build_html
 
     section("Recipe body")
-    found = [d for p in sorted(recipes_dir.glob("*.md")) for d in build_html.unparsed_content(p)]
+    found = []
+    for p in sorted(recipes_dir.glob("*.md")):
+        try:
+            found.extend(build_html.unparsed_content(p))
+        except config.ConfigError:
+            continue  # unsplittable front matter — already named in the section above
     if not found:
         ok("all body content was parsed")
         return
