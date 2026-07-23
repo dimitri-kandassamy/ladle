@@ -220,8 +220,11 @@ h2 { bookmark-level: none; }
 }
 .method h2.label { margin: 0 0 0.18in; font-size: 9pt; }
 
-.steps { counter-reset: step; list-style: none; margin: 0; padding: 0; }
-.steps li {
+/* Section bodies are rendered from markdown, so the theme styles plain <ol>/<ul>/
+   <h3> inside its own wrappers rather than classed markup. `>` keeps a nested
+   list from inheriting the step counter. */
+.steps > ol { counter-reset: step; list-style: none; margin: 0; padding: 0; }
+.steps > ol > li {
   counter-increment: step;
   position: relative;
   padding-left: 0.32in;
@@ -231,25 +234,37 @@ h2 { bookmark-level: none; }
   line-height: 1.42;
   color: var(--ink);
 }
-.steps li::before {
+.steps > ol > li::before {
   content: counter(step) ".";
   position: absolute;
   left: 0;
   font-weight: 700;
   font-style: italic;
 }
+/* A step may carry prose around the list (a lead-in, a `NOTA:` aside) — set it
+   like a step so it does not fall back to the browser default. */
+.steps > p {
+  margin: 0 0 0.13in;
+  font-family: var(--body);
+  font-size: 9.5pt;
+  line-height: 1.42;
+  color: var(--ink);
+}
 
-.ing-group { margin-bottom: 0.16in; }
-.ing-group .group-label {
+/* Ingredient `### group` headings — was a .group-label div. */
+.ing-body h3 {
   font-family: var(--body);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 6.5pt;
   font-weight: 700;
-  margin-bottom: 6pt;
+  margin: 0.16in 0 6pt;
 }
-.ing-list { list-style: none; margin: 0; padding: 0; }
-.ing-list li {
+.ing-body h3:first-child { margin-top: 0; }
+.ing-body ul,
+.ing-body ol { list-style: none; margin: 0 0 0.16in; padding: 0; }
+.ing-body li,
+.ing-body p {
   font-family: var(--body);
   font-style: italic;
   font-size: 9pt;
@@ -267,6 +282,14 @@ h2 { bookmark-level: none; }
 
 .notes { margin-top: 0.18in; }
 .notes .prose { font-size: 9.2pt; }
+/* Notes are usually prose, but an author may write them as a list. Match the
+   theme's marker-less setting rather than falling back to browser bullets and
+   indentation. */
+.notes .prose ul,
+.notes .prose ol { list-style: none; margin: 0; padding: 0; }
+.notes .prose li { margin-bottom: 0.7em; }  /* same rhythm as .prose p */
+.notes .prose p:first-child,
+.notes .prose h3:first-child { margin-top: 0; }
 
 /* Vertical rotated sidebar on the outer (right) edge. Implemented with a
    transform (not writing-mode) so it renders identically in WeasyPrint: the

@@ -99,6 +99,59 @@ The templates expose tokens as CSS variables (`--navy`, `--cream`, `--ink`,
 `--ink-deep`, `--rule`, `--display`, `--body`), so most restyling is CSS + token
 edits, no template surgery.
 
+## What a template receives
+
+Both templates get `book` (the merged `book.yaml`, with `book.labels` for every
+printed string) and `recipes` — an ordered list of recipe objects:
+
+| Key                                  | What it is                                        |
+| ------------------------------------ | ------------------------------------------------- |
+| `slug` `title` `category` `servings` | front matter, as written                          |
+| `credits` `page` `credits_line`      | provenance; `credits_line` folds in `p. N`        |
+| `author.name` `author.org`           | empty strings when there is no `author:`          |
+| `has_story` `story_html`             | `story_html` is a list of paragraphs              |
+| `headshot_url` `illustration_url`    | empty string when unset — **always guard**        |
+| `ingredients_html` `directions_html` | **rendered HTML** for each section                |
+| `notes_html`                         | **rendered HTML**; empty when there is no section |
+| `extra_sections`                     | `[{title, html}]` for unknown headings            |
+| `attribution` `draft`                | front matter                                      |
+
+### Section bodies are rendered HTML
+
+ladle splits a recipe body on its `##` headings and renders each section from
+markdown, so a template inserts one value per section rather than looping:
+
+```jinja
+<div class="ing-body">{{ r.ingredients_html }}</div>
+<div class="steps">{{ r.directions_html }}</div>
+```
+
+You get plain `<p>`, `<ul>`, `<ol>`, `<h3>` and inline `<a>/<strong>/<em>` — no
+ladle-specific classes — so style them under a wrapper your template owns. Use
+the child combinator where nesting matters:
+
+```css
+.steps > ol { counter-reset: step; list-style: none; }
+.steps > ol > li::before { content: counter(step) "."; }
+```
+
+Always render `extra_sections`, or a book using a heading ladle doesn't know
+will lose it:
+
+```jinja
+{% for s in r.extra_sections %}
+  <h2 class="label">{{ s.title }}</h2>
+  <div class="prose">{{ s.html }}</div>
+{% endfor %}
+```
+
+> **Breaking change.** `r.ingredient_groups` and `r.directions` are gone,
+> replaced by `r.ingredients_html` / `r.directions_html`, and `r.notes_html` is
+> now one HTML value rather than a list of paragraphs. The names changed
+> deliberately: a template still referencing the old ones fails loudly on an
+> undefined variable instead of quietly iterating a string character by
+> character. `r.story_html` is unchanged.
+
 ## Authoring workflow
 
 The quickest start is to fork `default`:
