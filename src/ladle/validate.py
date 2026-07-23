@@ -185,17 +185,33 @@ def validate_bodies(recipes_dir: Path, *, strict: bool = False) -> None:
 
 
 # ---- 2. PDF structure ------------------------------------------------------
+def _pdfinfo(pdf: Path) -> dict[str, str]:
+    """`pdfinfo`'s ``Key: value`` fields, or ``{}`` if poppler is missing or fails.
+
+    Catching OSError matters: an absent `pdfinfo` raises FileNotFoundError rather
+    than returning non-zero, so the "is poppler installed?" message this feeds
+    used to be unreachable — the run died on the raw errno instead.
+    """
+    try:
+        res = subprocess.run(["pdfinfo", str(pdf)], capture_output=True, text=True)
+    except OSError:
+        return {}
+    if res.returncode != 0:
+        return {}
+    fields = (line.partition(":") for line in res.stdout.splitlines())
+    return {k.strip(): v.strip() for k, _, v in fields if k.strip()}
+
+
 def validate_pdf(recipes_dir: Path) -> None:
     section("PDF structure")
     pdf = BUILD / "cookbook.pdf"
     if not pdf.exists():
         bad("build/cookbook.pdf not found (run `ladle build`)")
         return
-    res = subprocess.run(["pdfinfo", str(pdf)], capture_output=True, text=True)
-    if res.returncode != 0:
+    info = _pdfinfo(pdf)
+    if not info:
         bad("pdfinfo failed (is poppler installed?)")
         return
-    info = dict((k.strip(), v.strip()) for k, _, v in (line.partition(":") for line in res.stdout.splitlines()) if k)
 
     pages = int(info.get("Pages", "0"))
     n_recipes = sum(1 for p in recipes_dir.glob("*.md") if not front_matter(p).get("draft", False))
@@ -266,7 +282,24 @@ def structural_epub_check(epub: Path) -> None:
         else:
             bad("container.xml missing")
         opfs = [n for n in names if n.endswith(".opf")]
-        ok(f"OPF package found ({opfs[0]})") if opfs else bad("no .opf package")
+        if opfs:
+            ok(f"OPF package found ({opfs[0]})")
+        else:
+            bad("no .opf package")
+
+
+def _run_epubcheck(command: list[str], epub: Path) -> None:
+    """Run one epubcheck invocation and report its last few lines of output.
+
+    The bundled jar and a PATH-installed `epubcheck` differ only in how they are
+    launched, so the reporting lives here once.
+    """
+    res = subprocess.run([*command, str(epub)], capture_output=True, text=True)
+    tail = (res.stdout + res.stderr).strip().splitlines()[-3:]
+    if res.returncode == 0:
+        ok("epubcheck: " + " ".join(tail[-1:]))
+    else:
+        bad("epubcheck reported errors:\n      " + "\n      ".join(tail))
 
 
 def validate_epub() -> None:
@@ -278,18 +311,9 @@ def validate_epub() -> None:
     jar = config.epubcheck_jar()
     java = find_java()
     if jar.exists() and java:
-        res = subprocess.run([java, "-jar", str(jar), str(epub)], capture_output=True, text=True)
-        tail = (res.stdout + res.stderr).strip().splitlines()[-3:]
-        if res.returncode == 0:
-            ok("epubcheck: " + " ".join(tail[-1:]))
-        else:
-            bad("epubcheck reported errors:\n      " + "\n      ".join(tail))
+        _run_epubcheck([java, "-jar", str(jar)], epub)
     elif shutil.which("epubcheck"):
-        res = subprocess.run(["epubcheck", str(epub)], capture_output=True, text=True)
-        tail = (res.stdout + res.stderr).strip().splitlines()[-3:]
-        ok("epubcheck: " + " ".join(tail[-1:])) if res.returncode == 0 else bad(
-            "epubcheck reported errors:\n      " + "\n      ".join(tail)
-        )
+        _run_epubcheck(["epubcheck"], epub)
     else:
         note("epubcheck/Java unavailable — running structural fallback")
         structural_epub_check(epub)
@@ -310,14 +334,7 @@ CONTACT_BG = "#d8d2c4"
 
 def _pdf_page_count(pdf: Path) -> int:
     """Page count via pdfinfo; 0 if unavailable (caller renders as a single slice)."""
-    res = subprocess.run(["pdfinfo", str(pdf)], capture_output=True, text=True)
-    if res.returncode != 0:
-        return 0
-    for line in res.stdout.splitlines():
-        key, _, val = line.partition(":")
-        if key.strip() == "Pages":
-            return int(val.strip() or 0)
-    return 0
+    return int(_pdfinfo(pdf).get("Pages", "").strip() or 0)
 
 
 def _page_ranges(n_pages: int, workers: int) -> list[tuple[int, int]]:
