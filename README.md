@@ -111,22 +111,53 @@ A recipe with a non-empty `story:` gets a full story page (with an optional
 `headshot`); without one it gets a compact opener. Every recipe is validated
 against [`recipe.schema.json`](https://github.com/dimitri-kandassamy/ladle/blob/main/src/ladle/schema/recipe.schema.json).
 
-The body has a contract too, and only these shapes are rendered:
+#### The body contract
 
-| Under            | ladle reads                                              |
-| ---------------- | -------------------------------------------------------- |
-| `## INGREDIENTS` | `- item` lines, optionally split by `### group` headings |
-| `## DIRECTIONS`  | numbered `1.` steps, one per line                        |
-| `## NOTES`       | free prose                                               |
+**`##` splits the body into sections; everything under a heading is markdown.**
+That is the whole rule. There is no line grammar to satisfy — a step wrapped
+onto a second line is one step, a paragraph is a paragraph.
 
-The headings are matched literally, so they stay in English even in a
-translated book (`labels:` controls what is _printed_). Anything else — a step
-wrapped onto a second line, an ingredient without its `-`, a section under
-another heading — is content ladle cannot place. It is reported by `build` and
-by `ladle validate`, as `file:line`, rather than silently dropped; use
-`ladle validate --strict` to make it fail the run.
+| Heading          | Holds                                        |
+| ---------------- | -------------------------------------------- |
+| `## INGREDIENTS` | markdown; `### group` headings split it up   |
+| `## DIRECTIONS`  | markdown; `1.` lists become numbered steps   |
+| `## NOTES`       | markdown (optional section)                  |
+
+The headings are **fixed English keys**, matched literally, even in a translated
+book — `labels:` controls what is _printed_, so your files stay decoupled from
+the display language. All three are optional: a drink with no method is a real
+recipe, so a missing section warns rather than failing the build.
+
+`##` is reserved as the section boundary. `###` and deeper are yours to use
+inside a section.
+
+The markdown ladle styles and tests:
+
+- `-` / `*` bullet lists and `1.` numbered lists
+- `###` sub-headings
+- `**bold**`, `*italic*` / `_italic_`, and `[links](https://example.com)`
+- paragraphs, separated by a blank line
+
+Anything outside that list still renders — it just isn't styled by the theme,
+and nested lists are flattened. Nothing is silently discarded.
+
+A heading ladle doesn't know renders as a generic titled block **and** warns, so
+a book written to another project's conventions builds on the first try and
+tells you what to rename:
+
+```text
+warning: bolo-de-coco.md:31: "## PREPARAÇÃO" is not a section ladle knows
+         (INGREDIENTS, DIRECTIONS, NOTES) — rendered as a generic block, 4 lines
+```
+
+`ladle validate` reports the same as `file:line`; `ladle validate --strict`
+turns it into a failure.
 
 `illustration:` is optional. A recipe without one simply renders no hero image.
+
+Two labels look similar and are not: `recipe_by` is used when a recipe declares
+an `author:`, `recipe_from` when it only carries `credits:` — authorship versus
+provenance.
 
 ### A book is a folder
 

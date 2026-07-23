@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking
+
+- **Theme templates receive rendered HTML for recipe section bodies.**
+  `r.ingredient_groups` and `r.directions` are replaced by `r.ingredients_html`
+  and `r.directions_html`, and `r.notes_html` is now a single HTML value instead
+  of a list of paragraphs. New: `r.extra_sections` (`[{title, html}]`), which a
+  template must render or a book using an unrecognised heading loses it.
+  `r.story_html` is unchanged.
+
+  The keys were renamed rather than reused on purpose: a template still
+  iterating the old names now raises on an undefined variable instead of
+  silently walking a string one character at a time. Section bodies emit plain
+  `<p>`/`<ul>`/`<ol>`/`<h3>` with no ladle-specific classes, so themes style
+  them under their own wrapper — see `docs/THEMING.md`, which now documents the
+  full template context. Only the bundled theme is affected; the rendered output
+  of the example book is byte-identical.
+
 ### Added
 
 - `ladle theme lint <theme>` — the featured-gallery gate: checks that a theme's
@@ -25,15 +42,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Theme templates now render in a `jinja2.sandbox.SandboxedEnvironment`, so an
   untrusted community theme is treated as data, never code; a template that trips
   the sandbox surfaces as a friendly error naming the file.
-- `build` and `validate` now report recipe body content that no parser rule
-  claims, instead of dropping it silently. The parsers only understand `- item`
-  and `### group` under `## INGREDIENTS`, numbered `1.` steps under
-  `## DIRECTIONS`, and free prose under `## NOTES`; anything else — a step
-  wrapped onto a second line, an unbulleted ingredient, a section under a
-  heading ladle does not read — used to vanish with no warning, and a truncated
-  step still looks like a complete sentence on the page. Diagnostics are
-  `file:line: message`; `build` caps them and points at `validate` for the full
-  list.
+- **Recipe section bodies are now rendered as markdown.** ladle splits a body on
+  its `##` headings and renders each section, instead of matching it against a
+  line grammar that kept only `- item` / `### group` under `## INGREDIENTS` and
+  numbered `1.` steps under `## DIRECTIONS`. Everything the old parsers dropped
+  in silence now appears: a step wrapped onto a second line (which used to
+  truncate mid-sentence while still reading as a complete one), a numbered
+  ingredient list, an unbulleted ingredient, a prose lead-in, a `###` inside
+  `## DIRECTIONS`. The supported markdown is documented in the README and
+  covered by tests; anything outside it still renders, just unstyled.
+- A `## HEADING` ladle does not know now renders as a generic titled block and
+  warns, rather than vanishing — so a book written to another project's
+  conventions builds on the first try and tells you what to rename. `build` and
+  `validate` report it as `file:line: message`, capped in `build`;
+  `validate --strict` still turns it into a failure.
+- A missing `## INGREDIENTS`/`## DIRECTIONS`/`## NOTES` no longer implies a
+  broken recipe: a drink or a cheese board legitimately has no method.
 - A recipe whose front matter opens with `---` but never closes it now fails
   with a message naming the file, instead of a raw `ValueError` traceback.
 - A `##` heading repeated within one recipe now accumulates its blocks; the
