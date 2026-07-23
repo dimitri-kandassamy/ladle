@@ -131,6 +131,28 @@ search (stop at `.git`), hatch-vcs (git tag → version).
   `{name, role}`; accessibility `auto`.
 - **Trim/page size stays theme-owned** (no per-book override); print bleed/safe
   zones are theme-authorable.
+- **Recipe bodies are markdown under fixed section headings — rendered, not
+  grammar-parsed.** A recipe is front matter plus markdown under `## HEADING`s.
+  ladle splits on the headings and hands each section's body to its own
+  dependency-light block renderer (the one that already renders prose); it does
+  **not** parse steps/ingredients into a bespoke line grammar. One parse produces
+  the HTML both outputs consume (WeasyPrint for PDF, pandoc `--from html` for
+  EPUB), so the two can't diverge. Markdown freedom is "we don't block it": a
+  documented, tested subset (inline links/bold/italic, `-`/`*` and `1.` lists,
+  `###` sub-headings) is supported and styled; anything else renders at the
+  author's risk. Consequences of this model:
+  - **Section headings are fixed canonical English keys** (`## INGREDIENTS`,
+    `## METHOD`, `## NOTES`); the reader sees localized text via the existing
+    `labels:` map. This decouples file structure from display language — so
+    there is **no native-language heading alias map**.
+  - **An unrecognized heading renders as a generic titled block and warns** —
+    content is never silently dropped, and no per-theme "slot" contract is
+    needed.
+  - **A missing mandatory section (ingredients/method) warns, it does not block
+    the build** (a drink or a cheese board is legitimate); `validate --strict`
+    can escalate it for CI.
+  - **`##` is reserved as the section boundary**; `###` and deeper are free
+    inside a section. Documented, no new syntax.
 
 ## Not doing (and why)
 
