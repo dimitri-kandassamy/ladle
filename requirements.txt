@@ -5,6 +5,4 @@ MarkupSafe>=2.1
 PyYAML>=6.0
 jsonschema>=4.0
 weasyprint>=63
-cairosvg>=2.7
 Pillow>=9.4
-numpy>=1.26

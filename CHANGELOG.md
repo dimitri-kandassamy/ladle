@@ -52,6 +52,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The bundled sample book had a direction step wrapped onto a second line, so
   `ladle theme preview` rendered it truncated mid-clause.
 
+### Removed
+
+- `cairosvg` and `numpy` are no longer runtime dependencies. Both existed only
+  for `bake_assets.py`, which generated the theme's paper-grain rasters; that
+  command was removed once the rasters were pre-baked and committed, but the two
+  declarations (and `doctor`'s checks for them) were left behind. Neither is
+  imported anywhere, so nothing changes at build time — SVG illustrations were
+  already being rendered by WeasyPrint's own SVG support. Installs get smaller
+  and `ladle doctor` stops failing over packages the tool never loads.
+
 ## [0.2.0] - 2026-07-12
 
 This release sharpens `ladle` around its one job — building a book. The CLI is
