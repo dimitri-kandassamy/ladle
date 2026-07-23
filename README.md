@@ -71,7 +71,7 @@ ladle new mybook                 # scaffold ./mybook/ (or `ladle new` -> ./book/
 cd mybook
 # …add your recipes under recipes/…
 ladle build                      # -> build/cookbook.pdf and build/cookbook.epub
-ladle validate                   # schema + body + PDF structure + epubcheck + contact sheet
+ladle validate                   # recipe schema + body, PDF structure, epubcheck, contact sheet
 open build/contact-sheet.png     # a thumbnail grid of every page
 ```
 
@@ -151,7 +151,7 @@ for a complete, working template.
 | ----------------------------- | -------------------------------------------------------------- |
 | `ladle new [X]`               | scaffold a new book in `./X/` (default `./book/`)              |
 | `ladle build`                 | build the PDF + EPUB from your recipes                         |
-| `ladle validate`              | recipe schema + body, PDF trim + page count, epubcheck, sheet  |
+| `ladle validate`              | recipe schema + body, PDF structure, epubcheck, contact sheet  |
 | `ladle doctor`                | check pandoc/poppler/WeasyPrint/Java are installed             |
 
 ## Build from source

@@ -110,4 +110,6 @@ Content and artwork are original, so validation is structural, not pixel-based
 - every recipe's front matter conforms to `src/ladle/schema/recipe.schema.json` (JSON Schema);
 - the PDF has the expected page count and trim;
 - the EPUB passes `epubcheck`;
-- a `build/contact-sheet.png` thumbnail grid is produced for eyeballing the look.
+- a `build/contact-sheet.png` thumbnail grid is produced for eyeballing the look
+  (a long book paginates into `contact-sheet-02.png` … so no single image exceeds
+  the canvas dimension that would leave it unopenable).
