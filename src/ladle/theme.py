@@ -135,11 +135,11 @@ def _report(theme_dir: Path, results: list[dict]) -> int:
     fails = 0
     for r in results:
         if r["level"] == "ok":
-            ui.step(f"  ok   {r['message']}")
+            ui.check_ok(r["message"])
         elif r["level"] == "note":
-            ui.step(f"  note {r['message']}")
+            ui.check_note(r["message"])
         else:
-            ui.step(f"  {ui.style('FAIL', 'red')} {r['message']}")
+            ui.check_fail(r["message"])
             fails += 1
     ui.step("")
     if fails:
