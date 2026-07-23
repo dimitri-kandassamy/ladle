@@ -35,22 +35,15 @@ BUILD = config.build_dir()
 failures: list[str] = []
 
 
-def section(title: str) -> None:
-    ui.step("")
-    ui.step(ui.style(title, "bold"))
-
-
-def ok(msg: str) -> None:
-    ui.step(f"  ok   {msg}")
+section = ui.section
+ok = ui.check_ok
+note = ui.check_note
 
 
 def bad(msg: str) -> None:
-    ui.step(f"  {ui.style('FAIL', 'red')} {msg}")
+    """Report a failing check and record it for the summary/exit code."""
+    ui.check_fail(msg)
     failures.append(msg)
-
-
-def note(msg: str) -> None:
-    ui.step(f"  note {msg}")
 
 
 def _split_or_empty(path: Path) -> tuple[dict, str]:

@@ -131,3 +131,35 @@ def test_confirm_parses_tty_answer(monkeypatch, typed, default, expected):
     monkeypatch.setattr(ui.sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr("builtins.input", lambda *_: typed)
     assert ui.confirm("go?", default=default) is expected
+
+
+# ---- check reports ---------------------------------------------------------
+def test_check_labels_align_messages_at_one_column(capsys):
+    """The reason this formatting is centralised: three commands share the column."""
+    ui.configure(color=False)
+    ui.check_ok("passed")
+    ui.check_note("informational")
+    ui.check_note("optional dep missing", "warn")
+    ui.check_fail("broke")
+
+    lines = capsys.readouterr().err.splitlines()
+    assert lines == [
+        "  ok   passed",
+        "  note informational",
+        "  warn optional dep missing",
+        "  FAIL broke",
+    ]
+
+
+def test_section_prints_a_blank_line_then_a_heading(capsys):
+    ui.configure(color=False)
+    ui.section("PDF structure")
+    assert capsys.readouterr().err == "\nPDF structure\n"
+
+
+def test_check_reports_go_to_stderr_not_stdout(capsys):
+    ui.configure(color=False)
+    ui.check_ok("passed")
+    ui.check_fail("broke")
+    out = capsys.readouterr()
+    assert out.out == ""  # stdout stays clean for piping

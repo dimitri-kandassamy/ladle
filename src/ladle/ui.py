@@ -192,6 +192,37 @@ def die(msg: str, code: int = ERROR, hint: str | None = None) -> int:
     return code
 
 
+# ---- check reports --------------------------------------------------------
+# `validate`, `doctor` and `theme lint` all print the same shape: a bold section
+# heading, then one indented result line per check. Each used to format those
+# lines itself, from copies of the same literals — and the labels only line up
+# because they are padded to a common width, an alignment three separate copies
+# cannot be trusted to keep. The formatting lives here; each command keeps its
+# own bookkeeping (which failures count, and what they mean for the exit code).
+_CHECK_LABEL_WIDTH = 4  # "note"/"warn"/"FAIL" — "ok" is padded out to match
+
+
+def section(title: str) -> None:
+    """Blank line, then a bold heading introducing a group of check results."""
+    step("")
+    step(style(title, "bold"))
+
+
+def check_ok(msg: str) -> None:
+    """A passing check."""
+    step(f"  {'ok':<{_CHECK_LABEL_WIDTH}} {msg}")
+
+
+def check_note(msg: str, label: str = "note") -> None:
+    """An informational result. *label* lets ``doctor`` say ``warn`` instead."""
+    step(f"  {label:<{_CHECK_LABEL_WIDTH}} {msg}")
+
+
+def check_fail(msg: str) -> None:
+    """A failing check. Padded by hand: ANSI codes would break :meth:`str.__format__`."""
+    step(f"  {style('FAIL', 'red')} {msg}")
+
+
 # ---- interaction ----------------------------------------------------------
 def interactive() -> bool:
     """Whether we may prompt: a real stdin TTY and ``--no-input`` not set."""

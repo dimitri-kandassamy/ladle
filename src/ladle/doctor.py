@@ -51,21 +51,17 @@ required_failures: list[str] = []
 missing_deps: list[Dep] = []
 
 
-def section(title: str) -> None:
-    ui.step("")
-    ui.step(ui.style(title, "bold"))
-
-
-def ok(msg: str) -> None:
-    ui.step(f"  ok   {msg}")
+section = ui.section
+ok = ui.check_ok
 
 
 def warn(msg: str) -> None:
-    ui.step(f"  warn {msg}")
+    """An optional dependency is missing — reported, but never a failure."""
+    ui.check_note(msg, "warn")
 
 
 def bad(msg: str, *, required: bool = True, dep: Dep | None = None) -> None:
-    ui.step(f"  {ui.style('FAIL', 'red')} {msg}")
+    ui.check_fail(msg)
     if required:
         required_failures.append(msg)
     if dep is not None:
