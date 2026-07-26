@@ -248,6 +248,81 @@ def test_shipped_books_have_no_dropped_content(recipes_dir):
     assert [str(d) for p in paths for d in bh.unparsed_content(p)] == []
 
 
+# ---- cross-references ------------------------------------------------------
+def test_unresolved_xrefs_accepts_a_reference_to_a_sibling_recipe(tmp_path):
+    write_recipe(tmp_path, "## NOTES\nServe with [Greens](#greens).\n", name="cake.md")
+    write_recipe(tmp_path, "## NOTES\nfine\n", name="greens.md")
+    assert bh.unresolved_xrefs(sorted(tmp_path.glob("*.md"))) == []
+
+
+def test_unresolved_xrefs_reports_a_slug_no_recipe_has(tmp_path):
+    write_recipe(tmp_path, "## NOTES\nSee [Missing](#no-such-recipe).\n", name="cake.md")
+    (d,) = bh.unresolved_xrefs(sorted(tmp_path.glob("*.md")))
+    assert d.file == "cake.md"
+    assert d.line == 7  # 4 lines of front matter, a blank, then `## NOTES`
+    assert "#no-such-recipe" in d.message
+
+
+def test_unresolved_xrefs_honours_an_explicit_slug(tmp_path):
+    # The target's slug comes from front matter when set, not from the filename.
+    (tmp_path / "01-greens.md").write_text(
+        "---\ntitle: X\ncategory: Savory\nslug: skillet-greens\n---\n\n## NOTES\nfine\n", encoding="utf-8"
+    )
+    write_recipe(tmp_path, "## NOTES\n[G](#skillet-greens) and [F](#01-greens).\n", name="cake.md")
+    (d,) = bh.unresolved_xrefs(sorted(tmp_path.glob("*.md")))
+    assert "#01-greens" in d.message
+
+
+def test_unresolved_xrefs_reports_a_draft_target_distinctly(tmp_path):
+    # A draft is filtered out of both builds, so its anchor never exists — but the
+    # slug is right there in the folder, so say why rather than "no such recipe".
+    (tmp_path / "greens.md").write_text(
+        "---\ntitle: X\ncategory: Savory\ndraft: true\n---\n\n## NOTES\nfine\n", encoding="utf-8"
+    )
+    write_recipe(tmp_path, "## NOTES\nSee [Greens](#greens).\n", name="cake.md")
+    (d,) = bh.unresolved_xrefs(sorted(tmp_path.glob("*.md")))
+    assert "draft" in d.message
+
+
+def test_unresolved_xrefs_scans_the_front_matter_story(tmp_path):
+    # `story:` renders through the same inline markdown as the body, so a dead
+    # reference there breaks the same way.
+    (tmp_path / "cake.md").write_text(
+        "---\ntitle: X\ncategory: Savory\nstory: 'After the [Greens](#greens).'\n---\n\n## NOTES\nfine\n",
+        encoding="utf-8",
+    )
+    (d,) = bh.unresolved_xrefs(sorted(tmp_path.glob("*.md")))
+    assert d.line == 4
+
+
+def test_unresolved_xrefs_ignores_external_links(tmp_path):
+    write_recipe(tmp_path, "## NOTES\n[site](https://example.com/#anchor)\n", name="cake.md")
+    assert bh.unresolved_xrefs(sorted(tmp_path.glob("*.md"))) == []
+
+
+@pytest.mark.parametrize(
+    "recipes_dir",
+    [
+        config.PACKAGE_ROOT / "sample" / "recipes",
+        Path(__file__).resolve().parent.parent / "examples" / "the-ladle-kitchen" / "recipes",
+    ],
+    ids=["sample", "example"],
+)
+def test_shipped_books_have_no_dead_cross_references(recipes_dir):
+    # A dead reference in a shipped book would fail `ladle validate` downstream
+    # with an epubcheck error (RSC-012) naming a generated file.
+    assert [str(d) for d in bh.unresolved_xrefs(sorted(recipes_dir.glob("*.md")))] == []
+
+
+def test_warn_unresolved_xrefs_caps_output(tmp_path, capsys):
+    for i in range(12):
+        write_recipe(tmp_path, f"## NOTES\n[x](#gone-{i})\n", name=f"r{i}.md")
+    bh.warn_unresolved_xrefs(tmp_path, limit=3)
+    err = capsys.readouterr().err
+    assert err.count("warning:") == 4  # 3 findings + the summary line
+    assert "and 9 more" in err
+
+
 def test_dropped_formats_as_file_line_message():
     # `file:line: message` is what editors and terminals make clickable.
     assert str(bh.Dropped("r.md", 12, "boom")) == "r.md:12: boom"

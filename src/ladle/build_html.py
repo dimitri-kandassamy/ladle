@@ -397,7 +397,12 @@ def font_face_css(fonts_dir: Path, font_faces: list[dict]) -> str:
 
 @dataclass(frozen=True)
 class Dropped:
-    """One piece of recipe body content that will not appear in the built book."""
+    """One problem in a recipe file, reported as ``file:line: message``.
+
+    Named for its first use — body content that will not appear in the built book
+    — and since reused for a cross-reference that resolves to nothing, which does
+    render but lands nowhere.
+    """
 
     file: str
     line: int
@@ -462,6 +467,58 @@ def unparsed_content(path: Path) -> list[Dropped]:
                 )
             )
     return sorted(out, key=lambda d: d.line)
+
+
+# The target half of the `[Label](#slug)` cross-reference `inline()` renders.
+# Kept beside the check rather than shared with `inline()`: that one has to match
+# the label to rewrite it, this one only needs the slug.
+_XREF_RE = re.compile(r"\[[^\]]+\]\(#([a-z0-9][a-z0-9\-]*)\)")
+
+
+def unresolved_xrefs(paths: list[Path]) -> list[Dropped]:
+    """Cross-references that point at no recipe the built book will contain.
+
+    A `[Label](#slug)` naming nothing still renders, as a link to nowhere: silent
+    in the PDF, but an epubcheck error (RSC-012) in the EPUB — and epubcheck names
+    the generated chapter file and column, not the recipe the author wrote. This
+    trades that for a source line, before either build runs.
+
+    Whole files are scanned, front matter included, because `story:` renders
+    through the same inline markdown as the body. A draft is not a valid target:
+    it is filtered out of both builds, so its anchor never exists — worth its own
+    message, since the slug is right there in the recipes folder.
+    """
+    texts: dict[Path, str] = {}
+    live: set[str] = set()
+    drafts: set[str] = set()
+    for p in paths:
+        text = p.read_text(encoding="utf-8")
+        texts[p] = text
+        try:
+            fm, _ = split_front_matter(text, where=p.name)
+        except config.ConfigError:
+            continue  # unsplittable front matter — already reported by the schema check
+        (drafts if fm.get("draft", False) else live).add(fm.get("slug") or p.stem)
+
+    out: list[Dropped] = []
+    for p, text in texts.items():
+        for n, line in enumerate(text.splitlines(), start=1):
+            for slug in _XREF_RE.findall(line):
+                if slug in live:
+                    continue
+                why = f'"{slug}" is a draft recipe' if slug in drafts else f'no recipe has the slug "{slug}"'
+                out.append(Dropped(p.name, n, f"cross-reference to #{slug} resolves to nothing — {why}"))
+    return out
+
+
+def warn_unresolved_xrefs(recipes_dir: Path, *, limit: int = 10) -> None:
+    """Warn about dead cross-references at build time, capped like its sibling."""
+    found = unresolved_xrefs(sorted(recipes_dir.glob("*.md")))
+    for d in found[:limit]:
+        ui.warn(str(d))
+    if len(found) > limit:
+        n = len(found) - limit
+        ui.warn(f"… and {n} more unresolved cross-reference{'s' if n != 1 else ''}.")
 
 
 def warn_unparsed_content(recipes_dir: Path, *, limit: int = 10) -> None:
@@ -558,6 +615,10 @@ def render(book_path: str | None = None) -> int:
     # half-eaten step still *looks* complete on the page — so say so here rather
     # than letting a silently-wrong book get printed.
     warn_unparsed_content(book_cfg.recipes_dir)
+    # A dead cross-reference is the one body problem that fails a later command
+    # instead of this one (epubcheck RSC-012), so name it here in the author's
+    # own file while there is still a source line to point at.
+    warn_unresolved_xrefs(book_cfg.recipes_dir)
 
     # ---- print HTML (absolute file:// assets for WeasyPrint) ----
     print_recipes = order_recipes(
