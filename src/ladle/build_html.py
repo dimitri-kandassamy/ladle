@@ -74,6 +74,11 @@ def inline(text: str) -> Markup:
     """
     s = html.escape(text.strip())
     s = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", r'<a href="\2">\1</a>', s)
+    # Internal cross-reference to another recipe by slug: `[Label](#slug)` links to
+    # that recipe's anchor and is tagged `class="xref"` so a print theme can append
+    # the target's resolved page number (target-counter) without the author baking
+    # a folio into the text. In the EPUB it stays a plain hyperlink.
+    s = re.sub(r"\[([^\]]+)\]\(#([a-z0-9][a-z0-9\-]*)\)", r'<a class="xref" href="#\2">\1</a>', s)
     s = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", s)
     s = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", s)
     s = re.sub(r"(?<!\w)_([^_]+)_(?!\w)", r"<em>\1</em>", s)
