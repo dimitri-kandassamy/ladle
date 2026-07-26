@@ -126,14 +126,35 @@ markdown, so a template inserts one value per section rather than looping:
 <div class="steps">{{ r.directions_html }}</div>
 ```
 
-You get plain `<p>`, `<ul>`, `<ol>`, `<h3>` and inline `<a>/<strong>/<em>` — no
-ladle-specific classes — so style them under a wrapper your template owns. Use
-the child combinator where nesting matters:
+You get plain `<p>`, `<ul>`, `<ol>`, `<h3>` and inline `<a>/<strong>/<em>`, with
+one exception noted below — so style them under a wrapper your template owns.
+Use the child combinator where nesting matters:
 
 ```css
 .steps > ol { counter-reset: step; list-style: none; }
 .steps > ol > li::before { content: counter(step) "."; }
 ```
+
+### `a.xref` — the one class ladle emits
+
+A `[Label](#slug)` in a recipe body is an in-book cross-reference to the recipe
+with that slug, and renders as `<a class="xref" href="#slug">`. It is the only
+ladle-specific class in a rendered body, and it exists because print needs
+something the markup can't say on its own: a hyperlink is useless on paper
+without a page number.
+
+Give it one, the same way the bundled theme's table of contents does — the
+number resolves at render time against the target's `id`, so it stays right
+however the book repaginates:
+
+```css
+.xref::after { content: " (p. " target-counter(attr(href url), page) ")"; }
+```
+
+Scope that to your print stylesheet. In the EPUB the anchor is a working
+hyperlink already, and pandoc rewrites it across the chapter split for you.
+Themes are free to ignore the class entirely — the reference then reads as plain
+text, still linked.
 
 Always render `extra_sections`, or a book using a heading ladle doesn't know
 will lose it:

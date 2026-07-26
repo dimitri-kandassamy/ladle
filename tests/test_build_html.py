@@ -34,6 +34,18 @@ def test_inline_only_links_http_schemes():
     assert "<a" not in str(bh.inline("[x](javascript:alert(1))"))
 
 
+def test_inline_internal_cross_reference_to_a_slug():
+    # `[Label](#slug)` becomes an in-book cross-reference tagged for the theme to
+    # resolve the target's page number; it is not a plain external link.
+    out = str(bh.inline("see [Carrot Cake](#carrot-cake)"))
+    assert '<a class="xref" href="#carrot-cake">Carrot Cake</a>' in out
+
+
+def test_inline_cross_reference_slug_must_be_anchor_shaped():
+    # A `#` target that isn't a bare slug (spaces, uppercase) is left as text.
+    assert "<a" not in str(bh.inline("[x](#Not A Slug)"))
+
+
 def test_plain_text_strips_markdown_and_links():
     assert bh.plain_text("**Chef** [Ada](https://a.b)") == "Chef Ada"
 

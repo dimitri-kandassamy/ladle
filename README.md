@@ -136,6 +136,9 @@ The markdown ladle styles and tests:
 - `-` / `*` bullet lists and `1.` numbered lists
 - `###` sub-headings
 - `**bold**`, `*italic*` / `_italic_`, and `[links](https://example.com)`
+- `[Label](#slug)` — an in-book **cross-reference** to another recipe. It links
+  to that recipe's page; a print theme can also render the target's resolved
+  page number, so the reference never goes stale when the book repaginates.
 - paragraphs, separated by a blank line
 
 Anything outside that list still renders — it just isn't styled by the theme,
