@@ -107,10 +107,10 @@ def paragraphs(text: str) -> list[str]:
 
 
 # The markdown a recipe section body may use. Deliberately small and documented
-# (see docs/RECIPES.md): `###` sub-headings, `-`/`*` and `1.` lists, and the
-# inline set `inline()` handles. Anything else renders as prose rather than being
-# dropped — which is the whole point of rendering bodies instead of matching them
-# against a line grammar.
+# (README, "The body contract"): `###` sub-headings, `-`/`*` and `1.` lists, and
+# the inline set `inline()` handles. Anything else renders as prose rather than
+# being dropped — which is the whole point of rendering bodies instead of matching
+# them against a line grammar.
 _MD_H3 = re.compile(r"^\s{0,3}###\s+(.*\S)\s*$")
 _MD_UL = re.compile(r"^\s*[-*]\s+(.*\S)\s*$")
 _MD_OL = re.compile(r"^\s*\d+\.\s+(.*\S)\s*$")
