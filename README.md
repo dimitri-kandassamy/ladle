@@ -139,6 +139,8 @@ The markdown ladle styles and tests:
 - `[Label](#slug)` — an in-book **cross-reference** to another recipe. It links
   to that recipe's page; a print theme can also render the target's resolved
   page number, so the reference never goes stale when the book repaginates.
+  A reference to a slug no recipe has (or to a draft, which isn't in the book)
+  is named with its source line at build time.
 - paragraphs, separated by a blank line
 
 Anything outside that list still renders — it just isn't styled by the theme,

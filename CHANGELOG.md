@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   recipe by slug, emitted as `<a class="xref" href="#slug">`. A print theme can
   append the target's resolved page number (`target-counter`) so the reference
   never goes stale as the book repaginates; the EPUB keeps it a plain hyperlink.
+  `build` warns per dead reference — `recipe.md:33: cross-reference to #x
+  resolves to nothing` — because the alternative was an epubcheck failure
+  (RSC-012) at `validate` time naming a generated chapter file and column.
 - `ladle theme lint <theme>` — the featured-gallery gate: checks that a theme's
   `theme.yaml` validates against the schema, that its templates load in the Jinja
   sandbox, and that every embedded font family names a present file with a
