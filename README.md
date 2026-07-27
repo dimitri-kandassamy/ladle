@@ -17,6 +17,9 @@ browser and no Node, built for home cooks, communities, and small publishers who
 would rather keep their recipes in version-controlled plain text than locked
 inside a proprietary app.
 
+> [!WARNING]
+> **ladle is pre-1.0 and moving quickly.** Expect breaking changes between releases.
+
 ![A spread from the example cookbook, built by ladle](https://raw.githubusercontent.com/dimitri-kandassamy/ladle/main/docs/assets/hero.png)
 
 _The example cookbook — a print-ready PDF from plain markdown._
@@ -120,11 +123,11 @@ pages. Every recipe is validated against
 That is the whole rule. There is no line grammar to satisfy — a step wrapped
 onto a second line is one step, a paragraph is a paragraph.
 
-| Heading          | Holds                                        |
-| ---------------- | -------------------------------------------- |
-| `## INGREDIENTS` | markdown; `### group` headings split it up   |
-| `## DIRECTIONS`  | markdown; `1.` lists become numbered steps   |
-| `## NOTES`       | markdown (optional section)                  |
+| Heading          | Holds                                      |
+| ---------------- | ------------------------------------------ |
+| `## INGREDIENTS` | markdown; `### group` headings split it up |
+| `## DIRECTIONS`  | markdown; `1.` lists become numbered steps |
+| `## NOTES`       | markdown (optional section)                |
 
 The headings are **fixed English keys**, matched literally, even in a translated
 book — `labels:` controls what is _printed_, so your files stay decoupled from
@@ -186,12 +189,12 @@ for a complete, working template.
 
 ### Commands
 
-| Command                       | Does                                                           |
-| ----------------------------- | -------------------------------------------------------------- |
-| `ladle new [X]`               | scaffold a new book in `./X/` (default `./book/`)              |
-| `ladle build`                 | build the PDF + EPUB from your recipes                         |
-| `ladle validate`              | recipe schema + body, PDF structure, epubcheck, contact sheet  |
-| `ladle doctor`                | check pandoc/poppler/WeasyPrint/Java are installed             |
+| Command          | Does                                                          |
+| ---------------- | ------------------------------------------------------------- |
+| `ladle new [X]`  | scaffold a new book in `./X/` (default `./book/`)             |
+| `ladle build`    | build the PDF + EPUB from your recipes                        |
+| `ladle validate` | recipe schema + body, PDF structure, epubcheck, contact sheet |
+| `ladle doctor`   | check pandoc/poppler/WeasyPrint/Java are installed            |
 
 ## Build from source
 
