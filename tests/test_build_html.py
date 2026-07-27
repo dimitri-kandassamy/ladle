@@ -569,6 +569,49 @@ def test_print_author_byline_needs_a_story():
     assert "Recipe by" in render_print(has_story=True, author={"name": "Ada", "org": ""})
 
 
+def laid_out_text(html: str) -> str:
+    """All text WeasyPrint actually places on a page, with the theme's real CSS.
+
+    Markup assertions cannot see this class of bug: the ingredients are in the
+    HTML either way, and only the layout decides whether they land on a sheet or
+    in a fragment that `overflow: hidden` discards.
+    """
+    from weasyprint import HTML
+
+    theme = config.PACKAGE_ROOT / "themes" / "default"
+    links = "".join(
+        f'<link rel="stylesheet" href="{(theme / "css" / name).as_uri()}">' for name in ("common.css", "print.css")
+    )
+    doc = HTML(string=html.replace("</head>", links + "</head>"), base_url=str(theme)).render()
+
+    def walk(box, out):
+        for child in getattr(box, "all_children", lambda: [])():
+            if hasattr(child, "text") and child.text.strip():
+                out.append(child.text.strip())
+            walk(child, out)
+        return out
+
+    return " ".join(t for page in doc.pages for t in walk(page._page_box, []))
+
+
+def test_print_an_overlong_recipe_still_shows_its_ingredients():
+    """A recipe whose method overruns the sheet must not lose the other column.
+
+    The column row is pinned to the sheet height for this reason. Unpinned, the
+    row grows to the method's full height, fragments, and the ingredients column
+    lands past the first sheet where `overflow: hidden` discards every line of
+    it — which is what happened, unnoticed, until a 60-step recipe was tried.
+    """
+    steps = "".join(f"<li>Step {i}. " + "words " * 25 + "</li>" for i in range(60))
+    html = render_print(
+        ingredients_html=bh.Markup("<ul>" + "".join(f"<li>Ingredient {i}</li>" for i in range(40)) + "</ul>"),
+        directions_html=bh.Markup(f"<ol>{steps}</ol>"),
+    )
+    text = laid_out_text(html)
+    assert "Ingredient 0" in text
+    assert "Step 0." in text
+
+
 # ---- theme template sandbox (untrusted themes are data, not code) ----------
 def test_make_env_blocks_private_attribute_access():
     # A theme reaching for dunder internals is a sandbox escape attempt.

@@ -283,13 +283,23 @@ h2, h3 { bookmark-level: none; }
   padding: 0.85in 0.9in 0.95in 0.8in;
   height: 100%;
 }
-/* The columns are not stretched to the sheet: the divider below is a border on
-   the ingredients column, so a full-height box would draw a hairline down blank
-   paper beside a short recipe. Letting the columns take their content height
-   caps the rule at the taller column. */
+/* The column row is pinned to the sheet height, and that is load-bearing: it is
+   what keeps an over-long recipe from losing its ingredients entirely.
+
+   Let the row take its content height instead and a recipe whose method runs
+   past the sheet grows the row to the method's full height. The row then
+   fragments, the ingredients column lands in a fragment below the first sheet,
+   and `overflow: hidden` throws it away — all of it, silently. Pinned, both
+   columns start at the top of the sheet and only their tails are cut.
+
+   Neither is good; the recipe page cannot yet flow onto a second sheet. Until it
+   can, losing the end of a long method beats losing every ingredient. The cost is
+   cosmetic: the divider is a border on the ingredients column, so a full-height
+   row draws the hairline down blank paper beside a short recipe. */
 .columns {
   display: flex;
   gap: 0.34in;
+  height: 100%;
 }
 .col { flex: 1; min-width: 0; }
 .col.directions { flex: 1.8; }   /* directions ~2x ingredients, as in the original */
@@ -323,7 +333,11 @@ h2, h3 { bookmark-level: none; }
    the sheet rather than growing it, which opens a gap between the rule and the
    column headings that varies with how long the recipe is. Stacking in normal
    flow keeps that gap constant, and lets the divider stop at the content. */
-.recipe .inner { padding: 0.8in 0.8in 0.95in; }
+/* `height: 100%` is what lets the column row's own `height: 100%` resolve — a
+   percentage against an auto-height parent computes to auto, which would leave
+   this page with the fragmenting row described above while the method page was
+   fixed. */
+.recipe .inner { padding: 0.8in 0.8in 0.95in; height: 100%; }
 .recipe .rhead { text-align: center; }
 .recipe .rhead .title { font-size: 27pt; margin: 0 0 0.1in; }
 .recipe .rhead .title.small { font-size: 22pt; }
