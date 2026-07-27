@@ -604,6 +604,9 @@ def render(book_path: str | None = None) -> int:
         book.setdefault(key, "")
     book.setdefault("volume", "")
     book.setdefault("language", "en")
+    # Off unless asked for: a divider earns its sheet in a long book and crowds a
+    # short one, and only the author knows which they are writing.
+    book.setdefault("section_openers", False)
     book["title_article"], book["title_rest"] = split_title_article(book["title"])
     book["labels"] = merged_labels(book)
 

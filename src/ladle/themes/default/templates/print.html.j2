@@ -18,7 +18,10 @@
 {% for href in css_links %}<link rel="stylesheet" href="{{ href }}">
 {% endfor %}
 </head>
-<body>
+{# `sectioned` lets print.css nest each recipe under its section in the PDF
+   outline. It has to key off the same flag as the openers: with no opener to sit
+   under, a demoted recipe would nest beneath the introduction instead. #}
+<body{% if book.section_openers %} class="sectioned"{% endif %}>
 
 {# ---------- macros ---------- #}
 {# The folio prints `counter(page)` (see print.css) rather than a number baked in
@@ -159,15 +162,26 @@
 {# ---------- pages ---------- #}
 
 <section class="page navy cover">
-  <div class="pattern"></div>
   <div class="panel">
     <div class="display title"><span class="article">{{ book.title_article }}</span>{{ book.title_rest }}</div>
-    <div class="subtitle">{{ book.subtitle }}</div>
-    <div class="volume">{{ book.labels.volume }} {{ book.volume }}</div>
+    {% if book.subtitle %}<div class="subtitle">{{ book.subtitle }}</div>{% endif %}
+    {# Guarded: `volume` is optional, and an unset one used to print the bare
+       word "Volume" with nothing after it. #}
+    {% if book.volume %}<div class="volume">{{ book.labels.volume }} {{ book.volume }}</div>{% endif %}
   </div>
 </section>
 
-<section class="page navy endpaper"><div class="pattern"></div></section>
+<section class="page navy endpaper"></section>
+
+{# Interior title page: the same title as the cover, set quietly on paper. Part
+   of the front matter, so it carries no footer and takes no folio. #}
+<section class="page cream title-page">
+  <div class="inner">
+    <div class="display title"><span class="article">{{ book.title_article }}</span>{{ book.title_rest }}</div>
+    <hr class="rule">
+    {% if book.subtitle %}<div class="tp-sub">{{ book.subtitle }}</div>{% endif %}
+  </div>
+</section>
 
 {# Contents: recipes grouped by section, with page numbers resolved by WeasyPrint
    (target-counter) against each recipe opener's id. #}
@@ -211,23 +225,45 @@
   {{ footer() }}
 </section>
 
+{# A full-bleed divider before the first recipe of each section, echoing the
+   cover and endpapers. Opt-in (`section_openers: true`): a sheet per section is
+   worth spending in a long book and crowds a short one, where the dividers can
+   outnumber the recipes.
+
+   `recipes` is already ordered so each section is contiguous, so emitting one
+   whenever the category changes puts exactly one before each group — no
+   hard-coded section list, and it follows if the sections are ever renamed.
+   Openers carry no footer (so no folio) and hold no contents entry; the index
+   resolves against recipe ids, so the extra sheets simply shift and re-resolve. #}
+{% macro section_opener(name) -%}
+<section class="page navy section-opener">
+  <div class="panel">
+    <hr class="rule">
+    <h1 class="display title">{{ name }}</h1>
+    <hr class="rule">
+  </div>
+</section>
+{%- endmacro %}
+
 {# Two pages when the recipe has something to fill an opener with — a story, or a
    hero illustration — and one page when it has neither. Keyed off the recipe's
    own content rather than a book-level setting, so an illustrated book keeps its
    spreads and a plain one stops paying a blank sheet per recipe. #}
+{% set ns = namespace(section=None) %}
 {% for r in recipes %}
+{%- if book.section_openers and r.category != ns.section %}{% set ns.section = r.category %}
+{{ section_opener(book.labels.section_names.get(r.category, r.category)) }}
+{%- endif %}
 {% if r.has_story %}{{ story_page(r) }}{{ method(r) }}
 {% elif r.illustration_url %}{{ opener_page(r) }}{{ method(r) }}
 {% else %}{{ recipe_page(r) }}{% endif %}
 {% endfor %}
 
-<section class="page navy endpaper"><div class="pattern"></div></section>
+<section class="page navy endpaper"></section>
 
 <section class="page navy colophon">
-  <div class="pattern"></div>
   <div class="inner">
     <div class="producer">{{ book.labels.produced_by }}<span class="name">{{ book.producer }}</span></div>
-    <div></div>
     <div class="copyright">{{ book.rights }}</div>
   </div>
 </section>

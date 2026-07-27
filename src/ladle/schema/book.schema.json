@@ -67,6 +67,11 @@
       "default": [],
       "description": "Explicit recipe order by slug; slugs not listed sort alphabetically within their section."
     },
+    "section_openers": {
+      "type": "boolean",
+      "default": false,
+      "description": "Print a full-page divider before each section. Worth a sheet each in a long book; off by default, since in a short one the dividers outnumber the recipes."
+    },
     "palette": {
       "type": "object",
       "additionalProperties": { "type": "string" },

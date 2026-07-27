@@ -27,7 +27,7 @@ mytheme/
   fonts/
     *.ttf                        # the fonts this theme embeds
   illustrations/
-    patterns/                    # decorative art + baked paper textures
+    patterns/                    # baked paper textures (and any art you add)
 ```
 
 Two structural rules the build depends on:
@@ -244,10 +244,15 @@ Pass `--book PATH` to preview a theme against your own book instead of the sampl
 
 ### Paper textures
 
-The cream/navy paper grain and the cover/endpaper line-art are pre-baked raster
-files (`paper-cream.jpg`, `paper-navy.png`, `cover.png`, `endpaper.png`) committed
-under the theme's `illustrations/patterns/`, alongside the source SVGs they were
-rasterised from. The PDF build consumes the rasters directly.
+The cream and navy paper grain are pre-baked raster files (`paper-cream.jpg`,
+`paper-navy.png`) committed under the theme's `illustrations/patterns/`. The PDF
+build consumes them directly.
+
+Grain is the only decoration the bundled theme ships. It used to lay a scattered
+line-art motif over the navy pages as well; that was dropped, because type set
+over it — a cover title, a section name — always had to fight it for legibility.
+Your own theme is free to add art back, but put it where nothing has to be read
+on top of it.
 
 If you change a theme's `palette.cream` or `palette.navy`, regenerate these files
 so the textures match and commit the results with your theme. The tool no longer
@@ -261,7 +266,7 @@ tooling (the reference implementation lives in the project's git history at
 - [ ] `fonts/` contains every file referenced in `font_faces` (+ their licenses)
 - [ ] `templates/print.html.j2` and `templates/epub.html.j2`
 - [ ] `css/common.css`, `css/print.css`, `css/epub.css`
-- [ ] `illustrations/patterns/` with `cover.svg`/`endpaper.svg` and baked rasters
+- [ ] `illustrations/patterns/` with any baked rasters `print.css` references
 - [ ] `fonts_meta` documents each family's license (required by `ladle theme lint`)
 - [ ] `ladle theme lint` passes (schema + sandbox + fonts)
 - [ ] `ladle build` + `ladle validate` pass against a test book
