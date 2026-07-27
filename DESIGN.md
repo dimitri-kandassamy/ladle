@@ -50,8 +50,16 @@ page. Two patterns are worth noting because they keep the layout renderer-portab
 - **Rotated sidebar via `transform`.** The vertical recipe label on the outer edge
   is a normal horizontal line rotated 90°, not `writing-mode`.
 
-A recipe with a non-empty `story` gets a full story page (optional `headshot`);
-without one it gets a compact opener. Either way the method page follows.
+A recipe's page budget follows from its content. A non-empty `story` gets a full
+story page (optional `headshot`) and an `illustration` alone gets a compact
+opener to carry the art; either is followed by the method page. A recipe with
+neither renders on **one** sheet, its title block above its own columns.
+
+That last case is the reason the rule is keyed off content rather than a book
+setting: the opener exists to hold hero art, so without art it would be a title
+alone on an otherwise blank sheet — one per recipe, threaded through the whole
+book. An illustrated book still gets its spreads; a plain one stops paying for
+them.
 
 The front matter includes a **Contents** page: recipes grouped by section, with
 page numbers resolved at render time via CSS `target-counter()` against each

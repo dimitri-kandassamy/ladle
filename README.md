@@ -107,9 +107,12 @@ illustration: assets/illustrations/recipes/carrot-cake.svg
 - Keeps for several days.
 ```
 
-A recipe with a non-empty `story:` gets a full story page (with an optional
-`headshot`); without one it gets a compact opener. Every recipe is validated
-against [`recipe.schema.json`](https://github.com/dimitri-kandassamy/ladle/blob/main/src/ladle/schema/recipe.schema.json).
+How much room a recipe gets follows from what it carries. A non-empty `story:`
+earns a full story page (with an optional `headshot`); an `illustration:` alone
+earns a compact opener for the art. A recipe with neither is set on a single
+sheet, title above its own columns — so a book without art costs no blank
+pages. Every recipe is validated against
+[`recipe.schema.json`](https://github.com/dimitri-kandassamy/ladle/blob/main/src/ladle/schema/recipe.schema.json).
 
 #### The body contract
 

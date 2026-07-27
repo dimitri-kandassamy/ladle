@@ -71,6 +71,18 @@ def front_matter(path: Path) -> dict:
     return _split_or_empty(path)[0]
 
 
+def _has_opener(path: Path) -> bool:
+    """Does this recipe get its own opener page (so, two pages) in the bundled theme?
+
+    Mirrors the template's rule: an opener carries either a story or a hero
+    illustration. A recipe with neither renders on one sheet, so counting every
+    recipe as a spread would report a large, permanent delta on any book that
+    ships without art.
+    """
+    fm = front_matter(path)
+    return bool(str(fm.get("story", "") or "").strip() or fm.get("illustration"))
+
+
 def notes_line_count(path: Path) -> int:
     """Non-empty line count of a recipe's `## NOTES` body, for the page-count diagnostic."""
     body = _split_or_empty(path)[1]
@@ -207,18 +219,22 @@ def validate_pdf(recipes_dir: Path) -> None:
         return
 
     pages = int(info.get("Pages", "0"))
-    n_recipes = sum(1 for p in recipes_dir.glob("*.md") if not front_matter(p).get("draft", False))
-    # cover + endpaper + contents + intro + endpaper + colophon = 6 fixed;
-    # each recipe = opener/story + method
-    expected = 6 + 2 * n_recipes
+    live = [p for p in recipes_dir.glob("*.md") if not front_matter(p).get("draft", False)]
+    # cover + endpaper + contents + intro + endpaper + colophon = 6 fixed. A
+    # recipe takes two pages when it has something to fill an opener with — a
+    # story or a hero illustration — and one when it has neither, matching how
+    # the bundled theme lays them out.
+    spreads = sum(1 for p in live if _has_opener(p))
+    expected = 6 + 2 * spreads + (len(live) - spreads)
     if pages == expected:
-        ok(f"page count = {pages} (6 fixed + {n_recipes} recipes×2)")
+        ok(f"page count = {pages} ({len(live)} recipes, {spreads} on two pages)")
     else:
-        # A heuristic, not a structural invariant: a recipe with a long NOTES
-        # section (manuscript provenance, substitutions, …) legitimately
-        # overflows the fixed 2-pages-per-recipe layout onto a 3rd page.
-        # Report it as a diagnostic rather than failing the whole run.
+        # A heuristic, not a structural invariant. Two things legitimately push a
+        # book past the count: a recipe with a long NOTES section overflowing onto
+        # a further page, and the contents, which is counted as one sheet but
+        # flows onto as many as the book needs. Report it, never fail on it.
         note(f"page count = {pages}, expected {expected} (delta {pages - expected:+d})")
+        note("the contents counts as one sheet here but spans more in a long book")
         threshold = 8
         culprits = [
             p.name

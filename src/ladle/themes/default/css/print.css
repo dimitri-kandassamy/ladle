@@ -79,6 +79,16 @@ h2 { bookmark-level: none; }
   font-weight: 600;
 }
 .footer .mark .the { font-style: italic; text-transform: none; letter-spacing: 0; }
+/* Folio, above the mark. `counter(page)` is the same counter the contents page
+   resolves through `target-counter`, so a printed page number and its index
+   entry can never drift apart. */
+.footer .folio {
+  font-family: var(--body);
+  font-size: 8.5pt;
+  margin-bottom: 5pt;
+  color: var(--ink-deep);
+}
+.footer .folio::before { content: counter(page); }
 
 /* ---- Cover ------------------------------------------------------------- */
 .page.cover .pattern {
@@ -126,7 +136,22 @@ h2 { bookmark-level: none; }
 .intro .prose { text-align: left; }
 
 /* ---- Contents ---------------------------------------------------------- */
-.contents .inner { padding: 1.0in 0.95in 0; text-align: center; }
+/* The contents is the one page that flows and fragments across sheets once a
+   book outgrows a single index page. Element padding would land only on the
+   first fragment's top and the last fragment's bottom, leaving every
+   continuation sheet running edge to edge — so the per-sheet breathing room is
+   padding on the page element with `box-decoration-break: clone`, which repeats
+   the padding *and* the paper texture on every fragment.
+
+   The texture has to stay on the element for the same reason: an `@page`
+   background only paints inside the page margins, so a margin band would print
+   white on a full-bleed sheet. */
+.page.contents {
+  padding: 0.9in 0.95in;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.contents .inner { padding: 0; text-align: center; }
 .contents .title { font-size: 44pt; margin: 0; }
 .contents hr.rule { margin: 0.28in 0 0.34in; }
 .toc { text-align: left; }
@@ -206,19 +231,53 @@ h2 { bookmark-level: none; }
   padding: 0.85in 0.9in 0.95in 0.8in;
   height: 100%;
 }
-.method .columns {
+/* The columns are not stretched to the sheet: the divider below is a border on
+   the ingredients column, so a full-height box would draw a hairline down blank
+   paper beside a short recipe. Letting the columns take their content height
+   caps the rule at the taller column. */
+.columns {
   display: flex;
   gap: 0.34in;
-  height: 100%;
 }
-.method .col { flex: 1; min-width: 0; }
-.method .col.directions { flex: 1.8; }   /* directions ~2x ingredients, as in the original */
+.col { flex: 1; min-width: 0; }
+.col.directions { flex: 1.8; }   /* directions ~2x ingredients, as in the original */
 /* Hairline vertical divider between the columns (original: 0.25pt #3c3c3c). */
-.method .col.ingredients {
+.col.ingredients {
   border-left: 0.5pt solid var(--ink);
   padding-left: 0.34in;
 }
-.method h2.label { margin: 0 0 0.18in; font-size: 9pt; }
+/* A recipe whose author never recorded a method: no divider, since a hairline
+   running into an empty column is half of what makes the page look unfinished. */
+.col.directions.no-method + .col.ingredients {
+  border-left: 0;
+  padding-left: 0;
+}
+.no-method-note {
+  font-family: var(--body);
+  font-style: italic;
+  font-size: 9.5pt;
+  line-height: 1.42;
+  margin: 0;
+  color: var(--ink-deep);
+}
+.columns h2.label { margin: 0 0 0.18in; font-size: 9pt; }
+
+/* ---- Recipe on a single sheet ------------------------------------------ */
+/* For a recipe with neither a story nor a hero: the title block sits at the head
+   of the same sheet as the columns.
+
+   Deliberately plain block flow — not a flex column with the body as `flex: 1`.
+   WeasyPrint sizes such an item to its min-content and bottom-pins it against
+   the sheet rather than growing it, which opens a gap between the rule and the
+   column headings that varies with how long the recipe is. Stacking in normal
+   flow keeps that gap constant, and lets the divider stop at the content. */
+.recipe .inner { padding: 0.8in 0.8in 0.95in; }
+.recipe .rhead { text-align: center; }
+.recipe .rhead .title { font-size: 27pt; margin: 0 0 0.1in; }
+.recipe .rhead .title.small { font-size: 22pt; }
+.recipe .rhead .recipe-by { margin-bottom: 0.04in; }
+.recipe .rhead .recipe-by .label { display: block; margin-bottom: 3pt; font-size: 7pt; }
+.recipe .rhead hr.rule { width: 100%; margin: 0.16in auto 0.24in; }
 
 /* Section bodies are rendered from markdown, so the theme styles plain <ol>/<ul>/
    <h3> inside its own wrappers rather than classed markup. `>` keeps a nested

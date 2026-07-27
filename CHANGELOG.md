@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking
 
+- **A recipe without a story or an illustration now renders on one page.** The
+  bundled theme's opener page exists to carry hero art; with no art and no story
+  it was a title alone on an otherwise blank sheet — one per recipe, threaded
+  through the whole book. Such a recipe is now set on a single sheet, its title
+  block above its own columns. A recipe with a story or an illustration keeps its
+  opener and method page exactly as before, so an illustrated book is unchanged
+  (the example book's output is identical, still 16 pages); an art-free book gets
+  dramatically shorter — a 75-recipe test book went 159 → 84 pages.
+
+  The rule is keyed off the recipe's own content, not a book setting, so nothing
+  needs configuring either way. `validate`'s page-count check knows the rule.
+
 - **Theme templates receive rendered HTML for recipe section bodies.**
   `r.ingredient_groups` and `r.directions` are replaced by `r.ingredients_html`
   and `r.directions_html`, and `r.notes_html` is now a single HTML value instead
@@ -26,6 +38,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Printed folios.** Every footer-bearing page (recipes and the introduction)
+  now prints its page number above the running mark. The contents page has always
+  resolved entries with `target-counter`, so until now it cited page numbers that
+  no printed page carried — the numbers pointed nowhere on paper. Both read the
+  same `counter(page)`, so a folio and its index entry cannot drift.
+- **A recipe with no method reads as intentional.** When a recipe has ingredients
+  but no `## DIRECTIONS` — ordinary in a hand-written archive — the theme prints
+  `labels.no_method` where the steps would start and drops the column divider,
+  instead of leaving a labelled empty column beside a hairline running into blank
+  paper. New `labels:` key, overridable per book like the rest of the chrome.
 - **Recipe cross-references.** `[Label](#slug)` in a recipe body links to another
   recipe by slug, emitted as `<a class="xref" href="#slug">`. A print theme can
   append the target's resolved page number (`target-counter`) so the reference
@@ -74,6 +96,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reading-resolution pages, across concurrent page-range workers.
 
 ### Fixed
+
+- Contents pages after the first used to run edge to edge. The index is the one
+  page that flows across sheets, and element padding lands only on the first
+  fragment's top and the last fragment's bottom — so every continuation sheet had
+  its first entry jammed against the trim. The per-sheet breathing room now comes
+  from padding on the page element with `box-decoration-break: clone`, which
+  repeats the padding and the paper texture on every fragment. (The texture has
+  to stay on the element: an `@page` background never paints the margin band, so
+  a full-bleed sheet would print white edges.) The contents also loses its running
+  footer, which was absolutely positioned against the fragmenting box and so
+  landed on only one of its sheets.
+
+- The hairline divider between a recipe's columns ran the full height of the
+  sheet regardless of content, drawing a rule down blank paper beside a short
+  recipe. The columns now take their content height, capping the rule at the
+  taller of the two.
+
+- `validate`'s page-count check assumed two pages for every recipe, so a book
+  whose recipes carry no art reported a large, permanent delta. It now counts the
+  pages each recipe actually takes, and says outright that the contents spans more
+  than the one sheet it is budgeted in a long book — the delta used to send you
+  hunting through NOTES sections for a cause that was never there.
 
 - `validate`'s contact sheet for a long book (~145+ pages) used to be a single
   image taller than the ~16384px canvas dimension many viewers can open — it now

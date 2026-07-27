@@ -116,6 +116,22 @@ printed string) and `recipes` — an ordered list of recipe objects:
 | `extra_sections`                     | `[{title, html}]` for unknown headings            |
 | `attribution` `draft`                | front matter                                      |
 
+### Deciding how many pages a recipe gets
+
+`directions_html` and `illustration_url` are empty strings, not missing keys, so
+a template can branch on what a recipe actually carries. The bundled theme uses
+exactly two such branches, and a theme with a fixed-height sheet wants both:
+
+- **`has_story` or `illustration_url`** → an opener page (story or hero) plus a
+  method page. With neither, an opener would be a title alone on blank paper, so
+  the bundled theme sets those recipes on a single sheet instead.
+- **`directions_html` empty** → the author recorded only the ingredients. Print
+  `book.labels.no_method` where the steps would start and drop the column
+  divider; a labelled empty column beside a hairline reads as an unfinished page.
+
+Both are content-keyed on purpose. Nothing in `book.yaml` selects a layout, so a
+book gains or loses the spread by gaining or losing art.
+
 ### Section bodies are rendered HTML
 
 ladle splits a recipe body on its `##` headings and renders each section from
@@ -210,7 +226,8 @@ It exits non-zero if any check fails, so it drops straight into CI.
 
 To see what a theme actually looks like, render it against the bundled canonical
 sample book — a tiny, asset-free book with one recipe per section, so the cover,
-contents, a recipe opener, and a method page all appear:
+contents, and a recipe page all appear (the sample ships no art, so its recipes
+render on single sheets):
 
 ```sh
 ladle theme preview themes/mine   # or a bundled name: ladle theme preview default
