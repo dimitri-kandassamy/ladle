@@ -24,10 +24,17 @@ html, body { margin: 0; padding: 0; color: var(--ink); }
 .page:last-child { break-after: auto; }
 
 /* PDF outline (viewer bookmarks): WeasyPrint adds one per heading. Keep only the
-   h1 chapter titles — Contents, Introduction, and each recipe opener — and drop
-   the h2 section labels ("Directions", "Ingredients", the Contents sub-heads),
-   which would otherwise clutter the outline. */
-h2 { bookmark-level: none; }
+   h1 chapter titles — Contents, Introduction, and each recipe — and drop the h2
+   section labels ("Directions", "Ingredients", the Contents sub-heads) and the
+   h3 ingredient sub-groups ("Filling", "Glaze"), which are not places to
+   navigate to and only clutter the panel. */
+h2, h3 { bookmark-level: none; }
+
+/* With section openers on, the openers are the top level and each recipe nests
+   under its section. Scoped to `.sectioned` because without an opener to sit
+   under, a demoted recipe would nest beneath the introduction instead. */
+.sectioned .recipe .title,
+.sectioned .recipe-head .title { bookmark-level: 2; }
 
 /* Cream pages: a paper-grain texture for a premium printed-paper feel. Painted as
    the page background (not an overlay) so absolutely-positioned furniture keeps its
@@ -39,20 +46,17 @@ h2 { bookmark-level: none; }
   background: url(../illustrations/patterns/paper-cream.jpg) center / cover no-repeat;
 }
 
-/* Navy pages (cover, endpapers, colophon) with the line-art pattern over a
-   stronger paper grain. */
+/* Navy pages (cover, endpapers, section openers, colophon): the colour and a
+   stronger paper grain, nothing else. These used to carry a scattered line-art
+   motif; it competed with every line of type set over it and dated the book to
+   one decorative idea, so the ground is now plain and the typography carries
+   these pages. */
 .page.navy {
   background-color: var(--navy);
   background-image: url(../illustrations/patterns/paper-navy.png);
   background-repeat: repeat;
   background-size: 1.5in 1.5in;
   color: var(--cream);
-}
-.page.navy .pattern {
-  position: absolute;
-  inset: 0;
-  background: url(../illustrations/patterns/endpaper.png) center / cover no-repeat;
-  opacity: 0.9;
 }
 
 /* ---- Running footer (cream pages) -------------------------------------- */
@@ -91,10 +95,8 @@ h2 { bookmark-level: none; }
 .footer .folio::before { content: counter(page); }
 
 /* ---- Cover ------------------------------------------------------------- */
-.page.cover .pattern {
-  background-image: url(../illustrations/patterns/cover.png);
-  opacity: 1;
-}
+/* The panel is now a framing device rather than a shield against the line art:
+   a hairline box, very slightly darker than the ground it sits on. */
 .cover .panel {
   position: absolute;
   left: 50%;
@@ -124,6 +126,56 @@ h2 { bookmark-level: none; }
   font-family: var(--display);
   font-weight: 700;
   font-size: 14pt;
+}
+
+/* ---- Interior title page ----------------------------------------------- */
+/* Centring a short, fixed block — safe to do with flex here, unlike a growing
+   body column on a fixed sheet (see the single-page recipe note below). */
+.title-page .inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 1in;
+  text-align: center;
+}
+.title-page .title { font-size: 34pt; line-height: 1.1; }
+.title-page .title .article { display: block; font-size: 26pt; margin-bottom: 2pt; }
+.title-page hr.rule { width: 1.8in; margin: 0.34in auto; }
+.title-page .tp-sub {
+  font-family: var(--body);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 8pt;
+  line-height: 1.8;
+  font-weight: 600;
+  color: var(--ink-deep);
+}
+
+/* ---- Section opener ----------------------------------------------------- */
+/* The section name between two short rules, centred on the plain navy ground.
+   A divider should be quieter than the cover, so it takes no panel and no
+   ornament. No footer either, so no folio — as on the cover and endpapers. */
+.section-opener .panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.section-opener .title {
+  color: var(--cream);
+  font-size: 30pt;
+  margin: 0.24in 0;
+}
+.section-opener hr.rule {
+  width: 0.9in;
+  margin: 0 auto;
+  border: 0;
+  border-top: 1px solid rgba(201, 191, 166, 0.55);
 }
 
 /* ---- Introduction ------------------------------------------------------ */
@@ -397,17 +449,26 @@ h2 { bookmark-level: none; }
 }
 
 /* ---- Colophon (back) --------------------------------------------------- */
+/* One block centred on the sheet. This used to be `space-between` around an
+   empty middle div, which pinned the producer to the top edge and the copyright
+   to the bottom with a large hollow of navy between them. */
 .colophon .inner {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0.9in 1in;
   text-align: center;
   color: var(--cream);
 }
 .colophon .producer { text-transform: uppercase; letter-spacing: 0.2em; font-size: 9pt; }
 .colophon .producer .name { display: block; font-size: 16pt; margin-top: 8pt; letter-spacing: 0.16em; }
-.colophon .copyright { font-family: var(--body); font-style: italic; font-size: 8pt; opacity: 0.85; }
+.colophon .copyright {
+  font-family: var(--body);
+  font-style: italic;
+  font-size: 8pt;
+  opacity: 0.85;
+  margin-top: 0.42in;
+}

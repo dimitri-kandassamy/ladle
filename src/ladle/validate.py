@@ -207,7 +207,7 @@ def _pdfinfo(pdf: Path) -> dict[str, str]:
     return {k.strip(): v.strip() for k, _, v in fields if k.strip()}
 
 
-def validate_pdf(recipes_dir: Path) -> None:
+def validate_pdf(recipes_dir: Path, book: dict | None = None) -> None:
     section("PDF structure")
     pdf = BUILD / "cookbook.pdf"
     if not pdf.exists():
@@ -220,12 +220,14 @@ def validate_pdf(recipes_dir: Path) -> None:
 
     pages = int(info.get("Pages", "0"))
     live = [p for p in recipes_dir.glob("*.md") if not front_matter(p).get("draft", False)]
-    # cover + endpaper + contents + intro + endpaper + colophon = 6 fixed. A
-    # recipe takes two pages when it has something to fill an opener with — a
-    # story or a hero illustration — and one when it has neither, matching how
+    # cover + endpaper + title page + contents + intro + endpaper + colophon = 7
+    # fixed. A recipe takes two pages when it has something to fill an opener with
+    # — a story or a hero illustration — and one when it has neither, matching how
     # the bundled theme lays them out.
     spreads = sum(1 for p in live if _has_opener(p))
-    expected = 6 + 2 * spreads + (len(live) - spreads)
+    expected = 7 + 2 * spreads + (len(live) - spreads)
+    if (book or {}).get("section_openers"):
+        expected += len({front_matter(p).get("category", "Savory") for p in live})
     if pages == expected:
         ok(f"page count = {pages} ({len(live)} recipes, {spreads} on two pages)")
     else:
@@ -457,7 +459,7 @@ def main(argv: list[str] | None = None) -> int:
     failures.clear()  # re-entrant: don't carry results across calls in one process
     validate_recipes(book_cfg.recipes_dir)
     validate_bodies(book_cfg.recipes_dir, strict=args.strict)
-    validate_pdf(book_cfg.recipes_dir)
+    validate_pdf(book_cfg.recipes_dir, book_cfg.data)
     validate_epub()
     contact_sheet()
     section("Summary")

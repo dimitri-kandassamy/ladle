@@ -38,6 +38,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **An interior title page.** The bundled theme went cover → endpaper → contents;
+  it now sets the title quietly on paper first, as a printed book does. Front
+  matter, so it carries no folio. One page longer.
+- **`section_openers: true`** (`book.yaml`, default off) prints a full-page
+  divider before each section — the section name between two rules on the navy
+  ground — and nests each recipe under its section in the PDF outline. Off by
+  default because a divider earns its sheet in a long book and crowds a short
+  one: the bundled sample would spend three of them on three recipes.
 - **Printed folios.** Every footer-bearing page (recipes and the introduction)
   now prints its page number above the running mark. The contents page has always
   resolved entries with `target-counter`, so until now it cited page numbers that
@@ -68,6 +76,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The bundled theme drops its line art.** The navy pages — cover, endpapers,
+  colophon — carried a scattered motif of jars and bowls behind their type. It
+  competed with every line set over it (the cover title needed a panel to stay
+  legible, and a section name over it was unreadable), and it pinned the theme to
+  one decorative idea. The navy ground is now colour and paper grain alone, with
+  the typography carrying those pages. This removes five raster and SVG assets,
+  roughly halving the theme's asset weight; the cream paper grain is untouched.
 - Theme templates now render in a `jinja2.sandbox.SandboxedEnvironment`, so an
   untrusted community theme is treated as data, never code; a template that trips
   the sandbox surfaces as a friendly error naming the file.
@@ -96,6 +111,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reading-resolution pages, across concurrent page-range workers.
 
 ### Fixed
+
+- The colophon pinned "produced by" to the top edge and the copyright to the
+  bottom with a hollow of navy between them (`space-between` around an empty
+  div). It is now one block centred on the sheet.
+
+- A book with no `volume:` printed the bare word "Volume" on its cover, with
+  nothing after it. The line is now omitted unless a volume is set, as the
+  subtitle already was.
+
+- The PDF outline listed every `### ingredient group` — "Filling", "Glaze" — as a
+  navigable child of its recipe. Those are labels, not destinations; the outline
+  now stops at recipe titles.
 
 - Contents pages after the first used to run edge to edge. The index is the one
   page that flows across sheets, and element padding lands only on the first

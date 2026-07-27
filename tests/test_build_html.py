@@ -415,8 +415,8 @@ def test_warn_schema_issues_silent_on_empty_dir(tmp_path, capsys):
 
 
 # ---- the bundled theme's page structure ------------------------------------
-def render_print(**recipe) -> str:
-    """Render the bundled print template with one synthetic recipe."""
+def a_recipe(**over) -> dict:
+    """One synthetic recipe in the shape `load_recipe` produces."""
     r = {
         "slug": "cake",
         "title": "Cake",
@@ -436,8 +436,13 @@ def render_print(**recipe) -> str:
         "extra_sections": [],
         "draft": False,
     }
-    r.update(recipe)
-    book = {
+    r.update(over)
+    return r
+
+
+def render_print(*, recipes=None, book=None, **recipe) -> str:
+    """Render the bundled print template. Bare kwargs override the one recipe."""
+    b = {
         "title": "The Book",
         "title_article": "The",
         "title_rest": "Book",
@@ -446,19 +451,21 @@ def render_print(**recipe) -> str:
         "producer": "",
         "rights": "",
         "language": "en",
-        "sections": ["Desserts"],
+        "sections": ["Savory", "Desserts"],
+        "section_openers": False,
         "palette": dict.fromkeys(("navy", "cream", "ink", "ink_deep", "rule"), "#000"),
         "fonts": {"display": "D", "body": "B"},
         "labels": bh.merged_labels({}),
     }
+    b.update(book or {})
     theme = config.PACKAGE_ROOT / "themes" / "default"
     env = bh.make_env(theme / "templates")
     return bh.render_template(
         env,
         "print.html.j2",
-        book=book,
+        book=b,
         intro={"title": "Intro", "from_name": "", "from_org": "", "body_html": []},
-        recipes=[r],
+        recipes=recipes if recipes is not None else [a_recipe(**recipe)],
         font_face_css="",
         css_links=[],
     )
@@ -503,6 +510,57 @@ def test_print_method_less_recipe_gets_a_note_instead_of_an_empty_column():
     html = render_print(directions_html=bh.Markup(""))
     assert "no-method" in html
     assert bh.DEFAULT_LABELS["no_method"] in html
+
+
+def test_print_has_an_interior_title_page():
+    assert 'class="page cream title-page"' in render_print()
+
+
+def test_print_cover_omits_an_unset_volume():
+    # An unset `volume:` used to print the bare word "Volume" with nothing after.
+    assert "volume" not in render_print(book={"volume": ""})
+    assert "Volume 2" in render_print(book={"volume": "2"})
+
+
+def test_print_no_line_art_anywhere():
+    # The navy pages carry colour and paper grain only; the scattered motif is
+    # gone, and with it the div that positioned it.
+    assert 'class="pattern"' not in render_print()
+
+
+def test_print_section_openers_are_off_by_default():
+    two = [a_recipe(slug="a", category="Savory"), a_recipe(slug="b", category="Desserts")]
+    assert "section-opener" not in render_print(recipes=two)
+
+
+def test_print_section_openers_when_enabled():
+    # One divider per section, not per recipe, and named from `section_names`.
+    two_each = [
+        a_recipe(slug="a", category="Savory"),
+        a_recipe(slug="b", category="Savory"),
+        a_recipe(slug="c", category="Desserts"),
+    ]
+    html = render_print(recipes=two_each, book={"section_openers": True})
+    assert html.count("section-opener") == 2
+    assert ">Savory</h1>" in html and ">Desserts</h1>" in html
+
+
+def test_print_section_openers_use_the_books_section_names():
+    # A translated book names its dividers through `labels:`, like the rest of
+    # the chrome — the category key itself is never printed.
+    labels = bh.merged_labels({"labels": {"section_names": {"Savory": "Salgados"}}})
+    html = render_print(
+        recipes=[a_recipe(category="Savory")],
+        book={"section_openers": True, "labels": labels},
+    )
+    assert ">Salgados</h1>" in html
+
+
+def test_print_outline_nests_recipes_only_when_sectioned():
+    # The demotion to bookmark-level 2 keys off the same flag as the openers:
+    # with no opener above it, a demoted recipe would nest under the intro.
+    assert 'class="sectioned"' not in render_print()
+    assert 'class="sectioned"' in render_print(book={"section_openers": True})
 
 
 def test_print_author_byline_needs_a_story():
