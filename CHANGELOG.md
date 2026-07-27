@@ -135,10 +135,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   footer, which was absolutely positioned against the fragmenting box and so
   landed on only one of its sheets.
 
-- The hairline divider between a recipe's columns ran the full height of the
-  sheet regardless of content, drawing a rule down blank paper beside a short
-  recipe. The columns now take their content height, capping the rule at the
-  taller of the two.
+- A recipe whose method overran its sheet lost **every** ingredient, not just
+  the tail of the method. Unpinning the column row from the sheet height (an
+  attempt to stop the divider drawing into blank paper beside short recipes) let
+  the row grow to the method's full height; the row then fragmented and the
+  whole ingredients column landed past the first sheet, where `overflow: hidden`
+  discarded it. The row is pinned again, so both columns start at the top and
+  only the tail of a long method is cut. The divider goes back to running the
+  full sheet height beside a short recipe — cosmetic, and the real fix is to let
+  a long recipe flow onto a second sheet, which the layout cannot yet do.
 
 - `validate`'s page-count check assumed two pages for every recipe, so a book
   whose recipes carry no art reported a large, permanent delta. It now counts the
