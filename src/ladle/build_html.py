@@ -40,6 +40,10 @@ DEFAULT_LABELS = {
     "from": "From",
     "volume": "Volume",
     "produced_by": "Edited & produced by",
+    # Printed where the steps would be on a recipe whose author recorded only the
+    # ingredients — a real shape in a hand-written archive, and one that reads as
+    # an unfinished page unless the book says otherwise.
+    "no_method": "No method was recorded for this recipe.",
     "section_names": {
         "Savory": "Savory",
         "Desserts": "Desserts",

@@ -92,6 +92,7 @@
         "from": { "type": "string" },
         "volume": { "type": "string" },
         "produced_by": { "type": "string" },
+        "no_method": { "type": "string" },
         "section_names": {
           "type": "object",
           "additionalProperties": { "type": "string" },

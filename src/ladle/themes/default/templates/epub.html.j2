@@ -25,8 +25,12 @@
 {{ r.ingredients_html }}
 {% if r.servings %}<p class="yields"><strong>{{ book.labels.yields }}:</strong> {{ r.servings }}</p>{% endif %}
 
+{% if r.directions_html %}
 <h2>{{ book.labels.directions }}</h2>
 {{ r.directions_html }}
+{% else %}
+<p class="no-method">{{ book.labels.no_method }}</p>
+{% endif %}
 
 {% if r.notes_html %}
 <h2>{{ book.labels.notes }}</h2>

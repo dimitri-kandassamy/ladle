@@ -20,6 +20,24 @@ def test_front_matter_reads_yaml_block(tmp_path):
     assert validate.front_matter(p) == {"title": "Soup", "draft": True}
 
 
+@pytest.mark.parametrize(
+    "fm, expected",
+    [
+        ("title: X\n", False),  # neither -> one page
+        ("title: X\nstory: Once upon a time.\n", True),
+        ("title: X\nillustration: art/x.svg\n", True),
+        ("title: X\nstory: ''\n", False),  # an empty story is no story
+        ("title: X\nstory: '   '\n", False),
+    ],
+)
+def test_has_opener_matches_the_template_rule(tmp_path, fm, expected):
+    # The page-count check has to agree with the bundled theme about which
+    # recipes take two pages, or it reports a permanent delta on an art-free book.
+    p = tmp_path / "r.md"
+    p.write_text(f"---\n{fm}---\n\n## NOTES\nx\n", encoding="utf-8")
+    assert validate._has_opener(p) is expected
+
+
 def test_front_matter_is_empty_without_a_front_matter_block(tmp_path):
     """Used to raise IndexError, surfacing as `error: list index out of range`."""
     p = tmp_path / "r.md"

@@ -21,9 +21,15 @@
 <body>
 
 {# ---------- macros ---------- #}
+{# The folio prints `counter(page)` (see print.css) rather than a number baked in
+   here, so it is resolved by the same counter the contents page reads through
+   `target-counter` — the printed number and the index entry cannot drift. Pages
+   with no footer (cover, endpapers, contents, colophon) carry no folio, which is
+   the conventional front-matter treatment. #}
 {% macro footer(attribution="") -%}
 <div class="footer">
   {% if attribution %}<div class="attribution">{{ attribution }}</div>{% endif %}
+  <div class="folio"></div>
   <div class="mark"><span class="the">{{ book.title_article }}</span> {{ book.title_rest|upper }}</div>
 </div>
 {%- endmacro %}
@@ -52,21 +58,48 @@
 {% endfor %}
 {%- endmacro %}
 
+{# Title, byline and rule — shared by all three recipe layouts so they cannot
+   drift apart. An `author:` is a person who tells the story, so it is shown only
+   on a recipe that has one; otherwise the byline falls back to `credits`, which
+   is provenance. That is the same rule the method page's sidebar applies. #}
+{% macro title_block(r) -%}
+{% set show_author = r.has_story and r.author.name %}
+<h1 id="{{ r.slug }}" class="display title {{ 'small' if r.title|length > 22 else '' }}">{{ r.title }}</h1>
+{% if show_author or r.credits_line %}
+<div class="recipe-by">
+  <span class="label">{{ book.labels.recipe_by if show_author else book.labels.recipe_from }}</span>
+  <span class="byline">
+    {% if show_author %}<span class="name">{{ r.author.name }}</span>{% if r.author.org %} <span class="org">({{ r.author.org }})</span>{% endif %}
+    {% else %}<span class="name">{{ r.credits_line }}</span>{% endif %}
+  </span>
+</div>
+{% endif %}
+<hr class="rule">
+{%- endmacro %}
+
+{# The two-column body, shared by the method page and the collapsed single page.
+   A recipe whose author never wrote the method gets an explicit line where the
+   steps would start: an empty labelled column beside a hairline divider reads as
+   an unfinished page rather than as fidelity to the source. #}
+{% macro columns(r) -%}
+<div class="columns">
+  <div class="col directions{% if not r.directions_html %} no-method{% endif %}">
+    {% if r.directions_html %}
+    <h2 class="label">{{ book.labels.directions }}</h2>
+    <div class="steps">{{ r.directions_html }}</div>
+    {% else %}
+    <p class="no-method-note">{{ book.labels.no_method }}</p>
+    {% endif %}
+  </div>
+  <div class="col ingredients">{{ ingredients_col(r) }}</div>
+</div>
+{%- endmacro %}
+
 {# Full story page — used only when a recipe has a story to tell. #}
 {% macro story_page(r) -%}
 <section class="page cream recipe-head story">
   <div class="inner">
-    <h1 id="{{ r.slug }}" class="display title {{ 'small' if r.title|length > 22 else '' }}">{{ r.title }}</h1>
-    {% if r.author.name or r.credits_line %}
-    <div class="recipe-by">
-      <span class="label">{{ book.labels.recipe_by if r.author.name else book.labels.recipe_from }}</span>
-      <span class="byline">
-        {% if r.author.name %}<span class="name">{{ r.author.name }}</span>{% if r.author.org %} <span class="org">({{ r.author.org }})</span>{% endif %}
-        {% else %}<span class="name">{{ r.credits_line }}</span>{% endif %}
-      </span>
-    </div>
-    {% endif %}
-    <hr class="rule">
+    {{ title_block(r) }}
     <div class="story">
       {% if r.headshot_url %}<img class="headshot" src="{{ r.headshot_url }}" alt="">{% endif %}
       <div class="prose">
@@ -79,19 +112,12 @@
 </section>
 {%- endmacro %}
 
-{# Opener page for a recipe without a story: centred title + byline + a large
-   centred hero illustration. The directions/ingredients live on the method page. #}
+{# Opener page for an illustrated recipe without a story: centred title + byline
+   + a large centred hero. The directions/ingredients live on the method page. #}
 {% macro opener_page(r) -%}
 <section class="page cream recipe-head opener">
   <div class="inner">
-    <h1 id="{{ r.slug }}" class="display title {{ 'small' if r.title|length > 22 else '' }}">{{ r.title }}</h1>
-    {% if r.credits_line %}
-    <div class="recipe-by">
-      <span class="label">{{ book.labels.recipe_from }}</span>
-      <span class="byline"><span class="name">{{ r.credits_line }}</span></span>
-    </div>
-    {% endif %}
-    <hr class="rule">
+    {{ title_block(r) }}
   </div>
   {% if r.illustration_url %}<img class="hero" src="{{ r.illustration_url }}" alt="">{% endif %}
   {{ footer(r.attribution) }}
@@ -101,13 +127,7 @@
 {% macro method(r) -%}
 <section class="page cream method">
   <div class="inner">
-    <div class="columns">
-      <div class="col directions">
-        <h2 class="label">{{ book.labels.directions }}</h2>
-        <div class="steps">{{ r.directions_html }}</div>
-      </div>
-      <div class="col ingredients">{{ ingredients_col(r) }}</div>
-    </div>
+    {{ columns(r) }}
   </div>
   <div class="sidebar">
     <div class="sidebar-rot">
@@ -116,6 +136,21 @@
       <span class="s-by">{{ (book.labels.recipe_by + ' ' + r.author.name) if (r.has_story and r.author.name) else (book.labels.recipe_from + ' ' + r.credits_line) }}</span>
       {% endif %}
     </div>
+  </div>
+  {{ footer(r.attribution) }}
+</section>
+{%- endmacro %}
+
+{# One recipe, one sheet — for a recipe with neither a story nor an illustration.
+   The opener page exists to carry hero art; with no art and no story it would be
+   a title alone on an otherwise blank sheet, one per recipe. Here the title block
+   sits at the head of the same sheet as the columns instead. No rotated sidebar:
+   it repeats a title that is now already on the page. #}
+{% macro recipe_page(r) -%}
+<section class="page cream recipe">
+  <div class="inner">
+    <div class="rhead">{{ title_block(r) }}</div>
+    {{ columns(r) }}
   </div>
   {{ footer(r.attribution) }}
 </section>
@@ -155,7 +190,10 @@
       {% endfor %}
     </nav>
   </div>
-  {{ footer() }}
+  {# No running footer: the contents is the one page that flows and fragments
+     across several sheets, and an absolutely-positioned footer would land on
+     only one of them. Its per-sheet breathing room comes from padding on the
+     page element instead (see print.css). #}
 </section>
 
 <section class="page cream intro">
@@ -173,9 +211,14 @@
   {{ footer() }}
 </section>
 
+{# Two pages when the recipe has something to fill an opener with — a story, or a
+   hero illustration — and one page when it has neither. Keyed off the recipe's
+   own content rather than a book-level setting, so an illustrated book keeps its
+   spreads and a plain one stops paying a blank sheet per recipe. #}
 {% for r in recipes %}
-{% if r.has_story %}{{ story_page(r) }}{% else %}{{ opener_page(r) }}{% endif %}
-{{ method(r) }}
+{% if r.has_story %}{{ story_page(r) }}{{ method(r) }}
+{% elif r.illustration_url %}{{ opener_page(r) }}{{ method(r) }}
+{% else %}{{ recipe_page(r) }}{% endif %}
 {% endfor %}
 
 <section class="page navy endpaper"><div class="pattern"></div></section>

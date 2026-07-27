@@ -414,6 +414,103 @@ def test_warn_schema_issues_silent_on_empty_dir(tmp_path, capsys):
     assert capsys.readouterr().err == ""
 
 
+# ---- the bundled theme's page structure ------------------------------------
+def render_print(**recipe) -> str:
+    """Render the bundled print template with one synthetic recipe."""
+    r = {
+        "slug": "cake",
+        "title": "Cake",
+        "category": "Desserts",
+        "servings": "",
+        "credits": "",
+        "credits_line": "",
+        "attribution": "",
+        "has_story": False,
+        "story_html": [],
+        "author": {"name": "", "org": ""},
+        "headshot_url": "",
+        "illustration_url": "",
+        "ingredients_html": bh.Markup("<ul><li>flour</li></ul>"),
+        "directions_html": bh.Markup("<ol><li>Mix.</li></ol>"),
+        "notes_html": bh.Markup(""),
+        "extra_sections": [],
+        "draft": False,
+    }
+    r.update(recipe)
+    book = {
+        "title": "The Book",
+        "title_article": "The",
+        "title_rest": "Book",
+        "subtitle": "",
+        "volume": "",
+        "producer": "",
+        "rights": "",
+        "language": "en",
+        "sections": ["Desserts"],
+        "palette": dict.fromkeys(("navy", "cream", "ink", "ink_deep", "rule"), "#000"),
+        "fonts": {"display": "D", "body": "B"},
+        "labels": bh.merged_labels({}),
+    }
+    theme = config.PACKAGE_ROOT / "themes" / "default"
+    env = bh.make_env(theme / "templates")
+    return bh.render_template(
+        env,
+        "print.html.j2",
+        book=book,
+        intro={"title": "Intro", "from_name": "", "from_org": "", "body_html": []},
+        recipes=[r],
+        font_face_css="",
+        css_links=[],
+    )
+
+
+def test_print_recipe_without_story_or_art_is_one_page():
+    # The opener page exists to carry hero art. With no art and no story it would
+    # be a title on an otherwise blank sheet, so the recipe collapses to one.
+    html = render_print()
+    assert 'class="page cream recipe"' in html
+    assert "recipe-head" not in html
+
+
+def test_print_recipe_with_an_illustration_keeps_its_opener():
+    html = render_print(illustration_url="art/cake.svg")
+    assert 'class="page cream recipe-head opener"' in html
+    assert 'class="page cream method"' in html
+
+
+def test_print_recipe_with_a_story_keeps_its_story_page():
+    html = render_print(has_story=True, story_html=["Once."])
+    assert 'class="page cream recipe-head story"' in html
+    assert 'class="page cream method"' in html
+
+
+def test_print_every_recipe_layout_carries_a_folio():
+    # The contents resolves page numbers with target-counter; without a printed
+    # folio those numbers point at nothing on paper.
+    for kwargs in ({}, {"illustration_url": "a.svg"}, {"has_story": True}):
+        assert '<div class="folio"></div>' in render_print(**kwargs)
+
+
+def test_print_contents_has_no_footer():
+    # It fragments across sheets, and an absolutely-positioned footer would land
+    # on only one of them.
+    html = render_print()
+    contents = html.split('class="page cream contents"')[1].split("</section>")[0]
+    assert "footer" not in contents
+
+
+def test_print_method_less_recipe_gets_a_note_instead_of_an_empty_column():
+    html = render_print(directions_html=bh.Markup(""))
+    assert "no-method" in html
+    assert bh.DEFAULT_LABELS["no_method"] in html
+
+
+def test_print_author_byline_needs_a_story():
+    # `author` is who tells the story; provenance without one is `credits`.
+    assert "Recipe by" not in render_print(author={"name": "Ada", "org": ""})
+    assert "Recipe by" in render_print(has_story=True, author={"name": "Ada", "org": ""})
+
+
 # ---- theme template sandbox (untrusted themes are data, not code) ----------
 def test_make_env_blocks_private_attribute_access():
     # A theme reaching for dunder internals is a sandbox escape attempt.

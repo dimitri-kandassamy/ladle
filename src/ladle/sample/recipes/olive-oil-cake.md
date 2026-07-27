@@ -3,7 +3,15 @@ title: Everyday Olive Oil Cake
 slug: olive-oil-cake
 category: Desserts
 servings: One 8-inch cake
-story: ''
+# One sample recipe carries a story so a preview exercises the two-page path —
+# story page plus method page — alongside the single-sheet recipes. It needs no
+# asset, which keeps this book renderable anywhere.
+story: >
+  Olive oil instead of butter makes a cake that keeps its crumb for days, which
+  is the whole reason this one is written down. It came from a kitchen where the
+  oil was better than the butter, and it has stayed that way since.
+author:
+  name: The ladle project
 draft: false
 ---
 
