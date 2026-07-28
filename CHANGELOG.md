@@ -112,6 +112,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The PDF was not set in the theme's fonts.** `font_face_css()` returned a
+  plain `str`, so the autoescaping template turned every `url("…")` into
+  `url(&#34;…&#34;)`. HTML entities are not decoded inside a `<style>` element,
+  which made each `@font-face` invalid — WeasyPrint silently dropped them all and
+  fell back to whatever serif the build machine happened to have. The book still
+  rendered at the right trim and page count, so nothing caught it; only the type
+  was wrong, and it varied by machine. Introduced in 0.1.0 by the switch to
+  `autoescape=True` (which correctly updated `inline()` and missed this one), so
+  every PDF built by 0.1.0 and 0.2.0 is affected. The EPUB was never affected —
+  pandoc embeds fonts through a separate path — so the two outputs of one book
+  have been in different typefaces until now. Rebuild to get the intended design.
+
+  `font_face_css()` now returns `Markup` and escapes its own input: a theme is
+  untrusted data, so a family name can no longer close the CSS string or the
+  `<style>` element. A new test builds the sample book, renders it, and asserts
+  every family in `theme.yaml` is embedded in the PDF — the suite had no check on
+  type at all, which is why this survived.
+
 - The colophon pinned "produced by" to the top edge and the copyright to the
   bottom with a hollow of navy between them (`space-between` around an empty
   div). It is now one block centred on the sheet.

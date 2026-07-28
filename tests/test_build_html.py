@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+import zlib
 from pathlib import Path
 
 import pytest
@@ -440,7 +442,7 @@ def a_recipe(**over) -> dict:
     return r
 
 
-def render_print(*, recipes=None, book=None, **recipe) -> str:
+def render_print(*, recipes=None, book=None, font_face_css="", **recipe) -> str:
     """Render the bundled print template. Bare kwargs override the one recipe."""
     b = {
         "title": "The Book",
@@ -466,9 +468,73 @@ def render_print(*, recipes=None, book=None, **recipe) -> str:
         book=b,
         intro={"title": "Intro", "from_name": "", "from_org": "", "body_html": []},
         recipes=recipes if recipes is not None else [a_recipe(**recipe)],
-        font_face_css="",
+        font_face_css=font_face_css,
         css_links=[],
     )
+
+
+def test_font_face_css_survives_the_autoescaping_template():
+    # The regression this guards: font_face_css used to return a plain str, so the
+    # autoescaping environment turned url("…") into url(&#34;…&#34;). Entities are
+    # not decoded inside a <style> element, so every @font-face was invalid and the
+    # book silently set in a system fallback font.
+    theme = config.PACKAGE_ROOT / "themes" / "default"
+    css = bh.font_face_css(theme / "fonts", config.load_theme(theme)["font_faces"])
+    html = render_print(font_face_css=css)
+    style = html.split("</style>", 1)[0]
+    assert "&#34;" not in style and "&amp;" not in style
+    assert 'format("truetype")' in style
+    assert 'font-family:"Playfair Display"' in style
+
+
+def test_font_face_css_escapes_a_family_that_would_break_out_of_the_style_block():
+    # A theme is untrusted data and font_face_css is marked safe, so it escapes its
+    # own input: a family name may not close the CSS string or the <style> element.
+    css = str(bh.font_face_css(Path("/f"), [{"family": "</style><script>x", "file": "a.ttf"}]))
+    assert "</style>" not in css
+    assert "<script>" not in css
+
+
+def embedded_font_subsets(pdf: bytes) -> set[str]:
+    """Embedded font subset names (``ABCDEF+Family``) in *pdf*.
+
+    Reads the PDF directly rather than shelling out to poppler's `pdffonts`: the
+    test job installs WeasyPrint's native libraries but not poppler, so a check
+    that needed it would silently skip in CI — which is the failure mode this
+    whole test exists to prevent.
+    """
+    names = set(re.findall(rb"/([A-Z]{6}\+[A-Za-z0-9\-]+)", pdf))
+    for stream in re.findall(rb"stream\r?\n(.*?)endstream", pdf, re.S):
+        try:
+            names.update(re.findall(rb"/([A-Z]{6}\+[A-Za-z0-9\-]+)", zlib.decompress(stream)))
+        except zlib.error:
+            continue  # not a flate stream (an embedded image, a font file)
+    return {n.decode() for n in names}
+
+
+def test_the_themes_declared_fonts_reach_the_pdf(tmp_path, monkeypatch):
+    # The guarantee the unit tests above only approximate, and the one nothing
+    # checked before: the built book sets in the theme's own type. When the
+    # @font-face rules are malformed WeasyPrint falls back to a system serif
+    # without a word — so the PDF still renders, still paginates, still has the
+    # right trim and page count, and passes every other check in the suite.
+    #
+    # It goes through `render()` and the real cookbook.html rather than calling
+    # font_face_css directly, because the defect this guards was in neither the
+    # function nor the template but in the seam between them.
+    from weasyprint import HTML
+
+    monkeypatch.setenv("LADLE_BUILD", str(tmp_path))
+    bh.render(str(config.SAMPLE_BOOK))
+    pdf = HTML(filename=str(tmp_path / "cookbook.html")).write_pdf()
+
+    embedded = embedded_font_subsets(pdf)
+    faces = config.load_theme(config.PACKAGE_ROOT / "themes" / "default")["font_faces"]
+    for family in sorted({f["family"] for f in faces}):
+        stem = family.replace(" ", "-")
+        assert any(name.split("+", 1)[1].startswith(stem) for name in embedded), (
+            f"{family!r} is declared in theme.yaml but is not embedded in the PDF; got {sorted(embedded)}"
+        )
 
 
 def test_print_recipe_without_story_or_art_is_one_page():
