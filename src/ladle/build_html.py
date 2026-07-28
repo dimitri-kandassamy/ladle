@@ -386,17 +386,39 @@ def load_intro(book: dict, *, absolute_assets: bool, book_root: Path) -> dict:
     }
 
 
-def font_face_css(fonts_dir: Path, font_faces: list[dict]) -> str:
+# Characters that must not reach a `<style>` element verbatim. `"` and `\` would
+# break out of the CSS string; `<` could close the element early (`</style>`) and
+# turn a theme manifest into markup. A theme is untrusted data (see make_env), and
+# font_face_css is marked safe, so it does its own escaping rather than leaning on
+# the autoescaper it opts out of.
+_CSS_ESCAPES = {'"': r"\22 ", "\\": r"\5c ", "<": r"\3c ", "\n": r"\a ", "\r": r"\d "}
+
+
+def css_string(value: str) -> str:
+    """Escape *value* for use inside a double-quoted CSS string."""
+    return "".join(_CSS_ESCAPES.get(ch, ch) for ch in value)
+
+
+def font_face_css(fonts_dir: Path, font_faces: list[dict]) -> Markup:
+    """The theme's `@font-face` rules, for the template's inline <style> block.
+
+    Returns Markup, and that is load-bearing. The environment autoescapes, and a
+    `<style>` element is raw text: a browser (and WeasyPrint) does *not* decode
+    HTML entities inside it. Escaped, `url("…")` becomes `url(&#34;…&#34;)` —
+    an invalid URL token — so every face is dropped and the book silently sets in
+    whatever fallback font the machine happens to have. Fonts are the theme's,
+    embedded in the PDF, so that failure is invisible and machine-dependent.
+    """
     out = []
     for face in font_faces:
         uri = (fonts_dir / face["file"]).as_uri()
         style = face.get("style", "normal")
         out.append(
-            f'@font-face{{font-family:"{face["family"]}";'
+            f'@font-face{{font-family:"{css_string(face["family"])}";'
             f'src:url("{uri}") format("truetype");'
             f"font-weight:100 900;font-style:{style};font-display:swap;}}"
         )
-    return "\n".join(out)
+    return Markup("\n".join(out))
 
 
 @dataclass(frozen=True)
