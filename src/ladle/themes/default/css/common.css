@@ -1,16 +1,12 @@
-/* Shared design tokens + typography for The Ladle Kitchen.
-   Used by both the print (PDF) and EPUB stylesheets. Colour and font values
-   come from book.yaml and are injected as :root variables by build_html.py. */
+/* Shared typography for The Ladle Kitchen, loaded alongside print.css.
+   (epub.css is standalone and sets its own type — pandoc gets that file only.)
 
-:root {
-  --navy: #16203a;
-  --cream: #faefdb;
-  --ink: #3c3c3c;        /* soft charcoal — primary ink (titles, labels, directions) */
-  --ink-deep: #231f20;   /* warm near-black — ingredients, footer, byline name */
-  --rule: #c9bfa6;
-  --display: "Playfair Display", Georgia, serif;
-  --body: "Bitter", "Iowan Old Style", Georgia, serif;
-}
+   Deliberately declares no design tokens. The `--navy`/`--cream`/`--ink`/
+   `--ink-deep`/`--rule`/`--display`/`--body` values live in theme.yaml, are
+   merged with any book.yaml overrides in Python, and are injected as a `:root`
+   block at the very end of the head. Declaring them here too would re-assert the
+   theme default at equal specificity from a later rule, which is exactly how
+   every book override used to be discarded. */
 
 /* High-contrast Didone display — recipe + book titles. */
 .display {

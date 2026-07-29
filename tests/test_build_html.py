@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import re
+import shutil
 import zlib
 from pathlib import Path
 
 import pytest
+import yaml
 from jinja2.exceptions import SecurityError
 
 from ladle import build_html as bh
@@ -442,7 +444,7 @@ def a_recipe(**over) -> dict:
     return r
 
 
-def render_print(*, recipes=None, book=None, font_face_css="", **recipe) -> str:
+def render_print(*, recipes=None, book=None, font_face_css="", css_links=(), **recipe) -> str:
     """Render the bundled print template. Bare kwargs override the one recipe."""
     b = {
         "title": "The Book",
@@ -469,7 +471,7 @@ def render_print(*, recipes=None, book=None, font_face_css="", **recipe) -> str:
         intro={"title": "Intro", "from_name": "", "from_org": "", "body_html": []},
         recipes=recipes if recipes is not None else [a_recipe(**recipe)],
         font_face_css=font_face_css,
-        css_links=[],
+        css_links=list(css_links),
     )
 
 
@@ -535,6 +537,66 @@ def test_the_themes_declared_fonts_reach_the_pdf(tmp_path, monkeypatch):
         assert any(name.split("+", 1)[1].startswith(stem) for name in embedded), (
             f"{family!r} is declared in theme.yaml but is not embedded in the PDF; got {sorted(embedded)}"
         )
+
+
+def first_box(page, css_class: str):
+    """The first box on *page* whose element carries *css_class*."""
+
+    def walk(box):
+        yield box
+        for child in getattr(box, "all_children", lambda: [])():
+            yield from walk(child)
+
+    for box in walk(page._page_box):
+        element = getattr(box, "element", None)
+        if element is not None and css_class in (element.get("class") or "").split():
+            return box
+    raise AssertionError(f"no box with class {css_class!r} on this page")
+
+
+def test_a_books_token_overrides_reach_the_render(tmp_path, monkeypatch):
+    # theme.yaml tokens are documented as defaults a book.yaml overrides per key.
+    # The merge was right and the override was emitted, but the token <style> block
+    # came *before* the <link> tags and common.css declared the same `:root` — equal
+    # specificity, later rule wins — so every override was discarded and no book has
+    # ever been able to restyle a theme without forking it.
+    #
+    # Asserting on the generated HTML cannot catch this: the override is in the
+    # markup either way, and only the cascade decides which value computes. So this
+    # goes through WeasyPrint and reads the computed style, as the fix's proof did.
+    from weasyprint import HTML
+
+    monkeypatch.setenv("LADLE_BUILD", str(tmp_path / "build"))
+    book_dir = shutil.copytree(config.SAMPLE_BOOK.parent, tmp_path / "book")
+    book_path = book_dir / "book.yaml"
+    book = yaml.safe_load(book_path.read_text(encoding="utf-8"))
+    book["palette"] = {"navy": "#ff0000"}
+    book["fonts"] = {"display": "Courier"}
+    book_path.write_text(yaml.safe_dump(book), encoding="utf-8")
+
+    bh.render(str(book_path))
+    cover = HTML(filename=str(tmp_path / "build" / "cookbook.html")).render().pages[0]
+
+    # The cover is `background: var(--navy)` and its title `font-family: var(--display)`.
+    background = first_box(cover, "cover").style["background_color"]
+    assert background.to("srgb").coordinates == (1.0, 0.0, 0.0), f"cover is {background}, not the book's #ff0000"
+    assert "Courier" in first_box(cover, "title").style["font_family"]
+
+
+def test_the_theme_does_not_redeclare_the_injected_tokens():
+    # The companion to the test above, and the cheaper half: a stylesheet that
+    # declares `:root` re-asserts a theme default from a later rule. Defaults belong
+    # in theme.yaml, which is the only place the merge reads them from.
+    css_dir = config.PACKAGE_ROOT / "themes" / "default" / "css"
+    for sheet in ("common.css", "print.css"):
+        rules = re.sub(r"/\*.*?\*/", "", (css_dir / sheet).read_text(encoding="utf-8"), flags=re.S)
+        assert ":root" not in rules, f"{sheet} declares :root; design tokens are theme.yaml's job"
+
+
+def test_the_token_block_comes_after_every_stylesheet_link():
+    # The contract the fix rests on, stated where a theme author would break it.
+    head = render_print(css_links=["a.css", "b.css"]).split("</head>", 1)[0]
+    assert head.rindex("<style>") > head.rindex("<link")
 
 
 def test_print_recipe_without_story_or_art_is_one_page():
@@ -648,7 +710,9 @@ def laid_out_text(html: str) -> str:
     links = "".join(
         f'<link rel="stylesheet" href="{(theme / "css" / name).as_uri()}">' for name in ("common.css", "print.css")
     )
-    doc = HTML(string=html.replace("</head>", links + "</head>"), base_url=str(theme)).render()
+    # Before the token <style>, which `render` emits last on purpose: injecting the
+    # links after it would give this helper the opposite cascade to a real build.
+    doc = HTML(string=html.replace("<style>", links + "<style>", 1), base_url=str(theme)).render()
 
     def walk(box, out):
         for child in getattr(box, "all_children", lambda: [])():
