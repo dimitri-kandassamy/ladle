@@ -112,6 +112,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A book's `palette:` and `fonts:` overrides did nothing in the PDF.** The
+  documented model is that `theme.yaml` tokens are defaults a `book.yaml`
+  overrides per key. The merge was correct and the override was written into the
+  page — but into a `<style>` block emitted *above* the `<link>` tags, while
+  `common.css` declared the same `:root` variables again. Equal specificity, so
+  the later rule won and the theme's own default overwrote the book's value every
+  time. A book that set `palette.navy: "#ff0000"` still printed the theme's navy,
+  which meant no book could restyle a theme without forking it. The EPUB was
+  never affected: `epub.css` sets its type and colour directly rather than
+  through the tokens — so it also does not yet honour the overrides, which is a
+  separate gap.
+
+  Fixed on both sides so the rule is explicit rather than incidental: the token
+  block is now always **last** in the head, and `common.css` no longer declares
+  `:root` at all. Defaults live in `theme.yaml`, which is the only place the merge
+  reads them from — having them in two places is what made the bug possible.
+  `docs/THEMING.md` documents both as a contract a forked theme has to keep.
+
+  The bundled theme's own output is unchanged apart from one fallback: the
+  effective `--body` stack loses `"Iowan Old Style"`, a macOS system font that
+  only ever applied when the embedded `Bitter` failed to load. The example book's
+  PDF extracts identical text and embeds the identical font set.
+
+  One limit worth knowing before you reach for it: in the bundled theme,
+  `palette.navy` and `palette.cream` are the *page grounds*, and those pages are
+  painted with opaque baked paper textures (`illustrations/patterns/`) tiled over
+  the colour. Overriding either now reaches the cascade but stays hidden behind
+  the texture, so those two tokens still need the rasters regenerated to take
+  visible effect — as `docs/THEMING.md` has always said. The type tokens
+  (`ink`, `ink_deep`, `rule`, `display`, `body`) are visible immediately.
+
 - **The PDF was not set in the theme's fonts.** `font_face_css()` returned a
   plain `str`, so the autoescaping template turned every `url("…")` into
   `url(&#34;…&#34;)`. HTML entities are not decoded inside a `<style>` element,

@@ -99,6 +99,30 @@ The templates expose tokens as CSS variables (`--navy`, `--cream`, `--ink`,
 `--ink-deep`, `--rule`, `--display`, `--body`), so most restyling is CSS + token
 edits, no template surgery.
 
+Two rules make that override actually take effect, and a theme has to honour
+both — they are the whole cascade contract:
+
+1. **The token `<style>` block is emitted last in the `<head>`**, after every
+   `<link>`. `print.html.j2` interpolates `{{ book.palette.* }}` /
+   `{{ book.fonts.* }}` into a `:root` block; put it above the links and any
+   stylesheet declaring `:root` outranks it, because equal specificity means the
+   later rule wins.
+2. **No stylesheet declares `:root`.** Defaults belong in `theme.yaml`, which is
+   the only place the merge reads them from. Declaring them in CSS as well is
+   what silently discarded every book override before ladle 0.3.
+
+If you fork the bundled theme, keep the `<link>`-then-`<style>` order in
+`print.html.j2`. A quick check on any book that sets a `palette:` override: the
+value you asked for should appear in `build/cookbook.html`'s **last** `:root`
+block, with nothing after it that redeclares the same variable.
+
+One caveat specific to the bundled theme: `palette.navy` and `palette.cream` are
+the page grounds, and `.page.navy`/`.page.cream` tile an **opaque** paper texture
+over the colour. Overriding either reaches the cascade but is hidden behind that
+raster, so it also needs the textures regenerated (see
+[Paper textures](#paper-textures) below). The type tokens — `ink`, `ink_deep`,
+`rule`, `display`, `body` — take effect on their own.
+
 ## What a template receives
 
 Both templates get `book` (the merged `book.yaml`, with `book.labels` for every
@@ -265,7 +289,8 @@ tooling (the reference implementation lives in the project's git history at
 - [ ] `theme.yaml` with a `name`, `palette`, `fonts`, and a `font_faces` entry per file
 - [ ] `fonts/` contains every file referenced in `font_faces` (+ their licenses)
 - [ ] `templates/print.html.j2` and `templates/epub.html.j2`
-- [ ] `css/common.css`, `css/print.css`, `css/epub.css`
+- [ ] `css/common.css`, `css/print.css`, `css/epub.css` — none of them declaring `:root`
+- [ ] `print.html.j2` emits its `<link>` tags before the token `<style>` block
 - [ ] `illustrations/patterns/` with any baked rasters `print.css` references
 - [ ] `fonts_meta` documents each family's license (required by `ladle theme lint`)
 - [ ] `ladle theme lint` passes (schema + sandbox + fonts)

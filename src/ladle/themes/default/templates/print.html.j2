@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <title>{{ book.title }}</title>
+{% for href in css_links %}<link rel="stylesheet" href="{{ href }}">
+{% endfor %}
+{# The token block is ALWAYS LAST in the head. Theme defaults and book overrides
+   are merged in Python and arrive here already resolved, so this is the only
+   place the tokens are declared — but a stylesheet that declares `:root` too
+   would have equal specificity, and the later rule wins. Emitted above the
+   links, every book override was silently overwritten by the theme's own
+   default. Keep it here. #}
 <style>
 {{ font_face_css }}
 :root {
@@ -15,8 +23,6 @@
   --body: "{{ book.fonts.body }}", Georgia, serif;
 }
 </style>
-{% for href in css_links %}<link rel="stylesheet" href="{{ href }}">
-{% endfor %}
 </head>
 {# `sectioned` lets print.css nest each recipe under its section in the PDF
    outline. It has to key off the same flag as the openers: with no opener to sit
