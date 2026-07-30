@@ -112,6 +112,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Every scaffolded book printed an empty table of contents.** `ladle new`
+  writes a `book.yaml` with `sections:` commented out, because it is optional.
+  The contents page looped over `book.sections` directly, and Jinja iterates an
+  undefined value as nothing — so the book built, exited 0, and printed a
+  Contents page with a heading, a rule and no entries. Every first run produced
+  it, and the EPUB disagreed silently, since pandoc builds its own navigation
+  from the headings.
+
+  Templates now receive `toc`, a grouping the core derives: declared sections in
+  their declared order, then any category no section declares, each with its
+  recipes. A book that sets `sections:` is unaffected; a book that sets none now
+  gets one section per category its recipes use, and either way every recipe in
+  the book has a contents entry — previously a recipe whose category was not
+  declared printed but appeared nowhere in the front matter. Themes should
+  iterate `toc` rather than `book.sections`; see `docs/THEMING.md`.
+
+  Templates in the themes ladle ships now also render with Jinja's
+  `StrictUndefined`, so reading something the build does not pass is a named
+  error instead of a blank region on the page. Your own themes are unaffected —
+  that strictness waits for the theme API version field, since it would fail
+  themes written against today's looser contract.
+
 - **A book's `palette:` and `fonts:` overrides did nothing in the PDF.** The
   documented model is that `theme.yaml` tokens are defaults a `book.yaml`
   overrides per key. The merge was correct and the override was written into the

@@ -140,6 +140,35 @@ printed string) and `recipes` — an ordered list of recipe objects:
 | `extra_sections`                     | `[{title, html}]` for unknown headings            |
 | `attribution` `draft`                | front matter                                      |
 
+### `toc` — the sections, already grouped
+
+Both templates also get `toc`: the same recipes grouped into ordered sections,
+ready to iterate.
+
+| Key       | What it is                                          |
+| --------- | --------------------------------------------------- |
+| `name`    | the category as recipes write it — the matching key |
+| `title`   | the displayed name, via `book.labels.section_names` |
+| `recipes` | that section's recipes, in book order               |
+
+```jinja
+{% for section in toc %}
+  <h2>{{ section.title }}</h2>
+  <ul>{% for r in section.recipes %}<li><a href="#{{ r.slug }}">{{ r.title }}</a></li>{% endfor %}</ul>
+{% endfor %}
+```
+
+Iterate `toc`, never `book.sections`. That key is optional — most books never set
+it, and a template that read it printed an empty contents page for all of them.
+`toc` is derived instead: a book that declares `sections:` gets them in that
+order, a book that declares none gets one section per category its recipes use,
+and either way every recipe in the book has an entry. It is empty only when the
+book has no recipes.
+
+This is the general rule: **a template receives derived structures, never raw
+configuration.** If you find yourself reading a `book.yaml` key the core doesn't
+pre-compute, that is a gap in the context worth filing rather than reading around.
+
 ### Deciding how many pages a recipe gets
 
 `directions_html` and `illustration_url` are empty strings, not missing keys, so

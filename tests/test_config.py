@@ -139,6 +139,13 @@ def test_theme_dir_absolute_path_is_left_as_is():
     assert cfg.theme_dir == Path("/opt/themes/mine")
 
 
+def test_is_bundled_theme_distinguishes_shipped_from_authors_own(tmp_path):
+    # Decides how strictly the build checks a theme's templates: a theme we ship
+    # is fixed in the same commit that changes the contract, an author's is not.
+    assert config.is_bundled_theme(config.THEMES_DIR / "default")
+    assert not config.is_bundled_theme(tmp_path / "themes" / "mine")
+
+
 def test_theme_path_joins_under_theme_dir():
     cfg = _book({"theme": "default"})
     assert cfg.theme_path("css", "print.css") == config.THEMES_DIR / "default/css/print.css"
