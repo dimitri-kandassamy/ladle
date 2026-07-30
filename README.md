@@ -76,6 +76,7 @@ cd mybook
 ladle build                      # -> build/cookbook.pdf and build/cookbook.epub
 ladle validate                   # recipe schema + body, PDF structure, epubcheck, contact sheet
 open build/contact-sheet.png     # a thumbnail grid of every page
+open build/index.html            # a download page for the two files, if your theme ships one
 ```
 
 Book-scoped commands take `--book PATH` (default: `./book.yaml`),

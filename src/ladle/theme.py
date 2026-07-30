@@ -33,6 +33,10 @@ from . import build_html, config, ui
 # Templates a theme must provide (the two renderers in build_html.render).
 REQUIRED_TEMPLATES = ("print.html.j2", "epub.html.j2")
 
+# Templates a theme may provide. Absent is a design choice, not a defect — but a
+# broken one still fails the gallery gate, because the build will render it.
+OPTIONAL_TEMPLATES = (build_html.LANDING_TEMPLATE,)
+
 # Font licenses that permit embedding + redistribution in a distributed book.
 # Matched against a normalized (lowercased, alphanumeric-only) license string by
 # prefix, so "OFL-1.1", "SIL Open Font License 1.1", and "Apache-2.0" all pass.
@@ -79,13 +83,20 @@ def check_manifest(theme_dir: Path) -> tuple[dict | None, list[dict]]:
 
 
 def check_templates(theme_dir: Path) -> list[dict]:
-    """Every required template is present and loads in the sandboxed environment."""
+    """Every required template is present and loads in the sandboxed environment.
+
+    An optional template is checked the same way when the theme ships one, and
+    noted rather than failed when it does not.
+    """
     templates_dir = theme_dir / "templates"
     env = build_html.make_env(templates_dir)
     results: list[dict] = []
-    for name in REQUIRED_TEMPLATES:
+    for name in (*REQUIRED_TEMPLATES, *OPTIONAL_TEMPLATES):
         if not (templates_dir / name).exists():
-            results.append(_fail(f"missing template templates/{name}"))
+            if name in OPTIONAL_TEMPLATES:
+                results.append(_note(f"no templates/{name} — this theme publishes no landing page"))
+            else:
+                results.append(_fail(f"missing template templates/{name}"))
             continue
         try:
             env.get_template(name)  # parse + compile under the sandbox

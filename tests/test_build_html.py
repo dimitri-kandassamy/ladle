@@ -708,6 +708,74 @@ def test_the_token_block_comes_after_every_stylesheet_link():
     assert head.rindex("<style>") > head.rindex("<link")
 
 
+# ---- the landing page (the theme's, not the core's) ------------------------
+def _book_with_theme(tmp_path, monkeypatch, mutate_theme=None):
+    """A copy of the sample book carrying its own copy of the bundled theme."""
+    monkeypatch.setenv("LADLE_BUILD", str(tmp_path / "build"))
+    book_dir = Path(shutil.copytree(config.SAMPLE_BOOK.parent, tmp_path / "book"))
+    theme_dir = Path(shutil.copytree(config.PACKAGE_ROOT / "themes" / "default", book_dir / "themes" / "mine"))
+    if mutate_theme:
+        mutate_theme(theme_dir)
+    book_path = book_dir / "book.yaml"
+    book = yaml.safe_load(book_path.read_text(encoding="utf-8"))
+    book["theme"] = "themes/mine"
+    book_path.write_text(yaml.safe_dump(book), encoding="utf-8")
+    return book_path
+
+
+def test_a_theme_that_renames_its_palette_tokens_still_builds(tmp_path, monkeypatch):
+    # The core used to write the landing page from an f-string indexing the
+    # palette by name, so a theme whose designer chose different token names died
+    # with `error: 'navy'` — after both HTML files were already on disk. No key
+    # name belongs in core code; the page is the theme's now.
+    def rename_tokens(theme_dir):
+        manifest = theme_dir / "theme.yaml"
+        text = manifest.read_text(encoding="utf-8")
+        manifest.write_text(text.replace("navy:", "ground:").replace("cream:", "paper:"), encoding="utf-8")
+
+    assert bh.render(str(_book_with_theme(tmp_path, monkeypatch, rename_tokens))) == 0
+
+
+def test_a_theme_without_a_landing_template_publishes_no_landing_page(tmp_path, monkeypatch):
+    # Optional means optional: no template, no index.html, no error.
+    book_path = _book_with_theme(tmp_path, monkeypatch, lambda t: (t / "templates" / bh.LANDING_TEMPLATE).unlink())
+    assert bh.render(str(book_path)) == 0
+    assert (tmp_path / "build" / "cookbook.html").exists()
+    assert not (tmp_path / "build" / "index.html").exists()
+
+
+def test_the_bundled_theme_publishes_a_landing_page(tmp_path, monkeypatch):
+    monkeypatch.setenv("LADLE_BUILD", str(tmp_path))
+    bh.render(str(config.SAMPLE_BOOK))
+    html = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert 'href="cookbook.pdf"' in html
+    assert 'href="cookbook.epub"' in html
+    assert html.endswith("</html>\n")
+
+
+def test_the_landing_page_escapes_the_books_own_text(tmp_path, monkeypatch):
+    # The f-string interpolated book.yaml verbatim, so a title with an ampersand
+    # or a bracket emitted broken (and injectable) markup. The template
+    # autoescapes like every other rendered page.
+    book_path = _book_with_theme(tmp_path, monkeypatch)
+    book = yaml.safe_load(book_path.read_text(encoding="utf-8"))
+    book["title"] = "Pots & <script>Pans</script>"
+    book_path.write_text(yaml.safe_dump(book), encoding="utf-8")
+
+    bh.render(str(book_path))
+    html = (tmp_path / "build" / "index.html").read_text(encoding="utf-8")
+    assert "<script>" not in html
+    assert "Pots &amp; &lt;script&gt;Pans" in html
+
+
+def test_the_core_names_no_palette_token():
+    # Constraint: the theme owns the page, the core owns the content model. No
+    # palette key name in core code — that is what A4 was.
+    source = (config.PACKAGE_ROOT / "build_html.py").read_text(encoding="utf-8")
+    for token in ("navy", "cream"):
+        assert f'"{token}"' not in source, f"build_html.py names the palette token {token!r}"
+
+
 def test_print_recipe_without_story_or_art_is_one_page():
     # The opener page exists to carry hero art. With no art and no story it would
     # be a title on an otherwise blank sheet, so the recipe collapses to one.

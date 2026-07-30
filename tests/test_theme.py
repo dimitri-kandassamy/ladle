@@ -72,6 +72,30 @@ def test_check_templates_all_present(tmp_path):
     assert _fails(theme.check_templates(tmp_path)) == []
 
 
+def test_check_templates_optional_one_is_absent_without_failing(tmp_path):
+    # A theme that publishes no landing page is a design choice, not a defect.
+    tdir = tmp_path / "templates"
+    tdir.mkdir()
+    for name in theme.REQUIRED_TEMPLATES:
+        (tdir / name).write_text("<p>{{ book.title }}</p>", encoding="utf-8")
+    results = theme.check_templates(tmp_path)
+    assert _fails(results) == []
+    assert any(r["level"] == "note" and theme.build_html.LANDING_TEMPLATE in r["message"] for r in results)
+
+
+def test_check_templates_optional_one_that_is_broken_still_fails(tmp_path):
+    # Optional to ship, but the build renders whatever is there, so the gallery
+    # gate holds it to the same standard as the two required templates.
+    tdir = tmp_path / "templates"
+    tdir.mkdir()
+    for name in theme.REQUIRED_TEMPLATES:
+        (tdir / name).write_text("<p>{{ book.title }}</p>", encoding="utf-8")
+    (tdir / theme.build_html.LANDING_TEMPLATE).write_text("{{ oops %}", encoding="utf-8")
+    fails = _fails(theme.check_templates(tmp_path))
+    assert len(fails) == 1
+    assert theme.build_html.LANDING_TEMPLATE in fails[0]
+
+
 # ---- fonts -----------------------------------------------------------------
 def _font_theme(tmp_path: Path, license_str: str, *, with_meta: bool = True, drop_file: bool = False) -> dict:
     fonts = tmp_path / "fonts"
