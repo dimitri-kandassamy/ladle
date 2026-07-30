@@ -112,6 +112,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`theme: ./mytheme` loaded a different theme.** A reference was treated as a
+  path only when it had more than one component, and `Path("./mytheme")`
+  normalises to exactly one — so the most natural way to point at a folder next
+  to your book sent ladle into its own installation directory, and the error
+  named a site-packages path the author never typed.
+
+  Anything containing a separator is now a path, taken at its word. A bare name
+  is looked up the way Hugo and Zola look one up: `<book>/themes/<name>` first,
+  then the themes bundled with ladle. So `theme: mine` finds `themes/mine` beside
+  your book with no path to write, and a vendored theme shadows a bundled one of
+  the same name. Existing books are unaffected: `theme: default` and
+  `theme: themes/mine` resolve exactly as before, unless the book happens to
+  carry a `themes/default/` of its own, which now wins.
+
+  A theme that resolves to nothing is also its own error now, rather than a
+  missing-template failure three stages later. The message names every directory
+  searched and lists the themes that do ship with ladle.
+
 - **A theme that renamed its palette tokens crashed the build.** At the end of
   every build the core wrote a small GitHub Pages download page from a Python
   string that reached into the palette by name — `navy`, `cream`, `rule`. Those

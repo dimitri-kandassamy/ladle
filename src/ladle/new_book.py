@@ -87,7 +87,7 @@ OPTIONAL_KEYS = """
 # volume: "1.0"
 # rights: © {year} {title} contributors
 # content_license: CC-BY-SA-4.0
-# theme: default                    # a bundled theme name, or a path to your own theme dir
+# theme: default                    # a theme name (yours in ./themes/ wins), or a path like ./mytheme
 # sections: [Savory, Desserts, Beverages]   # Contents order; recipes group by their `category`
 # order: []                         # explicit recipe order by slug; empty = by section, then title
 # section_openers: false            # a full-page divider before each section — worth it in a long book

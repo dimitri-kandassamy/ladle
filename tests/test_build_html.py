@@ -723,6 +723,29 @@ def _book_with_theme(tmp_path, monkeypatch, mutate_theme=None):
     return book_path
 
 
+def test_a_book_can_point_at_a_theme_folder_beside_it(tmp_path, monkeypatch):
+    # `theme: ./mytheme` used to resolve into ladle's own installation directory,
+    # so the build died naming a site-packages path the author never typed.
+    book_path = _book_with_theme(tmp_path, monkeypatch)
+    book = yaml.safe_load(book_path.read_text(encoding="utf-8"))
+    shutil.move(book_path.parent / "themes" / "mine", book_path.parent / "mytheme")
+    book["theme"] = "./mytheme"
+    book_path.write_text(yaml.safe_dump(book), encoding="utf-8")
+
+    assert bh.render(str(book_path)) == 0
+
+
+def test_a_theme_the_book_cannot_find_names_the_directories_searched(tmp_path, monkeypatch):
+    book_path = _book_with_theme(tmp_path, monkeypatch)
+    book = yaml.safe_load(book_path.read_text(encoding="utf-8"))
+    book["theme"] = "nosuch"
+    book_path.write_text(yaml.safe_dump(book), encoding="utf-8")
+
+    with pytest.raises(config.ThemeNotFoundError) as e:
+        bh.render(str(book_path))
+    assert "themes/nosuch" in str(e.value)
+
+
 def test_a_theme_that_renames_its_palette_tokens_still_builds(tmp_path, monkeypatch):
     # The core used to write the landing page from an f-string indexing the
     # palette by name, so a theme whose designer chose different token names died

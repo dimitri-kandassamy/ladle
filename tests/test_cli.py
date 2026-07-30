@@ -118,6 +118,20 @@ def test_missing_title_returns_clean_error_not_traceback(capsys, tmp_path):
     assert "Traceback" not in err
 
 
+def test_missing_theme_reports_the_search_without_a_syntax_hint(capsys, tmp_path):
+    # A theme that isn't there is not a syntax problem, so the generic
+    # "check the file's syntax" hint would send the author to the wrong place.
+    book = tmp_path / "book.yaml"
+    book.write_text("title: Demo\ntheme: nosuch\n", encoding="utf-8")
+    rc = cli.main(["build", "--book", str(book)])
+    assert rc == ui.ERROR
+    err = capsys.readouterr().err
+    assert "theme 'nosuch' not found" in err
+    assert "themes bundled with ladle: default" in err
+    assert "syntax" not in err
+    assert "Traceback" not in err
+
+
 def test_unexpected_error_maps_to_1_with_clean_message(monkeypatch, capsys):
     def boom(argv):
         raise ValueError("kaboom")
