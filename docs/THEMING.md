@@ -165,6 +165,13 @@ order, a book that declares none gets one section per category its recipes use,
 and either way every recipe in the book has an entry. It is empty only when the
 book has no recipes.
 
+A recipe whose `category:` is missing, blank, or empty is filed under
+`Uncategorized`, which sorts last and prints as "Other Recipes". Such a book is
+schema-invalid — `build` warns per file and `validate` fails it — but it still
+renders, and this is where those recipes land meanwhile. Treat it as any other
+section: it is a normal `toc` entry, and its name comes from
+`book.labels.section_names` like the rest.
+
 This is the general rule: **a template receives derived structures, never raw
 configuration.** If you find yourself reading a `book.yaml` key the core doesn't
 pre-compute, that is a gap in the context worth filing rather than reading around.

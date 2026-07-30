@@ -86,7 +86,7 @@ so you can keep several books side by side and build any of them.
 ```markdown
 ---
 title: Carrot Cake
-category: Desserts # Savory | Desserts | Beverages
+category: Desserts # required — Savory | Desserts | Beverages
 servings: "6 people" # optional
 credits: "The Ladle Kitchen" # optional — a person, a book, or a URL
 illustration: assets/illustrations/recipes/carrot-cake.svg
