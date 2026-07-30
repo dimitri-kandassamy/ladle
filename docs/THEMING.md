@@ -22,6 +22,7 @@ mytheme/
   templates/
     print.html.j2                # WeasyPrint (PDF) layout
     epub.html.j2                 # pandoc (EPUB) semantic HTML
+    landing.html.j2              # optional — a download page for the built book
   css/
     common.css  print.css  epub.css
   fonts/
@@ -176,6 +177,30 @@ This is the general rule: **a template receives derived structures, never raw
 configuration.** If you find yourself reading a `book.yaml` key the core doesn't
 pre-compute, that is a gap in the context worth filing rather than reading around.
 
+### `landing.html.j2` — the optional third template
+
+A theme may ship `templates/landing.html.j2`. When it does, `ladle build`
+renders it to `build/index.html`: a download page for publishing the built book
+to GitHub Pages, sitting beside `cookbook.pdf`, `cookbook.epub` and
+`contact-sheet.png` so the links are bare relative names.
+
+```jinja
+<a class="dl" href="cookbook.pdf">Download PDF</a>
+<a class="dl" href="cookbook.epub">Download EPUB</a>
+<a href="cookbook.pdf"><img src="contact-sheet.png" alt="Preview of all pages"></a>
+```
+
+It receives `book` only — no `recipes`, no `toc`. Ship no template and the build
+publishes no landing page, which is not an error: `theme lint` notes its absence
+and fails only a template that is present and broken.
+
+This page used to be built in the core from a Python string that read
+`palette.navy`, `palette.cream` and `palette.rule` by name — the bundled theme's
+token names, which no other theme is obliged to use, so renaming a token crashed
+the build. It is a cover design, and a cover design belongs with the rest of the
+design. If you fork the bundled theme and rename its tokens, update this template
+along with `print.html.j2`.
+
 ### Deciding how many pages a recipe gets
 
 `directions_html` and `illustration_url` are empty strings, not missing keys, so
@@ -325,6 +350,7 @@ tooling (the reference implementation lives in the project's git history at
 - [ ] `theme.yaml` with a `name`, `palette`, `fonts`, and a `font_faces` entry per file
 - [ ] `fonts/` contains every file referenced in `font_faces` (+ their licenses)
 - [ ] `templates/print.html.j2` and `templates/epub.html.j2`
+- [ ] optionally `templates/landing.html.j2` — a download page for the built book
 - [ ] `css/common.css`, `css/print.css`, `css/epub.css` — none of them declaring `:root`
 - [ ] `print.html.j2` emits its `<link>` tags before the token `<style>` block
 - [ ] `illustrations/patterns/` with any baked rasters `print.css` references

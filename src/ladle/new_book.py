@@ -91,7 +91,7 @@ OPTIONAL_KEYS = """
 # sections: [Savory, Desserts, Beverages]   # Contents order; recipes group by their `category`
 # order: []                         # explicit recipe order by slug; empty = by section, then title
 # section_openers: false            # a full-page divider before each section — worth it in a long book
-# palette: {{navy: "#16203a", cream: "#faefdb"}}   # override individual theme colors
+# palette: {{navy: "#16203a", cream: "#faefdb"}}   # override colors — token names are the theme's own
 # fonts: {{display: Playfair Display, body: Bitter}}
 """
 

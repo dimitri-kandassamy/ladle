@@ -26,6 +26,10 @@ from . import config, ui
 
 ARTICLES = {"the", "a", "an"}
 
+# The theme's optional third template: a download page for the built book,
+# rendered to build/index.html only when the theme ships one (see write_landing).
+LANDING_TEMPLATE = "landing.html.j2"
+
 # Where a recipe goes when its `category:` is missing, blank, or null. The schema
 # requires the key, so `validate` fails such a book — but `build` still prints
 # one, and it has to file those recipes somewhere. Assigned, never authored: it
@@ -739,7 +743,7 @@ def render(book_path: str | None = None) -> int:
     )
     (build / "epub.html").write_text(epub_html, encoding="utf-8")
 
-    write_landing(book, build)
+    write_landing(env, templates_dir, book, build)
 
     n = len(print_recipes)
     ui.success(
@@ -749,33 +753,24 @@ def render(book_path: str | None = None) -> int:
     return 0
 
 
-def write_landing(book: dict, build: Path) -> None:
-    """A small GitHub Pages download page linking the PDF + EPUB."""
-    p = book["palette"]
-    html_doc = f"""<!doctype html>
-<html lang="{book["language"]}"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{book["title"]}</title>
-<style>
-  body{{margin:0;font-family:Georgia,serif;background:{p["navy"]};color:{p["cream"]};
-       min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center}}
-  .card{{max-width:640px;padding:3rem 1.5rem}}
-  h1{{font-size:3rem;line-height:1.05;margin:0 0 .3rem}} .the{{font-style:italic;font-weight:400}}
-  p.sub{{text-transform:uppercase;letter-spacing:.16em;font-size:.8rem;opacity:.85}}
-  .dl{{display:inline-block;margin:.5rem;padding:.8rem 1.6rem;border:1px solid {p["rule"]};
-       border-radius:4px;color:{p["cream"]};text-decoration:none;letter-spacing:.08em}}
-  .dl:hover{{background:rgba(255,255,255,.08)}}
-  img{{max-width:100%;margin-top:2rem;border-radius:4px;opacity:.95}}
-  .foot{{margin-top:2rem;font-size:.75rem;opacity:.6}}
-</style></head><body><div class="card">
-  <h1><span class="the">{book["title_article"]}</span> {book["title_rest"]}</h1>
-  <p class="sub">{book["subtitle"]} · Volume {book["volume"]}</p>
-  <div>
-    <a class="dl" href="cookbook.pdf">Download PDF</a>
-    <a class="dl" href="cookbook.epub">Download EPUB</a>
-  </div>
-  <a href="cookbook.pdf"><img src="contact-sheet.png" alt="Preview of all pages"></a>
-  <p class="foot">{book["rights"]} · <a href="{book["repo_url"]}" style="color:{p["rule"]}">Contribute a recipe</a></p>
-</div></body></html>
-"""
-    (build / "index.html").write_text(html_doc, encoding="utf-8")
+def write_landing(env: SandboxedEnvironment, templates_dir: Path, book: dict, build: Path) -> None:
+    """Render the theme's optional landing page to build/index.html.
+
+    A download page for publishing the built book to GitHub Pages. It is the
+    theme's to design and the theme's to opt into: a theme that ships no
+    `landing.html.j2` simply gets no landing page, and that is not an error.
+
+    The core used to build this page from an f-string that indexed the palette
+    by name — `navy`, `cream`, `rule` — which are the bundled theme's token
+    names and nothing more. A theme that called its ground something else died
+    here with `error: 'navy'`, after both HTML files had already been written.
+    A page whose design is a palette away from the book belongs with the rest of
+    the design.
+    """
+    if not (templates_dir / LANDING_TEMPLATE).exists():
+        return
+    html_doc = render_template(env, LANDING_TEMPLATE, book=book)
+    # Jinja drops one trailing newline from a template's source; this file is
+    # published as-is rather than fed to another tool, so it keeps the one a text
+    # file should end with.
+    (build / "index.html").write_text(html_doc.rstrip("\n") + "\n", encoding="utf-8")

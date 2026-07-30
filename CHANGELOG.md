@@ -112,6 +112,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A theme that renamed its palette tokens crashed the build.** At the end of
+  every build the core wrote a small GitHub Pages download page from a Python
+  string that reached into the palette by name — `navy`, `cream`, `rule`. Those
+  are the bundled theme's token names and nothing more, so a theme that called
+  its ground `ground` died with `error: 'navy'`, after both HTML files were
+  already on disk.
+
+  The page has moved to the theme, as an optional third template:
+  `templates/landing.html.j2`, rendered to `build/index.html` only when the theme
+  provides one. It was a second, unthemed cover design living in core code; now
+  it is designed where the rest of the book's design lives, and no core code
+  reads the palette by key name any more. `theme lint` notes a theme that ships
+  no landing template and fails one that ships a broken template.
+
+  The bundled theme's landing page is byte-identical for a book that sets
+  `subtitle`, `volume`, `rights` and `repo_url`. Two changes for books that do
+  not: the page no longer prints a bare "· Volume" or a stray "·" for metadata
+  the book never set, and — because it now renders through the autoescaping
+  template environment rather than an f-string — a title containing `&` or `<`
+  produces valid markup instead of broken (and injectable) HTML.
+
+  **If you have forked the bundled theme,** copy `templates/landing.html.j2` into
+  your fork to keep publishing a landing page. Without it the build simply skips
+  the page; nothing else changes.
+
 - **Every scaffolded book printed an empty table of contents.** `ladle new`
   writes a `book.yaml` with `sections:` commented out, because it is optional.
   The contents page looped over `book.sections` directly, and Jinja iterates an

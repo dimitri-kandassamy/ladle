@@ -14,7 +14,8 @@ its medium.
 a book (book.yaml + recipes/*.md + content/introduction.md) + a theme
         │  ladle build → build_html.render  (src/ladle/build_html.py, Jinja2)
         ├──► build/cookbook.html  ──► make_pdf.render   (WeasyPrint) ──► build/cookbook.pdf
-        └──► build/epub.html      ──► make_epub.render  (pandoc)     ──► build/cookbook.epub
+        ├──► build/epub.html      ──► make_epub.render  (pandoc)     ──► build/cookbook.epub
+        └──► build/index.html     (only if the theme ships landing.html.j2)
 ```
 
 - `build/cookbook.html` is the art-directed print layout (the theme's
@@ -22,6 +23,11 @@ a book (book.yaml + recipes/*.md + content/introduction.md) + a theme
   positioned.
 - `build/epub.html` is semantic, flat markup (the theme's `css/epub.css`):
   pandoc splits it into one chapter file per recipe for a clean reflowable read.
+- `build/index.html` is a download page for publishing the two artefacts to
+  GitHub Pages. It is the theme's optional third template, not a renderer stage —
+  a theme that ships no `landing.html.j2` produces no landing page. It lived in
+  the core until it was found reading the bundled theme's palette keys by name,
+  which killed the build for any theme that named its tokens differently.
 
 ## Why these tools
 
