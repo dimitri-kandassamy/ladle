@@ -75,6 +75,15 @@ class ConfigError(Exception):
     traceback."""
 
 
+class ThemeNotFoundError(ConfigError):
+    """A `theme:` reference that resolves to no directory.
+
+    Its own type only so dispatch can skip the "check the file's syntax" hint —
+    the syntax is fine, the theme is somewhere else — and because the message
+    already lists every directory that was searched.
+    """
+
+
 # Shape a theme.yaml is normalized to, so callers can rely on the keys existing.
 _THEME_DEFAULTS: dict = {"name": "", "palette": {}, "fonts": {}, "font_faces": []}
 
@@ -95,18 +104,67 @@ def load_theme(theme_dir: Path) -> dict:
     return {**_THEME_DEFAULTS, **data}
 
 
-def resolve_theme_dir(name_or_path: str, root: Path | None = None) -> Path:
-    """Resolve a theme name or path to its directory.
+def _is_path_reference(ref: str) -> bool:
+    """True when *ref* points at a directory rather than naming an installed theme.
 
-    A bare name (``default``) resolves to a theme shipped in the package; a path
-    (containing a separator, e.g. ``themes/mine``) resolves relative to ``root``
-    — a book's directory for a book-selected theme, the cwd for a standalone
-    command like ``ladle theme lint``. Absolute paths are used as-is.
+    Any separator makes it a path, so ``./mytheme`` and ``../shared/mytheme`` are
+    paths even though they name one directory. ``Path("./mytheme")`` normalises
+    to a single component, and treating component count as the test is what sent
+    ``theme: ./mytheme`` looking inside site-packages.
     """
-    p = Path(name_or_path)
-    if len(p.parts) > 1 or p.is_absolute():
-        return p if p.is_absolute() else (root or Path.cwd()) / p
-    return THEMES_DIR / name_or_path
+    return "/" in ref or os.sep in ref or ref.startswith("~") or Path(ref).is_absolute()
+
+
+def theme_search_paths(name_or_path: str, root: Path | None = None) -> list[Path]:
+    """Every directory a theme reference could name, in resolution order.
+
+    A path is taken at its word — one candidate, no searching. A bare name is
+    looked up the way Hugo and Zola look one up: beside the book first
+    (``<root>/themes/<name>``, a theme vendored with the book), then among the
+    themes shipped with ladle. So a book can carry its own ``themes/`` directory
+    without either naming paths or colliding with the bundled set.
+
+    *root* is the book's directory for a book-selected theme, the cwd for a
+    standalone command like ``ladle theme lint``.
+    """
+    base = root or Path.cwd()
+    if _is_path_reference(name_or_path):
+        p = Path(name_or_path).expanduser()
+        return [p if p.is_absolute() else base / p]
+    return [base / "themes" / name_or_path, THEMES_DIR / name_or_path]
+
+
+def resolve_theme_dir(name_or_path: str, root: Path | None = None) -> Path:
+    """The directory a theme reference resolves to (see :func:`theme_search_paths`).
+
+    Resolution only — a reference that matches nothing yields its last candidate,
+    which is the conventional home for that reference and so the right thing to
+    name in an error. Use :func:`require_theme_dir` where the theme has to exist.
+    """
+    candidates = theme_search_paths(name_or_path, root)
+    return next((c for c in candidates if c.is_dir()), candidates[-1])
+
+
+def require_theme_dir(name_or_path: str, root: Path | None = None) -> Path:
+    """Like :func:`resolve_theme_dir`, but raise if no candidate is a directory.
+
+    The message names every directory searched, because the failure this replaces
+    reported a path in site-packages that the author never typed.
+    """
+    candidates = theme_search_paths(name_or_path, root)
+    found = next((c for c in candidates if c.is_dir()), None)
+    if found is None:
+        raise ThemeNotFoundError(_theme_not_found_message(name_or_path, candidates))
+    return found
+
+
+def _theme_not_found_message(name_or_path: str, candidates: list[Path]) -> str:
+    lines = [f"theme {name_or_path!r} not found. Searched:"]
+    lines += [f"  {rel(c)}" for c in candidates]
+    bundled = sorted(p.name for p in THEMES_DIR.iterdir() if p.is_dir()) if THEMES_DIR.is_dir() else []
+    if bundled:
+        lines.append(f"themes bundled with ladle: {', '.join(bundled)}")
+    return "\n".join(lines)
 
 
 def is_bundled_theme(theme_dir: Path) -> bool:
@@ -146,14 +204,23 @@ class BookConfig:
         return self.root / self.data.get("introduction", "content/introduction.md")
 
     @property
+    def theme_ref(self) -> str:
+        """This book's `theme:` value, as written."""
+        return self.data.get("theme", "default")
+
+    @property
     def theme_dir(self) -> Path:
         """Design bundle (templates/css/fonts/patterns) this book renders with.
 
-        A bare name (``theme: default``) resolves to a theme shipped in the
-        package; a path (``theme: themes/mine``) resolves relative to the book,
-        so a book can carry its own theme without touching the package.
+        Resolution only, so this stays safe to ask for: see
+        :func:`theme_search_paths` for the order, and :meth:`require_theme_dir`
+        for the same answer with a real error when the theme is not there.
         """
-        return resolve_theme_dir(self.data.get("theme", "default"), root=self.root)
+        return resolve_theme_dir(self.theme_ref, root=self.root)
+
+    def require_theme_dir(self) -> Path:
+        """This book's theme directory, or a ThemeNotFoundError naming the search."""
+        return require_theme_dir(self.theme_ref, root=self.root)
 
     def theme_path(self, *parts: str) -> Path:
         return self.theme_dir.joinpath(*parts)

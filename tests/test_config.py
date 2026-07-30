@@ -139,6 +139,65 @@ def test_theme_dir_absolute_path_is_left_as_is():
     assert cfg.theme_dir == Path("/opt/themes/mine")
 
 
+def test_theme_dir_dot_slash_stays_next_to_the_book(tmp_path):
+    # `./mytheme` is the most natural way to point at a folder beside your book,
+    # and it used to send ladle into its own installation directory: the test was
+    # the reference's component count, and Path("./mytheme") has exactly one.
+    (tmp_path / "mytheme").mkdir()
+    cfg = config.BookConfig(path=tmp_path / "book.yaml", data={"theme": "./mytheme"})
+    assert cfg.theme_dir == tmp_path / "mytheme"
+
+
+def test_theme_dir_dot_slash_is_a_path_even_when_nothing_is_there(tmp_path):
+    # It must not fall through to the bundled themes and report a site-packages
+    # path the author never typed.
+    cfg = config.BookConfig(path=tmp_path / "book.yaml", data={"theme": "./gone"})
+    assert cfg.theme_dir == tmp_path / "gone"
+
+
+def test_theme_dir_bare_name_prefers_a_theme_vendored_with_the_book(tmp_path):
+    # The order Hugo and Zola use: <book>/themes/<name> before the installed set,
+    # so a book can carry its own theme without naming paths.
+    (tmp_path / "themes" / "mine").mkdir(parents=True)
+    cfg = config.BookConfig(path=tmp_path / "book.yaml", data={"theme": "mine"})
+    assert cfg.theme_dir == tmp_path / "themes" / "mine"
+
+
+def test_a_vendored_theme_shadows_a_bundled_one_of_the_same_name(tmp_path):
+    (tmp_path / "themes" / "default").mkdir(parents=True)
+    cfg = config.BookConfig(path=tmp_path / "book.yaml", data={"theme": "default"})
+    assert cfg.theme_dir == tmp_path / "themes" / "default"
+
+
+def test_theme_dir_expands_a_home_relative_path(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    cfg = config.BookConfig(path=Path("/tmp/demo/book.yaml"), data={"theme": "~/themes/mine"})
+    assert cfg.theme_dir == tmp_path / "themes" / "mine"
+
+
+def test_require_theme_dir_names_every_directory_it_searched(tmp_path):
+    # The failure this replaces named one path inside site-packages, which is
+    # neither where the author looked nor anywhere they had written.
+    cfg = config.BookConfig(path=tmp_path / "book.yaml", data={"theme": "nosuch"})
+    with pytest.raises(config.ThemeNotFoundError) as e:
+        cfg.require_theme_dir()
+    message = str(e.value)
+    assert "nosuch" in message
+    assert config.rel(tmp_path / "themes" / "nosuch") in message
+    assert config.rel(config.THEMES_DIR / "nosuch") in message
+    assert "default" in message  # the bundled themes that do exist
+
+
+def test_require_theme_dir_returns_the_directory_when_it_is_there():
+    cfg = config.BookConfig(path=Path("/tmp/demo/book.yaml"), data={"theme": "default"})
+    assert cfg.require_theme_dir() == config.THEMES_DIR / "default"
+
+
+def test_theme_not_found_is_a_config_error(tmp_path):
+    # So the top-level guard keeps mapping it to a clean exit-1 message.
+    assert issubclass(config.ThemeNotFoundError, config.ConfigError)
+
+
 def test_is_bundled_theme_distinguishes_shipped_from_authors_own(tmp_path):
     # Decides how strictly the build checks a theme's templates: a theme we ship
     # is fixed in the same commit that changes the contract, an author's is not.

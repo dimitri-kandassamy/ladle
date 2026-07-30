@@ -112,6 +112,8 @@ def _dispatch(name: str, sub: list[str]) -> int:
         return exc.code if isinstance(exc.code, int) else ui.USAGE
     except config.NoBookError as exc:
         return ui.die(str(exc), ui.NO_BOOK, hint="run `ladle new` or pass --book PATH")
+    except config.ThemeNotFoundError as exc:  # before ConfigError: its message carries its own guidance
+        return ui.die(str(exc), ui.ERROR)
     except config.ConfigError as exc:
         return ui.die(str(exc), ui.ERROR, hint="check the file's syntax and required fields")
     except KeyboardInterrupt:

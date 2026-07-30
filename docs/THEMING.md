@@ -5,14 +5,30 @@ theme, `default` (the Community Cookbook art direction), and a book selects a
 theme with one line in its `book.yaml`:
 
 ```yaml
-theme: default            # a bundled theme, by name
-# theme: themes/mine      # …or a path, resolved relative to this book.yaml
+theme: default            # a name: your ./themes/default, else the bundled one
+# theme: ./mytheme        # …or a path, resolved relative to this book.yaml
 # theme: /abs/path/theme  # …or an absolute path
 ```
 
 Design (the theme) and content (the book) are fully decoupled: the same recipes
 render under any theme, and a theme carries its own fonts, so nothing about the
 look is hardcoded in the tool.
+
+## How a `theme:` value is resolved
+
+Anything containing a separator — `./mytheme`, `../shared/mytheme`,
+`~/themes/mine`, `/abs/path` — is a **path**, taken at its word and resolved
+relative to the book.yaml's directory unless it is absolute.
+
+Anything else is a **name**, looked up in two places, in order:
+
+1. `<book>/themes/<name>` — a theme vendored with the book
+2. the themes shipped with ladle
+
+So `theme: mine` finds `themes/mine` beside your book without you writing a
+path, and a vendored theme shadows a bundled one of the same name — the order
+Hugo and Zola use. When neither exists, the error names both directories it
+searched and lists the themes that do ship with ladle.
 
 ## Anatomy of a theme
 
@@ -282,7 +298,7 @@ The quickest start is to fork `default`:
 # copy the built-in theme into your book and point book.yaml at it
 cp -r "$(python3 -c 'import ladle,pathlib;print(pathlib.Path(ladle.__file__).parent/"themes/default")')" themes/mine
 # edit themes/mine/theme.yaml (palette/fonts), css/, templates/ …
-# in book.yaml:  theme: themes/mine
+# in book.yaml:  theme: mine        (themes/ beside the book is searched first)
 ladle build --book book.yaml && ladle validate --book book.yaml
 ```
 

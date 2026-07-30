@@ -29,7 +29,7 @@ def render(book_path: str | None = None) -> int:
     if not epub_html.exists():
         return ui.die(f"missing {config.rel(epub_html)}", ui.ERROR, hint="run `ladle build`")
 
-    theme = book_cfg.theme_dir
+    theme = book_cfg.require_theme_dir()
     css = theme / "css" / "epub.css"
     font_files = list(dict.fromkeys(f["file"] for f in config.load_theme(theme)["font_faces"]))
 

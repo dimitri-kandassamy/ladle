@@ -669,7 +669,7 @@ def render(book_path: str | None = None) -> int:
     if not book.get("title"):
         raise config.ConfigError(f"{config.rel(book_cfg.path)} is missing required field: title")
     book_root = book_cfg.root
-    theme = book_cfg.theme_dir
+    theme = book_cfg.require_theme_dir()
     theme_manifest = config.load_theme(theme)
     templates_dir = theme / "templates"
     fonts_dir = theme / "fonts"

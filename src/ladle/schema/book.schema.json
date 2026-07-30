@@ -36,7 +36,7 @@
       "type": "string",
       "minLength": 1,
       "default": "default",
-      "description": "A bundled theme name (e.g. 'default') or a path to a book-local theme directory."
+      "description": "A theme name (looked up in <book>/themes/, then the themes bundled with ladle) or a path to a theme directory, resolved relative to this book.yaml."
     },
     "introduction": {
       "type": "string",

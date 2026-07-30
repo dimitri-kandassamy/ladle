@@ -168,10 +168,10 @@ def _lint_main(argv: list[str]) -> int:
     )
     ap.add_argument("theme", help="theme name (bundled) or path to a theme directory")
     args = ap.parse_args(argv)
-    theme_dir = config.resolve_theme_dir(args.theme)
-    if not theme_dir.is_dir():
-        hint = "pass a theme name or a path to a theme dir"
-        return ui.die(f"theme not found: {config.rel(theme_dir)}", ui.ERROR, hint=hint)
+    try:
+        theme_dir = config.require_theme_dir(args.theme)
+    except config.ThemeNotFoundError as e:
+        return ui.die(str(e), ui.ERROR)
     return _report(theme_dir, lint(theme_dir))
 
 
@@ -271,10 +271,10 @@ def _preview_main(argv: list[str]) -> int:
     ap.add_argument("theme", help="theme name (bundled) or path to a theme directory")
     ap.add_argument("--book", metavar="PATH", default=None, help="book to render (default: the bundled sample book)")
     args = ap.parse_args(argv)
-    theme_dir = config.resolve_theme_dir(args.theme)
-    if not theme_dir.is_dir():
-        hint = "pass a theme name or a path to a theme dir"
-        return ui.die(f"theme not found: {config.rel(theme_dir)}", ui.ERROR, hint=hint)
+    try:
+        theme_dir = config.require_theme_dir(args.theme)
+    except config.ThemeNotFoundError as e:
+        return ui.die(str(e), ui.ERROR)
     return preview(theme_dir, args.book)
 
 
