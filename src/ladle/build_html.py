@@ -26,9 +26,20 @@ from . import config, ui
 
 ARTICLES = {"the", "a", "an"}
 
+# Where a recipe goes when its `category:` is missing, blank, or null. The schema
+# requires the key, so `validate` fails such a book — but `build` still prints
+# one, and it has to file those recipes somewhere. Assigned, never authored: it
+# is deliberately not in the schema's enum, so a book cannot claim it directly.
+#
+# It is a bucket rather than a real category on purpose. Filing an uncategorised
+# recipe under `Savory` was a guess the book had no basis for, and it put cakes
+# in with the stews; this says only what is true, which is that nobody said.
+FALLBACK_CATEGORY = "Uncategorized"
+
 # Book chrome strings, overridable per-book via book.yaml's `labels:` block.
-# `section_names` maps the internal category enum (Savory/Desserts/Beverages —
-# the front-matter matching key, never translated) to a displayed name.
+# `section_names` maps the internal category key (the enum Savory/Desserts/
+# Beverages, plus FALLBACK_CATEGORY — front-matter matching keys, never
+# translated) to a displayed name.
 DEFAULT_LABELS = {
     "ingredients": "Ingredients",
     "directions": "Directions",
@@ -48,6 +59,10 @@ DEFAULT_LABELS = {
         "Savory": "Savory",
         "Desserts": "Desserts",
         "Beverages": "Beverages",
+        # Reads to a reader as a section the author chose, while the author gets
+        # a warning per file and a failing `validate`. A book that would rather
+        # say something else — or say nothing — overrides this one label.
+        FALLBACK_CATEGORY: "Other Recipes",
     },
 }
 
@@ -333,7 +348,10 @@ def load_recipe(path: Path, *, absolute_assets: bool, book_root: Path) -> dict:
     return {
         "slug": slug,
         "title": fm.get("title", slug),
-        "category": fm.get("category", "Savory"),
+        # `or`, not a get() default: `category:` written blank or with no value
+        # is present-but-unusable, and used to reach the page as an empty or
+        # "None" section heading in the contents.
+        "category": fm.get("category") or FALLBACK_CATEGORY,
         "servings": fm.get("servings", ""),
         "credits": credits,
         "page": page,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import zlib
@@ -414,6 +415,48 @@ def test_build_toc_drops_a_declared_section_with_no_recipes():
 
 def test_build_toc_is_empty_for_a_book_with_no_recipes():
     assert _toc([], sections=["Savory"]) == []
+
+
+@pytest.mark.parametrize(
+    "front_matter",
+    [
+        "title: X",  # no category key at all
+        'title: X\ncategory: ""',  # written blank
+        "title: X\ncategory:",  # written with no value
+    ],
+    ids=["missing", "blank", "null"],
+)
+def test_a_recipe_with_no_usable_category_lands_in_the_fallback_bucket(tmp_path, front_matter):
+    # The schema requires `category`, so `validate` fails all three — but `build`
+    # still prints a book, and the blank and null forms used to reach the contents
+    # page as an empty heading and one reading "None". Present-but-unusable is
+    # treated as absent, and nothing is guessed about what the recipe is.
+    p = tmp_path / "x.md"
+    p.write_text(f"---\n{front_matter}\n---\n\n## NOTES\nfine\n", encoding="utf-8")
+    r = bh.load_recipe(p, absolute_assets=False, book_root=tmp_path)
+    assert r["category"] == bh.FALLBACK_CATEGORY
+
+
+def test_the_fallback_bucket_is_not_a_category_a_book_can_claim():
+    # Assigned by the build, never authored: keeping it out of the enum stops a
+    # recipe from opting into the bucket that means "nobody said".
+    schema = json.loads((config.PACKAGE_ROOT / "schema" / "recipe.schema.json").read_text(encoding="utf-8"))
+    assert bh.FALLBACK_CATEGORY not in schema["properties"]["category"]["enum"]
+
+
+def test_the_fallback_bucket_prints_a_name_a_reader_can_read():
+    toc = _toc([_r("x", bh.FALLBACK_CATEGORY, "X")])
+    assert toc[0]["title"] == "Other Recipes"
+
+
+def test_the_fallback_bucket_label_is_overridable_like_any_other_section():
+    book = {"labels": bh.merged_labels({"labels": {"section_names": {bh.FALLBACK_CATEGORY: "À trier"}}})}
+    assert bh.build_toc([_r("x", bh.FALLBACK_CATEGORY, "X")], book)[0]["title"] == "À trier"
+
+
+def test_the_fallback_bucket_sorts_after_the_books_own_sections():
+    recipes = [_r("x", bh.FALLBACK_CATEGORY, "X"), _r("stew", "Savory", "Stew")]
+    assert [s["name"] for s in _toc(recipes, sections=["Savory"])] == ["Savory", bh.FALLBACK_CATEGORY]
 
 
 def test_build_toc_titles_come_from_the_books_section_labels():

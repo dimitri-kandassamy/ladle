@@ -128,6 +128,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   declared printed but appeared nowhere in the front matter. Themes should
   iterate `toc` rather than `book.sections`; see `docs/THEMING.md`.
 
+  A recipe with no usable `category:` is filed under a new `Uncategorized`
+  bucket, which sorts last and prints as "Other Recipes" — a label a book
+  overrides like any other. Such a book was always schema-invalid (`build` warns
+  per file, `validate` fails it), but it still renders, and the old fallback
+  filed those recipes under `Savory` — a claim the book had no basis for, which
+  put cakes in with the stews. A `category:` written blank or with no value
+  reached the contents page as an empty heading, or one reading "None"; both are
+  now treated as absent. The bucket is assigned, never authored: it is not in the
+  schema's enum, so no recipe can claim it directly.
+
   Templates in the themes ladle ships now also render with Jinja's
   `StrictUndefined`, so reading something the build does not pass is a named
   error instead of a blank region on the page. Your own themes are unaffected —

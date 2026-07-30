@@ -227,7 +227,12 @@ def validate_pdf(recipes_dir: Path, book: dict | None = None) -> None:
     spreads = sum(1 for p in live if _has_opener(p))
     expected = 7 + 2 * spreads + (len(live) - spreads)
     if (book or {}).get("section_openers"):
-        expected += len({front_matter(p).get("category", "Savory") for p in live})
+        # One opener per distinct category, counting an unusable one the way the
+        # build files it, so the two do not disagree about how many sections a
+        # book has (see build_html.FALLBACK_CATEGORY).
+        from . import build_html
+
+        expected += len({front_matter(p).get("category") or build_html.FALLBACK_CATEGORY for p in live})
     if pages == expected:
         ok(f"page count = {pages} ({len(live)} recipes, {spreads} on two pages)")
     else:
