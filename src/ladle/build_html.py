@@ -17,8 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
-from jinja2 import FileSystemLoader
-from jinja2.exceptions import SecurityError
+from jinja2 import FileSystemLoader, StrictUndefined, Undefined
+from jinja2.exceptions import SecurityError, UndefinedError
 from jinja2.sandbox import SandboxedEnvironment
 from markupsafe import Markup
 
@@ -372,6 +372,30 @@ def order_recipes(recipes: list[dict], book: dict) -> list[dict]:
     return sorted(recipes, key=key)
 
 
+def build_toc(recipes: list[dict], book: dict) -> list[dict]:
+    """*recipes* grouped into ordered sections, for the template to iterate.
+
+    Templates get this derived structure rather than book.yaml's ``sections:``
+    list, because that key is optional: looping over it directly printed an empty
+    Contents page for every book that had not set it — silently, since Jinja
+    iterates an undefined value as nothing.
+
+    Declared sections come first and in their declared order. Any category no
+    section declares follows, in the order the recipes already sort in, so a book
+    with no ``sections:`` still gets one section per distinct category and every
+    printed recipe keeps a contents entry.
+    """
+    labels = book["labels"]["section_names"]
+    declared = book.get("sections") or []
+    derived = [r["category"] for r in recipes if r["category"] not in declared]
+    out = []
+    for name in [*declared, *dict.fromkeys(derived)]:
+        items = [r for r in recipes if r["category"] == name]
+        if items:
+            out.append({"name": name, "title": labels.get(name, name), "recipes": items})
+    return out
+
+
 def load_intro(book: dict, *, absolute_assets: bool, book_root: Path) -> dict:
     path = book_root / book.get("introduction", "content/introduction.md")
     if not path.exists():
@@ -576,19 +600,26 @@ def warn_schema_issues(recipes_dir: Path) -> None:
         ui.warn(f"{r['file']}{loc} {r['message']}")
 
 
-def make_env(templates_dir: Path) -> SandboxedEnvironment:
+def make_env(templates_dir: Path, *, strict: bool = False) -> SandboxedEnvironment:
     """Jinja environment for theme templates.
 
     Sandboxed on purpose: a theme is untrusted *data*, never code. Community
     themes ship executable Jinja, so rendering runs in a `SandboxedEnvironment`
     that blocks private-attribute access, imports, and unsafe callables. The
     bundled default theme stays well within these limits.
+
+    *strict* turns a reference to something the core never passed into a named
+    error instead of a blank region on the page. It is on for the themes we ship
+    (where a typo is our bug to catch) and off for everyone else's, because it
+    would fail themes written against today's looser contract; it becomes the
+    single behaviour once themes declare an API version.
     """
     return SandboxedEnvironment(
         loader=FileSystemLoader(str(templates_dir)),
         autoescape=True,
         trim_blocks=True,
         lstrip_blocks=True,
+        undefined=StrictUndefined if strict else Undefined,
     )
 
 
@@ -600,6 +631,12 @@ def render_template(env: SandboxedEnvironment, name: str, **context: object) -> 
         raise config.ConfigError(
             f"theme template {name} was blocked by the sandbox: {e}. Themes may not "
             "access private attributes, imports, or unsafe callables."
+        ) from e
+    except UndefinedError as e:
+        raise config.ConfigError(
+            f"theme template {name} used something the build does not provide: {e}. "
+            "Templates read the context the core passes them (book, intro, recipes, toc), "
+            "never book.yaml directly."
         ) from e
 
 
@@ -632,7 +669,7 @@ def render(book_path: str | None = None) -> int:
     book["title_article"], book["title_rest"] = split_title_article(book["title"])
     book["labels"] = merged_labels(book)
 
-    env = make_env(templates_dir)
+    env = make_env(templates_dir, strict=config.is_bundled_theme(theme))
     build.mkdir(parents=True, exist_ok=True)
     recipe_paths = sorted(book_cfg.recipes_dir.glob("*.md"))
 
@@ -660,6 +697,7 @@ def render(book_path: str | None = None) -> int:
         book=book,
         intro=load_intro(book, absolute_assets=True, book_root=book_root),
         recipes=print_recipes,
+        toc=build_toc(print_recipes, book),
         font_face_css=font_face_css(fonts_dir, theme_manifest["font_faces"]),
         css_links=[(css_dir / "common.css").as_uri(), (css_dir / "print.css").as_uri()],
     )
@@ -676,6 +714,10 @@ def render(book_path: str | None = None) -> int:
         book=book,
         intro=load_intro(book, absolute_assets=False, book_root=book_root),
         recipes=epub_recipes,
+        # Unused by the bundled epub template (pandoc derives its own navigation
+        # from the headings), but part of the context every template gets: a
+        # theme that wants to print its sections should not have to re-derive them.
+        toc=build_toc(epub_recipes, book),
     )
     (build / "epub.html").write_text(epub_html, encoding="utf-8")
 

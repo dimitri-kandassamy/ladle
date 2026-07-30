@@ -377,6 +377,50 @@ def test_order_recipes_unlisted_section_sorts_last_then_by_title():
     assert [r["slug"] for r in bh.order_recipes(recipes, book)] == ["s", "a", "z"]
 
 
+# ---- the derived table of contents -----------------------------------------
+def _toc(recipes, **book):
+    book.setdefault("labels", bh.merged_labels({}))
+    return bh.build_toc(recipes, book)
+
+
+def test_build_toc_groups_by_declared_sections_in_declared_order():
+    recipes = [_r("stew", "Savory", "Stew"), _r("cake", "Desserts", "Cake")]
+    toc = _toc(recipes, sections=["Desserts", "Savory"])
+    assert [(s["title"], [r["slug"] for r in s["recipes"]]) for s in toc] == [
+        ("Desserts", ["cake"]),
+        ("Savory", ["stew"]),
+    ]
+
+
+def test_build_toc_derives_sections_when_the_book_declares_none():
+    # The A3 regression: `sections:` is optional, and a book without it used to
+    # get a Contents page with a heading, a rule, and no entries.
+    recipes = [_r("stew", "Savory", "Stew"), _r("cake", "Desserts", "Cake")]
+    toc = _toc(recipes)
+    assert [s["name"] for s in toc] == ["Savory", "Desserts"]  # the recipes' own order
+    assert [r["slug"] for s in toc for r in s["recipes"]] == ["stew", "cake"]
+
+
+def test_build_toc_keeps_a_recipe_whose_category_no_section_declares():
+    # Undeclared categories follow the declared ones, so every printed recipe has
+    # a contents entry rather than being silently left out of the front matter.
+    recipes = [_r("stew", "Savory", "Stew"), _r("gin", "Beverages", "Gin")]
+    assert [s["name"] for s in _toc(recipes, sections=["Savory"])] == ["Savory", "Beverages"]
+
+
+def test_build_toc_drops_a_declared_section_with_no_recipes():
+    assert [s["name"] for s in _toc([_r("stew", "Savory", "S")], sections=["Savory", "Desserts"])] == ["Savory"]
+
+
+def test_build_toc_is_empty_for_a_book_with_no_recipes():
+    assert _toc([], sections=["Savory"]) == []
+
+
+def test_build_toc_titles_come_from_the_books_section_labels():
+    book = {"labels": bh.merged_labels({"labels": {"section_names": {"Savory": "Salé"}}})}
+    assert bh.build_toc([_r("stew", "Savory", "Stew")], book)[0]["title"] == "Salé"
+
+
 # ---- labels ----------------------------------------------------------------
 def test_merged_labels_defaults_unchanged_without_labels_block():
     labels = bh.merged_labels({})
@@ -462,14 +506,18 @@ def render_print(*, recipes=None, book=None, font_face_css="", css_links=(), **r
         "labels": bh.merged_labels({}),
     }
     b.update(book or {})
+    rs = recipes if recipes is not None else [a_recipe(**recipe)]
     theme = config.PACKAGE_ROOT / "themes" / "default"
-    env = bh.make_env(theme / "templates")
+    # strict=True, as `render` uses for a bundled theme: a template that reads
+    # something outside the context it is passed should fail these tests loudly.
+    env = bh.make_env(theme / "templates", strict=True)
     return bh.render_template(
         env,
         "print.html.j2",
         book=b,
         intro={"title": "Intro", "from_name": "", "from_org": "", "body_html": []},
-        recipes=recipes if recipes is not None else [a_recipe(**recipe)],
+        recipes=rs,
+        toc=bh.build_toc(rs, b),
         font_face_css=font_face_css,
         css_links=list(css_links),
     )
@@ -537,6 +585,24 @@ def test_the_themes_declared_fonts_reach_the_pdf(tmp_path, monkeypatch):
         assert any(name.split("+", 1)[1].startswith(stem) for name in embedded), (
             f"{family!r} is declared in theme.yaml but is not embedded in the PDF; got {sorted(embedded)}"
         )
+
+
+def test_a_scaffolded_book_gets_a_contents_page_with_entries(tmp_path, monkeypatch):
+    # A3, end to end and from the front door: `ladle new` writes a book.yaml with
+    # `sections:` commented out because it is optional, and the Contents page came
+    # out empty — heading, rule, nothing else — while the build exited 0. Every
+    # first run produced it, and the EPUB disagreed, since pandoc builds its own
+    # navigation from the headings.
+    from ladle import new_book
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("LADLE_BUILD", str(tmp_path / "build"))
+    assert new_book.main(["demo"]) == 0
+    bh.render(str(tmp_path / "demo" / "book.yaml"))
+
+    html = (tmp_path / "build" / "cookbook.html").read_text(encoding="utf-8")
+    toc = html.split('<nav class="toc">')[1].split("</nav>")[0]
+    assert 'href="#example-recipe"' in toc, f"scaffolded book has an empty contents page: {toc!r}"
 
 
 def first_box(page, css_class: str):
@@ -624,6 +690,17 @@ def test_print_every_recipe_layout_carries_a_folio():
     # folio those numbers point at nothing on paper.
     for kwargs in ({}, {"illustration_url": "a.svg"}, {"has_story": True}):
         assert '<div class="folio"></div>' in render_print(**kwargs)
+
+
+def test_print_contents_lists_the_recipes_of_a_book_that_declares_no_sections():
+    # A3: the loop used to read book.sections, which most books never set, so the
+    # Contents page printed a heading, a rule and nothing else.
+    recipes = [a_recipe(), a_recipe(slug="stew", title="Stew", category="Savory")]
+    html = render_print(recipes=recipes, book={"sections": []})
+    toc = html.split('<nav class="toc">')[1].split("</nav>")[0]
+    assert 'href="#cake"' in toc
+    assert 'href="#stew"' in toc
+    assert "Desserts" in toc and "Savory" in toc
 
 
 def test_print_contents_has_no_footer():
@@ -765,3 +842,19 @@ def test_render_template_converts_security_error_to_config_error(tmp_path):
         bh.render_template(env, "evil.html.j2")
     assert "evil.html.j2" in str(excinfo.value)
     assert "sandbox" in str(excinfo.value)
+
+
+def test_make_env_strict_names_what_a_bundled_template_got_wrong(tmp_path):
+    # What A3 cost us: looping over an undefined value renders nothing and exits 0.
+    # For themes we ship, that is an error with a name on it instead.
+    (tmp_path / "t.html.j2").write_text("{% for s in nope %}{{ s }}{% endfor %}", encoding="utf-8")
+    env = bh.make_env(tmp_path, strict=True)
+    with pytest.raises(config.ConfigError) as excinfo:
+        bh.render_template(env, "t.html.j2")
+    assert "t.html.j2" in str(excinfo.value)
+    assert "nope" in str(excinfo.value)
+
+
+def test_make_env_is_lenient_by_default_for_third_party_themes():
+    # Strictness is a contract change, so it waits for the theme API version field.
+    assert bh.make_env(Path(".")).from_string("[{% for s in nope %}{{ s }}{% endfor %}]").render() == "[]"

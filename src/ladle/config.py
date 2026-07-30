@@ -109,6 +109,15 @@ def resolve_theme_dir(name_or_path: str, root: Path | None = None) -> Path:
     return THEMES_DIR / name_or_path
 
 
+def is_bundled_theme(theme_dir: Path) -> bool:
+    """True for a theme shipped inside the package, false for the author's own.
+
+    The two are held to different contracts: we can fix a bundled theme in the
+    same commit that changes what the build passes it, so it is checked strictly.
+    """
+    return theme_dir.resolve().is_relative_to(THEMES_DIR.resolve())
+
+
 def hex_to_rgb(value: str) -> tuple[int, int, int]:
     h = value.lstrip("#")
     return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))

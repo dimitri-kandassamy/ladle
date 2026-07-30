@@ -189,24 +189,24 @@
   </div>
 </section>
 
-{# Contents: recipes grouped by section, with page numbers resolved by WeasyPrint
-   (target-counter) against each recipe opener's id. #}
+{# Contents: `toc` is the grouping the core derived (build_html.build_toc) — not
+   book.yaml's optional `sections:` key, which is undefined in most books and
+   quietly printed an empty Contents page when this loop read it directly. Page
+   numbers are resolved by WeasyPrint (target-counter) against each recipe
+   opener's id. #}
 <section class="page cream contents">
   <div class="inner">
     <h1 class="display title">{{ book.labels.contents }}</h1>
     <hr class="rule">
     <nav class="toc">
-      {% for section in book.sections %}
-      {% set items = recipes | selectattr('category', 'equalto', section) | list %}
-      {% if items %}
+      {% for section in toc %}
       <div class="toc-section">
-        <h2 class="toc-head">{{ book.labels.section_names.get(section, section) }}</h2>
+        <h2 class="toc-head">{{ section.title }}</h2>
         <ul class="toc-list">
-          {% for r in items %}<li><a href="#{{ r.slug }}">{{ r.title }}</a></li>
+          {% for r in section.recipes %}<li><a href="#{{ r.slug }}">{{ r.title }}</a></li>
           {% endfor %}
         </ul>
       </div>
-      {% endif %}
       {% endfor %}
     </nav>
   </div>
