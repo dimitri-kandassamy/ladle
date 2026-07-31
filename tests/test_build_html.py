@@ -543,7 +543,7 @@ def render_print(*, recipes=None, book=None, font_face_css="", css_links=(), **r
         "rights": "",
         "language": "en",
         "sections": ["Savory", "Desserts"],
-        "section_openers": False,
+        "params": {"section_openers": False},
         "palette": dict.fromkeys(("navy", "cream", "ink", "ink_deep", "rule"), "#000"),
         "fonts": {"display": "D", "body": "B"},
         "labels": bh.merged_labels({}),
@@ -572,7 +572,7 @@ def test_font_face_css_survives_the_autoescaping_template():
     # not decoded inside a <style> element, so every @font-face was invalid and the
     # book silently set in a system fallback font.
     theme = config.PACKAGE_ROOT / "themes" / "default"
-    css = bh.font_face_css(theme / "fonts", config.load_theme(theme)["font_faces"])
+    css = bh.font_face_css(theme / "fonts", config.load_theme(theme).font_faces)
     html = render_print(font_face_css=css)
     style = html.split("</style>", 1)[0]
     assert "&#34;" not in style and "&amp;" not in style
@@ -622,7 +622,7 @@ def test_the_themes_declared_fonts_reach_the_pdf(tmp_path, monkeypatch):
     pdf = HTML(filename=str(tmp_path / "cookbook.html")).write_pdf()
 
     embedded = embedded_font_subsets(pdf)
-    faces = config.load_theme(config.PACKAGE_ROOT / "themes" / "default")["font_faces"]
+    faces = config.load_theme(config.PACKAGE_ROOT / "themes" / "default").font_faces
     for family in sorted({f["family"] for f in faces}):
         stem = family.replace(" ", "-")
         assert any(name.split("+", 1)[1].startswith(stem) for name in embedded), (
@@ -759,12 +759,31 @@ def test_a_theme_that_renames_its_palette_tokens_still_builds(tmp_path, monkeypa
     assert bh.render(str(_book_with_theme(tmp_path, monkeypatch, rename_tokens))) == 0
 
 
-def test_a_theme_without_a_landing_template_publishes_no_landing_page(tmp_path, monkeypatch):
-    # Optional means optional: no template, no index.html, no error.
-    book_path = _book_with_theme(tmp_path, monkeypatch, lambda t: (t / "templates" / bh.LANDING_TEMPLATE).unlink())
+def test_a_theme_that_declares_a_landing_page_but_ships_none_says_so(tmp_path, monkeypatch, capsys):
+    # The bundled theme declares templates.landing, so deleting the file leaves a
+    # declaration pointing at nothing. Still not fatal — but it is a typo, and the
+    # manifest is what makes it distinguishable from a deliberate omission.
+    book_path = _book_with_theme(tmp_path, monkeypatch, lambda t: (t / "templates" / "landing.html.j2").unlink())
     assert bh.render(str(book_path)) == 0
     assert (tmp_path / "build" / "cookbook.html").exists()
     assert not (tmp_path / "build" / "index.html").exists()
+    assert "templates.landing" in capsys.readouterr().err
+
+
+def test_a_theme_that_declares_no_landing_page_publishes_none_quietly(tmp_path, monkeypatch, capsys):
+    # Optional means optional: nothing declared and nothing shipped, so no
+    # index.html, no error, and nothing to report.
+    def drop_landing(theme_dir):
+        (theme_dir / "templates" / "landing.html.j2").unlink()
+        manifest = theme_dir / "theme.yaml"
+        text = manifest.read_text(encoding="utf-8")
+        manifest.write_text(text.replace("  landing: landing.html.j2\n", ""), encoding="utf-8")
+
+    book_path = _book_with_theme(tmp_path, monkeypatch, drop_landing)
+    assert bh.render(str(book_path)) == 0
+    assert (tmp_path / "build" / "cookbook.html").exists()
+    assert not (tmp_path / "build" / "index.html").exists()
+    assert "landing" not in capsys.readouterr().err
 
 
 def test_the_bundled_theme_publishes_a_landing_page(tmp_path, monkeypatch):
@@ -879,7 +898,7 @@ def test_print_section_openers_when_enabled():
         a_recipe(slug="b", category="Savory"),
         a_recipe(slug="c", category="Desserts"),
     ]
-    html = render_print(recipes=two_each, book={"section_openers": True})
+    html = render_print(recipes=two_each, book={"params": {"section_openers": True}})
     assert html.count("section-opener") == 2
     assert ">Savory</h1>" in html and ">Desserts</h1>" in html
 
@@ -890,7 +909,7 @@ def test_print_section_openers_use_the_books_section_names():
     labels = bh.merged_labels({"labels": {"section_names": {"Savory": "Salgados"}}})
     html = render_print(
         recipes=[a_recipe(category="Savory")],
-        book={"section_openers": True, "labels": labels},
+        book={"params": {"section_openers": True}, "labels": labels},
     )
     assert ">Salgados</h1>" in html
 
@@ -899,7 +918,7 @@ def test_print_outline_nests_recipes_only_when_sectioned():
     # The demotion to bookmark-level 2 keys off the same flag as the openers:
     # with no opener above it, a demoted recipe would nest under the intro.
     assert 'class="sectioned"' not in render_print()
-    assert 'class="sectioned"' in render_print(book={"section_openers": True})
+    assert 'class="sectioned"' in render_print(book={"params": {"section_openers": True}})
 
 
 def test_print_author_byline_needs_a_story():
@@ -992,3 +1011,265 @@ def test_make_env_strict_names_what_a_bundled_template_got_wrong(tmp_path):
 def test_make_env_is_lenient_by_default_for_third_party_themes():
     # Strictness is a contract change, so it waits for the theme API version field.
     assert bh.make_env(Path(".")).from_string("[{% for s in nope %}{{ s }}{% endfor %}]").render() == "[]"
+
+
+# ---- the manifest's namespaces: one merge, warnings where a key is a guess ---
+def _manifest(tmp_path: Path, body: str) -> config.ThemeManifest:
+    """A theme dir with *body* as its theme.yaml, loaded as a manifest."""
+    (tmp_path / "theme.yaml").write_text(body, encoding="utf-8")
+    return config.load_theme(tmp_path)
+
+
+def test_merge_namespace_overlays_the_book_on_the_theme_per_key(tmp_path):
+    theme = _manifest(tmp_path, "name: mini\nparams: {column_ratio: 1.8, folio_position: footer}\n")
+    merged = bh.merge_namespace("params", theme, {"params": {"column_ratio": 2.4}})
+    # The overridden key changes; the one the book said nothing about survives.
+    assert merged == {"column_ratio": 2.4, "folio_position": "footer"}
+
+
+def test_merge_namespace_warns_about_a_key_the_theme_never_declared(tmp_path, capsys):
+    # Zola's rule: opening the schema to free-form keys costs the typo protection a
+    # closed enum gave, and this buys it back without making a typo fatal.
+    theme = _manifest(tmp_path, "name: mini\nparams: {column_ratio: 1.8}\n")
+    merged = bh.merge_namespace("params", theme, {"params": {"colunm_ratio": 2.4}})
+    err = capsys.readouterr().err
+    assert "params.colunm_ratio" in err and "mini" in err
+    assert merged["colunm_ratio"] == 2.4  # warned about, not dropped
+
+
+def test_merge_namespace_warns_when_an_override_changes_the_type(tmp_path, capsys):
+    # `column_ratio: "wide"` over a number produces silent garbage in a CSS `flex`,
+    # which is invisible until someone looks at the page.
+    theme = _manifest(tmp_path, "name: mini\nparams: {column_ratio: 1.8}\n")
+    bh.merge_namespace("params", theme, {"params": {"column_ratio": "wide"}})
+    err = capsys.readouterr().err
+    assert "params.column_ratio" in err and "a string" in err and "a number" in err
+
+
+def test_merge_namespace_is_quiet_when_the_theme_declares_nothing(tmp_path, capsys):
+    # A theme with no manifest contributes no vocabulary, and its book is the only
+    # source of these tokens — so every key would warn, which is noise, not a check.
+    theme = config.load_theme(tmp_path)
+    assert bh.merge_namespace("palette", theme, {"palette": {"navy": "#000"}}) == {"navy": "#000"}
+    assert capsys.readouterr().err == ""
+
+
+def test_a_boolean_override_of_a_boolean_default_does_not_warn(tmp_path, capsys):
+    # bool is an int subclass, so a naive type comparison would call True a number.
+    theme = _manifest(tmp_path, "name: mini\nparams: {section_openers: false}\n")
+    bh.merge_namespace("params", theme, {"params": {"section_openers": True}})
+    assert capsys.readouterr().err == ""
+
+
+# ---- labels: core defaults < theme.yaml < book.yaml -------------------------
+def test_merged_labels_layers_the_theme_between_core_and_book(tmp_path):
+    theme = _manifest(tmp_path, "name: mini\nlabels: {contents: Sommaire, dedication: Dedication}\n")
+    labels = bh.merged_labels({"labels": {"dedication": "For Ma"}}, theme)
+    assert labels["contents"] == "Sommaire"  # the theme's word, not ladle's
+    assert labels["dedication"] == "For Ma"  # the book has the last word
+    assert labels["ingredients"] == "Ingredients"  # a core-owned string still resolves
+
+
+def test_merged_labels_without_a_theme_is_unchanged(tmp_path):
+    # Backward compatible with every book and theme that predates `labels:`.
+    assert bh.merged_labels({}) == bh.merged_labels({}, config.load_theme(tmp_path))
+
+
+def test_undeclared_labels_reports_what_a_theme_prints_but_never_declares(tmp_path):
+    tdir = tmp_path / "templates"
+    tdir.mkdir()
+    (tdir / "print.html.j2").write_text(
+        "{{ book.labels.contents }}{{ book.labels['dedication'] }}{{ book.labels.ingredients }}",
+        encoding="utf-8",
+    )
+    theme = _manifest(tmp_path, "name: mini\nlabels: {contents: Contents}\n")
+    # `contents` is declared and `ingredients` is ladle's own, so neither is the
+    # theme's to declare. `dedication` is a word only this theme prints.
+    assert bh.undeclared_labels(theme) == ["dedication"]
+
+
+def test_undeclared_labels_ignores_the_strings_the_core_owns(tmp_path):
+    # `ingredients` and its siblings name recipe sections ladle parses itself, and
+    # section_names is the book's category data rather than the theme's chrome —
+    # so a theme printing any of them is not asked to declare it.
+    tdir = tmp_path / "templates"
+    tdir.mkdir()
+    (tdir / "print.html.j2").write_text(
+        "{{ book.labels.ingredients }}{{ book.labels.directions }}{{ book.labels.notes }}"
+        "{{ book.labels.no_method }}{{ book.labels.section_names.get(r.category) }}",
+        encoding="utf-8",
+    )
+    assert bh.undeclared_labels(_manifest(tmp_path, "name: mini\n")) == []
+
+
+def test_the_bundled_theme_declares_every_string_it_owns():
+    # It is the reference implementation, so it leans on no theme-owned fallback.
+    theme = config.load_theme(config.THEMES_DIR / "default")
+    assert bh.undeclared_labels(theme) == []
+
+
+def test_the_two_label_groups_do_not_overlap():
+    # The split is the contract: a string is the core's or the theme's, never both,
+    # and together they are every string ladle can resolve.
+    assert set(bh.CORE_LABELS) & set(bh.THEME_LABELS) == set()
+    assert set(bh.DEFAULT_LABELS) == set(bh.CORE_LABELS) | set(bh.THEME_LABELS)
+
+
+def test_the_bundled_theme_declares_exactly_the_theme_owned_strings():
+    # If a string moves between the two groups, the bundled manifest has to move
+    # with it — otherwise the reference implementation stops being reproducible.
+    theme = config.load_theme(config.THEMES_DIR / "default")
+    assert set(theme.labels) == set(bh.THEME_LABELS)
+
+
+def test_warn_undeclared_labels_says_which_default_it_used(tmp_path, capsys):
+    tdir = tmp_path / "templates"
+    tdir.mkdir()
+    (tdir / "print.html.j2").write_text("{{ book.labels.contents }}{{ book.labels.mystery }}", encoding="utf-8")
+    bh.warn_undeclared_labels(_manifest(tmp_path, "name: mini\n"))
+    err = capsys.readouterr().err
+    # A string ladle knows falls back and says so; one nobody knows renders empty.
+    assert "labels.contents" in err and "'Contents'" in err
+    assert "labels.mystery" in err and "render empty" in err
+
+
+# ---- fonts roles vs embedded faces -----------------------------------------
+def test_warn_unembedded_fonts_flags_a_role_no_face_provides(capsys):
+    faces = [{"family": "Bitter", "file": "Bitter.ttf"}]
+    bh.warn_unembedded_fonts({"display": "Comic Sans MS", "body": "Bitter"}, faces, theme_name="mini")
+    err = capsys.readouterr().err
+    assert "fonts.display" in err and "Comic Sans MS" in err
+    assert "fonts.body" not in err
+
+
+def test_warn_unembedded_fonts_is_quiet_for_a_theme_that_embeds_nothing(capsys):
+    bh.warn_unembedded_fonts({"display": "Georgia"}, [], theme_name="mini")
+    assert capsys.readouterr().err == ""
+
+
+def test_a_book_pointing_a_font_role_at_an_unembedded_family_warns(tmp_path, monkeypatch, capsys):
+    # The A1 failure arriving by another route: nothing errors, the PDF simply sets
+    # in whatever the machine has, which differs on the next machine.
+    monkeypatch.setenv("LADLE_BUILD", str(tmp_path / "build"))
+    book_dir = shutil.copytree(config.SAMPLE_BOOK.parent, tmp_path / "book")
+    book_path = Path(book_dir) / "book.yaml"
+    book = yaml.safe_load(book_path.read_text(encoding="utf-8"))
+    book["fonts"] = {"display": "Comic Sans MS"}
+    book_path.write_text(yaml.safe_dump(book), encoding="utf-8")
+    assert bh.render(str(book_path)) == 0
+    assert "fonts.display" in capsys.readouterr().err
+
+
+# ---- stylesheets and templates come from the manifest ----------------------
+def test_a_theme_can_rename_its_stylesheets(tmp_path, monkeypatch):
+    # The point of stylesheets: the core no longer knows the filenames, so a theme
+    # is free to organise its CSS however it likes.
+    def rename(theme_dir):
+        (theme_dir / "css" / "print.css").rename(theme_dir / "css" / "layout.css")
+        manifest = theme_dir / "theme.yaml"
+        text = manifest.read_text(encoding="utf-8")
+        manifest.write_text(text.replace("css/print.css", "css/layout.css"), encoding="utf-8")
+
+    assert bh.render(str(_book_with_theme(tmp_path, monkeypatch, rename))) == 0
+    head = (tmp_path / "build" / "cookbook.html").read_text(encoding="utf-8").split("</head>", 1)[0]
+    assert "layout.css" in head and "print.css" not in head
+
+
+def test_a_theme_can_add_a_stylesheet_and_it_lands_last(tmp_path, monkeypatch):
+    # Declared order is cascade order, so an appended sheet can override the others.
+    def add_sheet(theme_dir):
+        (theme_dir / "css" / "extra.css").write_text(".cover { background: red }", encoding="utf-8")
+        manifest = theme_dir / "theme.yaml"
+        text = manifest.read_text(encoding="utf-8")
+        manifest.write_text(
+            text.replace(
+                "print: [css/common.css, css/print.css]",
+                "print: [css/common.css, css/print.css, css/extra.css]",
+            ),
+            encoding="utf-8",
+        )
+
+    assert bh.render(str(_book_with_theme(tmp_path, monkeypatch, add_sheet))) == 0
+    head = (tmp_path / "build" / "cookbook.html").read_text(encoding="utf-8").split("</head>", 1)[0]
+    assert head.index("common.css") < head.index("print.css") < head.index("extra.css")
+    # And the token block still comes after every link, or the book's overrides lose.
+    assert head.rindex("<style>") > head.rindex("<link")
+
+
+def test_a_theme_can_rename_its_print_template(tmp_path, monkeypatch):
+    def rename(theme_dir):
+        (theme_dir / "templates" / "print.html.j2").rename(theme_dir / "templates" / "fancy.html.j2")
+        manifest = theme_dir / "theme.yaml"
+        text = manifest.read_text(encoding="utf-8")
+        manifest.write_text(text.replace("print: print.html.j2", "print: fancy.html.j2"), encoding="utf-8")
+
+    assert bh.render(str(_book_with_theme(tmp_path, monkeypatch, rename))) == 0
+    assert (tmp_path / "build" / "cookbook.html").exists()
+
+
+def test_a_stylesheet_the_manifest_names_but_the_theme_lacks_fails_clearly(tmp_path, monkeypatch):
+    def break_it(theme_dir):
+        manifest = theme_dir / "theme.yaml"
+        text = manifest.read_text(encoding="utf-8")
+        manifest.write_text(text.replace("css/print.css", "css/nope.css"), encoding="utf-8")
+
+    book_path = _book_with_theme(tmp_path, monkeypatch, break_it)
+    with pytest.raises(config.ConfigError) as excinfo:
+        bh.render(str(book_path))
+    assert "stylesheets.print" in str(excinfo.value) and "nope.css" in str(excinfo.value)
+
+
+def test_a_template_the_manifest_names_but_the_theme_lacks_fails_clearly(tmp_path, monkeypatch):
+    def break_it(theme_dir):
+        manifest = theme_dir / "theme.yaml"
+        text = manifest.read_text(encoding="utf-8")
+        manifest.write_text(text.replace("print: print.html.j2", "print: nope.html.j2"), encoding="utf-8")
+
+    book_path = _book_with_theme(tmp_path, monkeypatch, break_it)
+    with pytest.raises(config.ConfigError) as excinfo:
+        bh.render(str(book_path))
+    assert "templates.print" in str(excinfo.value) and "nope.html.j2" in str(excinfo.value)
+
+
+def test_a_manifest_path_that_leaves_the_theme_dir_is_refused(tmp_path, monkeypatch):
+    # A theme is untrusted data. The schema rejects this shape too; this proves the
+    # loader refuses it even so, rather than handing a file:// URI to WeasyPrint.
+    theme = config.load_theme(config.THEMES_DIR / "default")
+    escaping = config.ThemeManifest(
+        dir=theme.dir,
+        data={**theme.data, "stylesheets": {"print": ["../../../../etc/passwd"], "epub": []}},
+        raw=theme.raw,
+    )
+    with pytest.raises(config.ConfigError, match="leaves the theme directory"):
+        bh.require_stylesheets(escaping, "print")
+
+
+# ---- section_openers moved from the book contract to the theme's params ------
+def test_params_section_openers_drives_the_openers(tmp_path, monkeypatch, capsys):
+    book_path = _book_with_theme(tmp_path, monkeypatch)
+    book = yaml.safe_load(book_path.read_text(encoding="utf-8"))
+    book["params"] = {"section_openers": True}
+    book_path.write_text(yaml.safe_dump(book), encoding="utf-8")
+    assert bh.render(str(book_path)) == 0
+    assert 'class="sectioned"' in (tmp_path / "build" / "cookbook.html").read_text(encoding="utf-8")
+    assert "has moved" not in capsys.readouterr().err
+
+
+def test_the_superseded_top_level_section_openers_still_works_and_warns(tmp_path, monkeypatch, capsys):
+    # A layout knob belongs to whichever theme implements it. The old spelling never
+    # shipped in a release, only on `main`, so this is a courtesy to anyone tracking
+    # the branch rather than a compatibility promise.
+    book_path = _book_with_theme(tmp_path, monkeypatch)
+    book = yaml.safe_load(book_path.read_text(encoding="utf-8"))
+    book["section_openers"] = True
+    book_path.write_text(yaml.safe_dump(book), encoding="utf-8")
+    assert bh.render(str(book_path)) == 0
+    assert 'class="sectioned"' in (tmp_path / "build" / "cookbook.html").read_text(encoding="utf-8")
+    err = capsys.readouterr().err
+    assert "section_openers" in err and "has moved" in err
+
+
+def test_an_explicit_param_wins_over_the_superseded_key():
+    book = {"section_openers": True, "params": {"section_openers": False}}
+    bh.migrate_section_openers(book)
+    assert book["params"]["section_openers"] is False

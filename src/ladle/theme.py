@@ -30,12 +30,14 @@ from jinja2 import TemplateError
 
 from . import build_html, config, ui
 
-# Templates a theme must provide (the two renderers in build_html.render).
-REQUIRED_TEMPLATES = ("print.html.j2", "epub.html.j2")
+# Output targets a theme must declare a template for (the two renderers in
+# build_html.render), and the one it may omit. Which *file* serves each target is
+# the manifest's to say, so nothing here names a template.
+REQUIRED_TARGETS = (config.PRINT, config.EPUB)
 
-# Templates a theme may provide. Absent is a design choice, not a defect — but a
-# broken one still fails the gallery gate, because the build will render it.
-OPTIONAL_TEMPLATES = (build_html.LANDING_TEMPLATE,)
+# Absent is a design choice, not a defect — but a broken one still fails the
+# gallery gate, because the build will render whatever is there.
+OPTIONAL_TARGETS = (config.LANDING,)
 
 # Font licenses that permit embedding + redistribution in a distributed book.
 # Matched against a normalized (lowercased, alphanumeric-only) license string by
@@ -70,7 +72,7 @@ def _note(message: str) -> dict:
     return {"level": "note", "message": message}
 
 
-def check_manifest(theme_dir: Path) -> tuple[dict | None, list[dict]]:
+def check_manifest(theme_dir: Path) -> tuple[config.ThemeManifest | None, list[dict]]:
     """Load + schema-validate theme.yaml; return (manifest or None, results)."""
     manifest_path = theme_dir / "theme.yaml"
     if not manifest_path.exists():
@@ -79,44 +81,76 @@ def check_manifest(theme_dir: Path) -> tuple[dict | None, list[dict]]:
         manifest = config.load_theme(theme_dir)
     except config.ConfigError as e:
         return None, [_fail(str(e))]
-    return manifest, [_ok(f"theme.yaml valid (name: {manifest['name']})")]
+    return manifest, [_ok(f"theme.yaml valid (name: {manifest.name})")]
 
 
-def check_templates(theme_dir: Path) -> list[dict]:
-    """Every required template is present and loads in the sandboxed environment.
+def check_templates(manifest: config.ThemeManifest) -> list[dict]:
+    """Every declared template is present and loads in the sandboxed environment.
 
-    An optional template is checked the same way when the theme ships one, and
-    noted rather than failed when it does not.
+    Names come from the manifest, not from a constant here, so a theme that calls
+    its print template something else is checked against what it actually declared.
+    An optional target is noted rather than failed when the theme neither ships nor
+    declares one — but naming a landing template and not shipping it is a typo.
     """
-    templates_dir = theme_dir / "templates"
-    env = build_html.make_env(templates_dir)
+    env = build_html.make_env(manifest.templates_dir)
     results: list[dict] = []
-    for name in (*REQUIRED_TEMPLATES, *OPTIONAL_TEMPLATES):
-        if not (templates_dir / name).exists():
-            if name in OPTIONAL_TEMPLATES:
+    for target in (*REQUIRED_TARGETS, *OPTIONAL_TARGETS):
+        name = manifest.template(target)
+        if not name:
+            results.append(_fail(f"templates.{target} names no template"))
+            continue
+        if not manifest.template_path(target).exists():
+            if target in OPTIONAL_TARGETS and not manifest.declared(f"templates.{target}"):
                 results.append(_note(f"no templates/{name} — this theme publishes no landing page"))
             else:
-                results.append(_fail(f"missing template templates/{name}"))
+                results.append(_fail(f"templates.{target} names templates/{name}, which is not there"))
             continue
         try:
             env.get_template(name)  # parse + compile under the sandbox
         except TemplateError as e:
             results.append(_fail(f"templates/{name}: {e}"))
         else:
-            results.append(_ok(f"templates/{name} loads in the sandbox"))
+            results.append(_ok(f"templates/{name} loads in the sandbox ({target})"))
     return results
 
 
-def check_fonts(theme_dir: Path, manifest: dict) -> list[dict]:
-    """Each embedded family has a present file and a permissible, documented license."""
-    faces = manifest.get("font_faces") or []
+def check_stylesheets(manifest: config.ThemeManifest) -> list[dict]:
+    """Every stylesheet the manifest declares is present.
+
+    A missing one fails in the least visible way there is: WeasyPrint skips a
+    `file://` link that resolves to nothing, so the book simply prints unstyled.
+    """
+    results: list[dict] = []
+    for target in REQUIRED_TARGETS:
+        sheets = manifest.stylesheets(target)
+        if not sheets:
+            results.append(_note(f"stylesheets.{target} is empty — this theme loads no {target} CSS"))
+            continue
+        missing = [p for p in sheets if not p.exists()]
+        for path in missing:
+            results.append(_fail(f"stylesheets.{target} names {path.name}, which is not in {config.rel(manifest.dir)}"))
+        if not missing:
+            results.append(_ok(f"stylesheets.{target}: {', '.join(p.name for p in sheets)}"))
+    return results
+
+
+def check_fonts(manifest: config.ThemeManifest) -> list[dict]:
+    """Each embedded family has a present file and a permissible, documented license.
+
+    Also that every `fonts:` role names a family some face provides. A role
+    pointing at an unembedded family means the PDF sets in whatever the rendering
+    machine happens to have — invisible on the machine that built it, different on
+    the next one. A *book* overriding a role only warns (build_html), but a gallery
+    theme's own defaults are its author's to get right.
+    """
+    faces = manifest.font_faces
     if not faces:
         return [_note("no embedded fonts declared")]
-    meta = {m["family"]: m for m in (manifest.get("fonts_meta") or [])}
+    meta = {m["family"]: m for m in manifest.fonts_meta}
     results: list[dict] = []
     families: list[str] = []
     for face in faces:
-        if not (theme_dir / "fonts" / face["file"]).exists():
+        if not (manifest.fonts_dir / face["file"]).exists():
             results.append(_fail(f"font file fonts/{face['file']} not found (family {face['family']!r})"))
         if face["family"] not in families:
             families.append(face["family"])
@@ -128,6 +162,27 @@ def check_fonts(theme_dir: Path, manifest: dict) -> list[dict]:
             results.append(_ok(f"font {family!r} licensed {entry['license']}"))
         else:
             results.append(_fail(f"font {family!r} license {entry['license']!r} is not on the permissible allowlist"))
+    for role, family in sorted(manifest.fonts.items()):
+        if family and family not in families:
+            results.append(_fail(f"fonts.{role} is {family!r}, which no font_faces entry provides"))
+    return results
+
+
+def check_labels(manifest: config.ThemeManifest) -> list[dict]:
+    """Strings the theme's templates print without declaring them in the manifest.
+
+    A string ladle knows still renders from the core's fallback, so that is a note.
+    One neither side declares renders empty, which is a defect a reader would see.
+    """
+    undeclared = build_html.undeclared_labels(manifest)
+    if not undeclared:
+        return [_ok("every printed string the templates read is declared")]
+    results: list[dict] = []
+    for key in undeclared:
+        if key in build_html.THEME_LABELS:
+            results.append(_note(f"labels.{key} is printed but not declared — ladle's English default is used"))
+        else:
+            results.append(_fail(f"labels.{key} is printed but neither the theme nor ladle declares it"))
     return results
 
 
@@ -135,9 +190,13 @@ def lint(theme_dir: Path) -> list[dict]:
     """Run every theme check, returning the flat list of result records."""
     manifest, results = check_manifest(theme_dir)
     results = list(results)
-    results += check_templates(theme_dir)
-    if manifest is not None:
-        results += check_fonts(theme_dir, manifest)
+    # Keep reporting on a theme whose manifest would not load: the remaining checks
+    # then measure it against the defaults, which is what the build would use.
+    manifest = manifest or config.ThemeManifest.defaults(theme_dir)
+    results += check_templates(manifest)
+    results += check_stylesheets(manifest)
+    results += check_fonts(manifest)
+    results += check_labels(manifest)
     return results
 
 

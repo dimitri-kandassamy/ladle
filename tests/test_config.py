@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -10,27 +11,131 @@ from ladle import config
 from ladle.config import BookConfig
 
 
-def test_hex_to_rgb_with_hash():
-    assert config.hex_to_rgb("#16203a") == (22, 32, 58)
-
-
-def test_hex_to_rgb_without_hash():
-    assert config.hex_to_rgb("faefdb") == (250, 239, 219)
-
-
 def test_load_theme_missing_manifest_returns_defaults(tmp_path):
-    # A theme dir without a theme.yaml still yields the normalized shape.
+    # A theme dir without a theme.yaml still yields the normalized shape, and the
+    # defaults are what the core hardcoded before the manifest could declare them,
+    # so such a theme renders exactly as it did.
     theme = config.load_theme(tmp_path)
-    assert theme == {"name": "", "palette": {}, "fonts": {}, "font_faces": []}
+    assert theme.name == ""
+    assert theme.palette == {} and theme.fonts == {} and theme.font_faces == []
+    assert theme.params == {} and theme.labels == {}
+    assert theme.trim == ["6.75in", "9.5in"]
+    assert theme.template("print") == "print.html.j2"
+    assert theme.template("epub") == "epub.html.j2"
+    assert [p.name for p in theme.stylesheets("print")] == ["common.css", "print.css"]
+    assert [p.name for p in theme.stylesheets("epub")] == ["epub.css"]
 
 
 def test_load_theme_merges_manifest_over_defaults(tmp_path):
     (tmp_path / "theme.yaml").write_text("name: midnight\npalette:\n  navy: '#000'\n", encoding="utf-8")
     theme = config.load_theme(tmp_path)
-    assert theme["name"] == "midnight"
-    assert theme["palette"] == {"navy": "#000"}
+    assert theme.name == "midnight"
+    assert theme.palette == {"navy": "#000"}
     # keys absent from the manifest still fall back to the defaults
-    assert theme["font_faces"] == []
+    assert theme.font_faces == []
+
+
+def test_load_theme_partial_nested_namespace_keeps_its_siblings(tmp_path):
+    # The bug a shallow `{**defaults, **data}` merge would reintroduce: declaring
+    # one template used to drop the others, so the build died on a template
+    # nobody named. Every nested namespace fills per key.
+    (tmp_path / "theme.yaml").write_text("name: midnight\ntemplates: {print: fancy.html.j2}\n", encoding="utf-8")
+    theme = config.load_theme(tmp_path)
+    assert theme.template("print") == "fancy.html.j2"
+    assert theme.template("epub") == "epub.html.j2"
+    assert theme.template("landing") == "landing.html.j2"
+
+
+def test_load_theme_partial_stylesheets_keeps_the_other_target(tmp_path):
+    (tmp_path / "theme.yaml").write_text("name: midnight\nstylesheets: {print: [css/only.css]}\n", encoding="utf-8")
+    theme = config.load_theme(tmp_path)
+    assert [p.name for p in theme.stylesheets("print")] == ["only.css"]
+    assert [p.name for p in theme.stylesheets("epub")] == ["epub.css"]
+
+
+def test_load_theme_empty_stylesheet_list_is_honoured(tmp_path):
+    # A theme that inlines all its CSS declares none — an empty list has to mean
+    # "none", not "fall back to the defaults".
+    (tmp_path / "theme.yaml").write_text("name: midnight\nstylesheets: {print: []}\n", encoding="utf-8")
+    assert config.load_theme(tmp_path).stylesheets("print") == []
+
+
+def test_theme_declared_tells_a_declaration_from_a_default(tmp_path):
+    # What lets the build stay quiet about a theme that ships no landing page while
+    # still reporting one that names a landing template it does not have.
+    (tmp_path / "theme.yaml").write_text("name: midnight\ntemplates: {print: p.j2}\n", encoding="utf-8")
+    theme = config.load_theme(tmp_path)
+    assert theme.declared("templates.print")
+    assert not theme.declared("templates.landing")
+    assert not theme.declared("page.trim")
+
+
+# ---- a theme is untrusted data: manifest paths may not leave the theme dir --
+
+
+@pytest.mark.parametrize(
+    "relpath",
+    [
+        "/etc/passwd",  # absolute
+        "../../../etc/passwd",  # climbs out
+        "css/../../secrets.css",  # climbs out after descending
+        "~/secrets.css",  # home-relative
+        "",  # empty
+    ],
+)
+def test_theme_path_rejects_anything_outside_the_theme_dir(tmp_path, relpath):
+    theme = config.load_theme(tmp_path)
+    with pytest.raises(config.ConfigError, match="stylesheets.print"):
+        theme.path(relpath, key="stylesheets.print")
+
+
+def test_theme_path_rejects_a_symlink_pointing_out_of_the_theme(tmp_path):
+    # The check resolves, so a path that is innocent on its face but symlinked
+    # elsewhere is caught too.
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secrets.css").write_text("x", encoding="utf-8")
+    theme_dir = tmp_path / "theme"
+    (theme_dir / "css").mkdir(parents=True)
+    (theme_dir / "css" / "leak.css").symlink_to(outside / "secrets.css")
+    theme = config.load_theme(theme_dir)
+    with pytest.raises(config.ConfigError, match="resolves outside"):
+        theme.path("css/leak.css", key="stylesheets.print")
+
+
+def test_theme_path_accepts_an_ordinary_relative_path(tmp_path):
+    theme = config.load_theme(tmp_path)
+    assert theme.path("css/print.css") == tmp_path / "css" / "print.css"
+
+
+@pytest.mark.parametrize("bad", ["/etc/passwd", "../../secrets.css", "css/../../secrets.css"])
+def test_load_theme_refuses_an_escaping_path_at_load(tmp_path, bad):
+    # At load, not when some caller happens to reach that file: the EPUB
+    # stylesheets are read after the print HTML is already written, which is a
+    # confusing place to learn the manifest was never usable. The message names the
+    # manifest key rather than reporting a raw schema regex.
+    (tmp_path / "theme.yaml").write_text(f"name: mini\nstylesheets: {{epub: [{bad!r}]}}\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="stylesheets.epub"):
+        config.load_theme(tmp_path)
+
+
+def test_load_theme_refuses_an_escaping_template_path_at_load(tmp_path):
+    (tmp_path / "theme.yaml").write_text("name: mini\ntemplates: {print: '../../evil.j2'}\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="templates.print"):
+        config.load_theme(tmp_path)
+
+
+def test_an_escaping_path_error_is_readable(tmp_path):
+    # The rule lives in the loader rather than in a schema `pattern` precisely so
+    # the message can say this instead of dumping the regex at the author.
+    (tmp_path / "theme.yaml").write_text(
+        "name: mini\nstylesheets: {print: ['../../../etc/passwd']}\n", encoding="utf-8"
+    )
+    with pytest.raises(config.ConfigError) as excinfo:
+        config.load_theme(tmp_path)
+    message = str(excinfo.value)
+    assert "leaves the theme directory" in message
+    assert "^" not in message and "match" not in message
 
 
 # ---- theme.yaml schema validation ------------------------------------------
@@ -83,21 +188,58 @@ def test_load_theme_accepts_a_full_valid_manifest(tmp_path):
         "license: CC-BY-4.0\n"
         "tags: [warm, rustic, serif]\n"
         "preview: previews/cover.png\n"
+        'page: {trim: ["148mm", "210mm"]}\n'
+        "stylesheets: {print: [css/pocket.css], epub: [css/pocket.css]}\n"
+        "templates: {print: print.html.j2, epub: epub.html.j2}\n"
         'palette: {navy: "#16203a"}\n'
         "fonts: {display: Bitter}\n"
+        "labels: {contents: Sommaire, dedication: For Ma}\n"
+        "params: {column_ratio: 1.8, folio_position: footer}\n"
         "font_faces: [{family: Bitter, file: Bitter.ttf, style: normal}]\n"
         "fonts_meta: [{family: Bitter, license: OFL-1.1, source: https://example.com}]\n",
         encoding="utf-8",
     )
     theme = config.load_theme(tmp_path)
-    assert theme["name"] == "trattoria"
-    assert theme["tags"] == ["warm", "rustic", "serif"]
+    assert theme.name == "trattoria"
+    assert theme.data["tags"] == ["warm", "rustic", "serif"]
+    assert theme.trim == ["148mm", "210mm"]
+    assert theme.params == {"column_ratio": 1.8, "folio_position": "footer"}
+    # A string ladle has never heard of is a theme's to invent.
+    assert theme.labels["dedication"] == "For Ma"
 
 
 def test_default_theme_manifest_validates():
     # The shipped default theme must satisfy its own schema.
     theme = config.load_theme(config.THEMES_DIR / "default")
-    assert theme["name"] == "default"
+    assert theme.name == "default"
+
+
+def test_default_theme_declares_every_optional_namespace():
+    # The bundled theme is the reference implementation people copy, and it has to
+    # be reproducible from its manifest alone — so it declares what it uses rather
+    # than leaning on a core default.
+    theme = config.load_theme(config.THEMES_DIR / "default")
+    for dotted in ("page.trim", "stylesheets.print", "stylesheets.epub", "templates.print", "labels", "params"):
+        assert theme.declared(dotted), f"the bundled theme should declare {dotted}"
+
+
+def test_default_theme_declares_only_files_that_exist():
+    # Guards the reference implementation against drifting from its own manifest.
+    theme = config.load_theme(config.THEMES_DIR / "default")
+    for target in ("print", "epub"):
+        for sheet in theme.stylesheets(target):
+            assert sheet.exists(), f"stylesheets.{target} names a missing {sheet.name}"
+        assert theme.template_path(target).exists(), f"templates.{target} is missing"
+    for face in theme.font_faces:
+        assert (theme.fonts_dir / face["file"]).exists(), f"font file {face['file']} is missing"
+
+
+def test_default_theme_trim_agrees_with_its_print_css():
+    # The one fact declared twice: the manifest says it and `@page { size }` paints
+    # it. `validate` catches drift in the built PDF; this catches it at the source.
+    theme = config.load_theme(config.THEMES_DIR / "default")
+    css = (theme.dir / "css" / "print.css").read_text(encoding="utf-8")
+    assert f"size: {theme.trim[0]} {theme.trim[1]};" in css
 
 
 def _book(data: dict, path: str = "/tmp/demo/book.yaml") -> BookConfig:
@@ -333,9 +475,56 @@ def test_load_book_config_accepts_a_full_valid_book(tmp_path):
     assert cfg.data["title"] == "Demo"
 
 
-def test_load_book_config_unknown_label_key_raises_config_error(tmp_path):
-    # The strictness extends into the labels block (typo'd sub-key is caught).
+def test_load_book_config_accepts_a_label_key_the_core_never_heard_of(tmp_path):
+    # `labels` is deliberately open now: the keys belong to the active theme, so a
+    # theme that prints a dedication page can be translated by its book. The typo
+    # protection a closed enum gave moves to a build-time warning naming the key —
+    # see test_build_html's undeclared-label tests.
     book = tmp_path / "book.yaml"
-    book.write_text("title: Demo\nlabels:\n  ingrediants: X\n", encoding="utf-8")
-    with pytest.raises(config.ConfigError, match="labels: .*ingrediants"):
+    book.write_text("title: Demo\nlabels:\n  dedication: For Ma\n", encoding="utf-8")
+    assert config.load_book_config(str(book)).data["labels"] == {"dedication": "For Ma"}
+
+
+def test_load_book_config_rejects_a_label_that_is_not_a_string(tmp_path):
+    # Open on keys, not on shape: a label is a string, or the nested section_names
+    # mapping. A list is a mistake worth catching at load.
+    book = tmp_path / "book.yaml"
+    book.write_text("title: Demo\nlabels:\n  contents: [a, b]\n", encoding="utf-8")
+    with pytest.raises(config.ConfigError, match="labels/contents"):
         config.load_book_config(str(book))
+
+
+def test_load_book_config_accepts_free_form_params(tmp_path):
+    # The theme owns the vocabulary, so the core cannot type-check these keys; an
+    # undeclared one is warned about at build time instead.
+    book = tmp_path / "book.yaml"
+    book.write_text("title: Demo\nparams:\n  column_ratio: 2.4\n  section_openers: true\n", encoding="utf-8")
+    assert config.load_book_config(str(book)).data["params"]["column_ratio"] == 2.4
+
+
+# ---- the precedence contract is one table, not two ---------------------------
+def test_the_theming_docs_precedence_table_matches_the_code():
+    # The claim in docs/THEMING.md is that its table and the two namespace tuples
+    # are the same contract. When it lived only in prose, the merge and the docs
+    # drifted and a documented palette override stopped reaching the PDF.
+    doc_path = config.PACKAGE_ROOT.parent.parent / "docs" / "THEMING.md"
+    if not doc_path.exists():
+        pytest.skip("docs/ is not shipped in the installed package")
+    rows = re.findall(r"^\| `([a-z_]+)(?:\.\*)?` \| (yes) \| (\*\*no\*\*|per key) \|", doc_path.read_text(), re.M)
+    assert rows, "the precedence table in docs/THEMING.md was not found"
+    overridable = tuple(name for name, _, book in rows if book == "per key")
+    theme_owned = tuple(name for name, _, book in rows if book == "**no**")
+    assert overridable == config.OVERRIDABLE_NAMESPACES
+    assert theme_owned == config.THEME_OWNED_NAMESPACES
+
+
+def test_every_namespace_in_the_contract_is_a_real_manifest_key():
+    # Neither tuple may name a namespace the manifest does not normalize, or the
+    # merge would read an attribute that is not there.
+    theme = config.load_theme(config.THEMES_DIR / "default")
+    for ns in (*config.OVERRIDABLE_NAMESPACES, *config.THEME_OWNED_NAMESPACES):
+        assert ns in theme.data, f"{ns} is in the precedence contract but not in the manifest"
+
+
+def test_the_two_namespace_groups_do_not_overlap():
+    assert set(config.OVERRIDABLE_NAMESPACES) & set(config.THEME_OWNED_NAMESPACES) == set()

@@ -207,7 +207,7 @@ def _pdfinfo(pdf: Path) -> dict[str, str]:
     return {k.strip(): v.strip() for k, _, v in fields if k.strip()}
 
 
-def validate_pdf(recipes_dir: Path, book: dict | None = None) -> None:
+def validate_pdf(recipes_dir: Path, book_cfg: config.BookConfig | None = None) -> None:
     section("PDF structure")
     pdf = BUILD / "cookbook.pdf"
     if not pdf.exists():
@@ -226,12 +226,16 @@ def validate_pdf(recipes_dir: Path, book: dict | None = None) -> None:
     # the bundled theme lays them out.
     spreads = sum(1 for p in live if _has_opener(p))
     expected = 7 + 2 * spreads + (len(live) - spreads)
-    if (book or {}).get("section_openers"):
+    from . import build_html
+
+    # Ask the build what this book's knobs resolve to rather than reading the raw
+    # book.yaml: a theme declares the default and the book may override it under
+    # `params:`, so the top-level key alone stopped being the whole answer.
+    openers = book_cfg and build_html.resolved_params(book_cfg.data, book_cfg.load_theme()).get("section_openers")
+    if openers:
         # One opener per distinct category, counting an unusable one the way the
         # build files it, so the two do not disagree about how many sections a
         # book has (see build_html.FALLBACK_CATEGORY).
-        from . import build_html
-
         expected += len({front_matter(p).get("category") or build_html.FALLBACK_CATEGORY for p in live})
     if pages == expected:
         ok(f"page count = {pages} ({len(live)} recipes, {spreads} on two pages)")
@@ -464,7 +468,7 @@ def main(argv: list[str] | None = None) -> int:
     failures.clear()  # re-entrant: don't carry results across calls in one process
     validate_recipes(book_cfg.recipes_dir)
     validate_bodies(book_cfg.recipes_dir, strict=args.strict)
-    validate_pdf(book_cfg.recipes_dir, book_cfg.data)
+    validate_pdf(book_cfg.recipes_dir, book_cfg)
     validate_epub()
     contact_sheet()
     section("Summary")

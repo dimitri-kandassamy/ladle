@@ -90,9 +90,10 @@ OPTIONAL_KEYS = """
 # theme: default                    # a theme name (yours in ./themes/ wins), or a path like ./mytheme
 # sections: [Savory, Desserts, Beverages]   # Contents order; recipes group by their `category`
 # order: []                         # explicit recipe order by slug; empty = by section, then title
-# section_openers: false            # a full-page divider before each section — worth it in a long book
 # palette: {{navy: "#16203a", cream: "#faefdb"}}   # override colors — token names are the theme's own
 # fonts: {{display: Playfair Display, body: Bitter}}
+# params: {{section_openers: true}} # override a knob the theme declares (see its theme.yaml)
+# labels: {{contents: Sommaire}}    # override any string the theme or ladle prints
 """
 
 

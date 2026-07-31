@@ -5,9 +5,14 @@
 # selects a theme with `theme: <name>` in its book.yaml (a bare name resolves
 # to a theme shipped in the package; a path resolves relative to the book).
 #
-# The palette and fonts below are DEFAULTS: a book.yaml may override any token,
-# so a minimal book (just a title + language) still renders with this look.
-# See docs/THEMING.md to author your own theme.
+# The palette, fonts, labels and params below are DEFAULTS: a book.yaml may
+# override any of them per key, so a minimal book (just a title + language) still
+# renders with this look. `page`, `stylesheets` and `templates` are theme-owned —
+# a book changes those by supplying a file, not a value.
+#
+# Every optional key is declared explicitly here, because this theme is the
+# reference implementation people copy, and because a bundled theme has to be
+# reproducible from its manifest alone. See docs/THEMING.md to author your own.
 
 name: default
 title: Default
@@ -17,6 +22,30 @@ license: Apache-2.0       # license for this theme's design assets (fonts carry 
 author:
   name: Dimitri Kandassamy
 tags: [editorial, serif, classic, cream, warm]
+
+# ---- theme-owned: declared here, not overridable from a book.yaml ----------
+
+# The physical book. `ladle validate` checks the built PDF against this rather
+# than against a constant, so a theme that prints another size is not reported as
+# broken. Must agree with what css/print.css sets in `@page { size }`.
+page:
+  trim: ["6.75in", "9.5in"]
+
+# What to load, in cascade order. Paths are relative to this directory and may
+# not leave it. The design tokens are injected *after* these links so a book's
+# overrides win — see the comment at the top of css/print.css.
+stylesheets:
+  print: [css/common.css, css/print.css]
+  epub: [css/epub.css]
+
+# Which template renders which output. Names are relative to templates/.
+# `landing` is optional: a theme that ships none produces no landing page.
+templates:
+  print: print.html.j2
+  epub: epub.html.j2
+  landing: landing.html.j2
+
+# ---- theme defaults, overridable per key from a book.yaml ------------------
 
 # Default design tokens (book.yaml overrides these per key).
 palette:
@@ -29,6 +58,28 @@ palette:
 fonts:
   display: "Playfair Display"   # headings
   body: "Bitter"                # body text
+
+# Strings this theme prints. ladle keeps English fallbacks for the strings it
+# knows, so omitting one is a warning rather than a blank heading — but these
+# words exist because *this* theme prints these pages, so they are declared here.
+# `ingredients`, `directions`, `notes` and `no_method` are deliberately absent:
+# they name recipe sections ladle itself parses, so ladle owns those.
+labels:
+  contents: Contents
+  from: From
+  volume: Volume
+  produced_by: Edited & produced by
+  recipe_by: Recipe by
+  recipe_from: Recipe from
+  yields: Yields
+
+# Layout knobs a book.yaml may override. A full-page section divider earns its
+# sheet in a long book and crowds a short one, and only the author knows which
+# they are writing — so it is off here and switched on per book.
+params:
+  section_openers: false
+
+# ---- this bundle's own files ------------------------------------------------
 
 # Font files embedded in the PDF (@font-face) and EPUB. Each entry names the
 # CSS family, the file under this theme's fonts/ dir, and the style. A theme

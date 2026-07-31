@@ -22,8 +22,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from dataclasses import dataclass
-from pathlib import Path
+from dataclasses import dataclass, field
+from pathlib import Path, PurePosixPath
 
 import jsonschema
 import yaml
@@ -84,24 +84,222 @@ class ThemeNotFoundError(ConfigError):
     """
 
 
+# ---- the theme manifest ----------------------------------------------------
+# Which manifest namespaces a book.yaml may override key by key, and which belong
+# to the theme alone. This pair is the precedence contract in one place: the merge
+# in build_html loops the first, `theme lint` and `validate` read the second, and
+# docs/THEMING.md's table is asserted against both. It used to live only in prose
+# and in the shape of build_html.render, which is how a documented per-key palette
+# override came to silently not reach the PDF.
+OVERRIDABLE_NAMESPACES = ("palette", "fonts", "params", "labels")
+THEME_OWNED_NAMESPACES = ("page", "stylesheets", "templates")
+
+# The output targets a theme declares a template (and stylesheets) for. `landing`
+# is optional; see :meth:`ThemeManifest.template`.
+PRINT, EPUB, LANDING = "print", "epub", "landing"
+
 # Shape a theme.yaml is normalized to, so callers can rely on the keys existing.
-_THEME_DEFAULTS: dict = {"name": "", "palette": {}, "fonts": {}, "font_faces": []}
+# Every default is the value the core hardcoded *before* the manifest could
+# declare it, so a theme predating these keys renders exactly as it did.
+_THEME_DEFAULTS: dict = {
+    "name": "",
+    "page": {"trim": ["6.75in", "9.5in"]},
+    "stylesheets": {PRINT: ["css/common.css", "css/print.css"], EPUB: ["css/epub.css"]},
+    "templates": {PRINT: "print.html.j2", EPUB: "epub.html.j2", LANDING: "landing.html.j2"},
+    "palette": {},
+    "fonts": {},
+    "params": {},
+    "labels": {},
+    "font_faces": [],
+    "fonts_meta": [],
+}
 
 
-def load_theme(theme_dir: Path) -> dict:
-    """Load a theme's `theme.yaml` manifest (palette/fonts/font_faces defaults).
+def _normalize_theme(data: dict) -> dict:
+    """*data* with every defaulted key present, filled one nested key at a time.
 
-    A theme without a manifest still works — it just contributes no token
-    defaults, so its book.yaml must supply palette/fonts itself.
+    Per key, not per namespace. ``{**_THEME_DEFAULTS, **data}`` is shallow, which
+    was harmless only while every default was empty: the moment ``templates`` has
+    real defaults, a theme declaring one sub-key — ``templates: {print: mine.j2}``
+    — would lose the epub and landing defaults and fail the build on a template
+    nobody named.
+    """
+    out = dict(data)
+    for key, default in _THEME_DEFAULTS.items():
+        value = data.get(key)
+        if isinstance(default, dict):
+            out[key] = {**default, **(value or {})}
+        else:
+            out[key] = default if value is None else value
+    return out
+
+
+@dataclass(frozen=True)
+class ThemeManifest:
+    """A theme's `theme.yaml`, normalized, together with the directory it came from.
+
+    The manifest and its directory travel together because every path the manifest
+    names resolves against that directory — and because the alternative is what
+    this replaces: ``theme / "css" / "epub.css"`` and its siblings hardcoded at
+    each call site, which is exactly the layout assumption the manifest exists to
+    remove. It also leaves one seam for a future override resolver to hook, rather
+    than one per caller (see :meth:`path`).
+    """
+
+    dir: Path
+    data: dict = field(default_factory=dict)  # normalized: every defaulted key present
+    raw: dict = field(default_factory=dict)  # as written, so `declared` can spot a default
+
+    @classmethod
+    def defaults(cls, theme_dir: Path) -> ThemeManifest:
+        """The manifest a theme with no readable theme.yaml gets: the core defaults.
+
+        What the build falls back to, and what lets `theme lint` keep reporting on
+        a theme whose manifest it could not load.
+        """
+        return cls(dir=theme_dir, data=_normalize_theme({}), raw={})
+
+    # ---- identity + token namespaces ----
+    @property
+    def name(self) -> str:
+        return str(self.data.get("name") or "")
+
+    @property
+    def title(self) -> str:
+        return str(self.data.get("title") or self.name)
+
+    @property
+    def palette(self) -> dict:
+        return self.data["palette"]
+
+    @property
+    def fonts(self) -> dict:
+        return self.data["fonts"]
+
+    @property
+    def params(self) -> dict:
+        return self.data["params"]
+
+    @property
+    def labels(self) -> dict:
+        return self.data["labels"]
+
+    @property
+    def font_faces(self) -> list[dict]:
+        return self.data["font_faces"]
+
+    @property
+    def fonts_meta(self) -> list[dict]:
+        return self.data["fonts_meta"]
+
+    @property
+    def trim(self) -> list[str]:
+        """Declared trim as ``[width, height]`` CSS lengths (see `page.trim`)."""
+        return list(self.data["page"].get("trim") or [])
+
+    @property
+    def manifest_path(self) -> Path:
+        return self.dir / "theme.yaml"
+
+    @property
+    def templates_dir(self) -> Path:
+        return self.dir / "templates"
+
+    @property
+    def fonts_dir(self) -> Path:
+        return self.dir / "fonts"
+
+    # ---- paths the manifest names ----
+    def declared(self, dotted: str) -> bool:
+        """Was *dotted* actually written in theme.yaml, or is it a core default?
+
+        Tells "this theme ships no landing page", which is a design choice, apart
+        from "this theme names a landing template that is not there", a typo.
+        """
+        node: object = self.raw
+        for part in dotted.split("."):
+            if not isinstance(node, dict) or part not in node:
+                return False
+            node = node[part]
+        return node is not None
+
+    def path(self, relpath: str, *, key: str = "") -> Path:
+        """A theme-relative path, guaranteed to stay inside the theme directory.
+
+        A theme is untrusted *data*, never code (see ``build_html.make_env``).
+        While the core hardcoded which files it loaded, a manifest had nothing to
+        escape with; now that a theme names its own stylesheets,
+        ``../../../etc/passwd`` would otherwise reach WeasyPrint as a `file://`
+        URI. *key* names the manifest key at fault, since the path itself is
+        rarely enough to find it.
+        """
+        where = f"{key}: " if key else ""
+        text = (relpath or "").strip()
+        if not text:
+            raise ConfigError(f"{rel(self.manifest_path)}: {where}names an empty path")
+        pure = PurePosixPath(text)
+        if pure.is_absolute() or text.startswith("~") or "\\" in text or ":" in text:
+            raise ConfigError(
+                f"{rel(self.manifest_path)}: {where}{text!r} must be a relative path inside the theme directory"
+            )
+        if ".." in pure.parts:
+            raise ConfigError(f"{rel(self.manifest_path)}: {where}{text!r} leaves the theme directory")
+        # Resolved, so a symlink pointing out of the theme is caught too.
+        base = self.dir.resolve()
+        if not (base / pure).resolve().is_relative_to(base):
+            raise ConfigError(f"{rel(self.manifest_path)}: {where}{text!r} resolves outside the theme directory")
+        return self.dir / pure
+
+    def stylesheets(self, target: str) -> list[Path]:
+        """Stylesheets this theme loads for *target*, in declared cascade order."""
+        declared = self.data["stylesheets"].get(target) or []
+        return [self.path(p, key=f"stylesheets.{target}") for p in declared]
+
+    def template(self, target: str) -> str:
+        """Template name rendering *target*, relative to the theme's `templates/`.
+
+        Relative to the Jinja loader's root rather than to the theme directory, so
+        a name here reads the same way a ``{% extends %}`` inside a template does.
+        """
+        return str(self.data["templates"].get(target) or "")
+
+    def template_path(self, target: str) -> Path:
+        """Where :meth:`template`'s file lives on disk (existence not implied)."""
+        return self.path(f"templates/{self.template(target)}", key=f"templates.{target}")
+
+    def check_paths(self) -> None:
+        """Resolve every path the manifest names, so a bad one fails at load.
+
+        Called once when the manifest loads. Without it an escaping path is refused
+        only when whichever caller needs that particular file reaches it — and for
+        the EPUB stylesheets that is after the print HTML has already been written,
+        which is a confusing place to learn the manifest was never usable.
+        """
+        for target in (PRINT, EPUB):
+            self.stylesheets(target)
+            self.template_path(target)
+        if self.template(LANDING):
+            self.template_path(LANDING)
+
+
+def load_theme(theme_dir: Path) -> ThemeManifest:
+    """Load a theme's `theme.yaml` manifest.
+
+    A theme without a manifest still works: every key falls back to the value the
+    core hardcoded before the manifest could declare it, so a manifest-less
+    directory and a theme written against the older contract both render as before.
     """
     manifest = theme_dir / "theme.yaml"
-    data = {}
+    data: dict = {}
     if manifest.exists():
-        data = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
-        if not isinstance(data, dict):
-            raise ConfigError(f"{rel(manifest)} must be a mapping of theme settings, not a {type(data).__name__}")
-        validate_theme_data(data, manifest)
-    return {**_THEME_DEFAULTS, **data}
+        loaded = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
+        if not isinstance(loaded, dict):
+            raise ConfigError(f"{rel(manifest)} must be a mapping of theme settings, not a {type(loaded).__name__}")
+        validate_theme_data(loaded, manifest)
+        data = loaded
+    loaded_manifest = ThemeManifest(dir=theme_dir, data=_normalize_theme(data), raw=data)
+    loaded_manifest.check_paths()
+    return loaded_manifest
 
 
 def _is_path_reference(ref: str) -> bool:
@@ -176,11 +374,6 @@ def is_bundled_theme(theme_dir: Path) -> bool:
     return theme_dir.resolve().is_relative_to(THEMES_DIR.resolve())
 
 
-def hex_to_rgb(value: str) -> tuple[int, int, int]:
-    h = value.lstrip("#")
-    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
-
-
 @dataclass
 class BookConfig:
     path: Path
@@ -225,7 +418,7 @@ class BookConfig:
     def theme_path(self, *parts: str) -> Path:
         return self.theme_dir.joinpath(*parts)
 
-    def load_theme(self) -> dict:
+    def load_theme(self) -> ThemeManifest:
         """This book's theme manifest (see :func:`load_theme`)."""
         return load_theme(self.theme_dir)
 
