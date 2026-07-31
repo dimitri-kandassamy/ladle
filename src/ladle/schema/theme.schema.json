@@ -6,6 +6,13 @@
   "type": "object",
   "required": ["name"],
   "additionalProperties": false,
+  "$defs": {
+    "themePath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A path relative to this theme directory, using forward slashes. A theme is untrusted data, so absolute paths and any path escaping the theme directory are refused at load — by the loader rather than by a schema `pattern`, which could only report the violation as a raw regex."
+    }
+  },
   "properties": {
     "name": {
       "type": "string",
@@ -47,10 +54,71 @@
       "type": "string",
       "description": "Path (relative to this theme dir) to a generated preview image used by the gallery."
     },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The physical book. Theme-owned: a book.yaml may not override it. `validate` checks the built PDF against this instead of against a constant, so a theme that prints another size is no longer reported as broken.",
+      "properties": {
+        "trim": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?(in|mm|cm|pt|pc|px|q)$" },
+          "description": "Trim size as [width, height] CSS lengths, e.g. ['6.75in', '9.5in']. Must agree with what the theme's own `@page { size }` sets."
+        }
+      }
+    },
+    "stylesheets": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Stylesheets to load per output target, in cascade order. Paths are relative to this theme directory and may not escape it. Theme-owned: a book overrides a stylesheet by file, not by value.",
+      "properties": {
+        "print": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/themePath" },
+          "description": "Stylesheets linked into the print HTML (the PDF). Later entries win, and the design tokens are injected after all of them."
+        },
+        "epub": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/themePath" },
+          "description": "Stylesheets passed to pandoc for the EPUB."
+        }
+      }
+    },
+    "templates": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Which template renders which output target. Names are relative to this theme's templates/ directory, so they read the same way a {% extends %} inside a template does.",
+      "properties": {
+        "print": { "$ref": "#/$defs/themePath", "description": "Template rendering the print HTML (the PDF)." },
+        "epub": { "$ref": "#/$defs/themePath", "description": "Template rendering the EPUB HTML." },
+        "landing": {
+          "$ref": "#/$defs/themePath",
+          "description": "Optional download page for the built book. A theme that ships no landing template simply produces no landing page."
+        }
+      }
+    },
     "palette": {
       "type": "object",
       "additionalProperties": { "type": "string" },
       "description": "Default design-token colours (name -> hex); a book.yaml overrides any key."
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": { "type": ["string", "object"] },
+      "description": "Printed strings this theme uses, and their defaults. Keys are the theme's own — a theme that prints a dedication page declares the word here. ladle keeps English fallbacks for the strings it knows about, and warns when a theme prints one it never declared. A book.yaml overrides any key.",
+      "properties": {
+        "section_names": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Per-section display names (category -> shown name)."
+        }
+      }
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Layout knobs this theme exposes, with their defaults. Free-form: the theme owns the vocabulary, and a book.yaml overrides any key it declares. Every theme knob belongs here rather than as a new top-level book.yaml field."
     },
     "fonts": {
       "type": "object",
