@@ -70,7 +70,13 @@
     "section_openers": {
       "type": "boolean",
       "default": false,
-      "description": "Print a full-page divider before each section. Worth a sheet each in a long book; off by default, since in a short one the dividers outnumber the recipes."
+      "deprecated": true,
+      "description": "Superseded by `params: {section_openers: true}` — a full-page section divider is the theme's layout decision, so it belongs with the theme's other knobs. Read here for anyone who wrote it while it was briefly a top-level key; it warns and an explicit `params:` entry wins."
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Overrides for the layout knobs the active theme declares in its `params:` block. Free-form, because the vocabulary is the theme's; a key the theme never declared is warned about at build time."
     },
     "palette": {
       "type": "object",
@@ -84,20 +90,9 @@
     },
     "labels": {
       "type": "object",
-      "additionalProperties": false,
-      "description": "Optional chrome-string overrides for a non-English edition; any key omitted falls back to the English default.",
+      "additionalProperties": { "type": ["string", "object"] },
+      "description": "Printed-string overrides, for a non-English edition or a change of wording. Keys are defined by the active theme, which is why this is open rather than a fixed list — a theme that prints a dedication page declares `dedication`, and only this book can translate it. ladle supplies English defaults for the strings it knows about, and warns at build time about a key neither it nor the theme declares.",
       "properties": {
-        "ingredients": { "type": "string" },
-        "directions": { "type": "string" },
-        "notes": { "type": "string" },
-        "yields": { "type": "string" },
-        "recipe_by": { "type": "string" },
-        "recipe_from": { "type": "string" },
-        "contents": { "type": "string" },
-        "from": { "type": "string" },
-        "volume": { "type": "string" },
-        "produced_by": { "type": "string" },
-        "no_method": { "type": "string" },
         "section_names": {
           "type": "object",
           "additionalProperties": { "type": "string" },

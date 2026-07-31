@@ -27,7 +27,7 @@
 {# `sectioned` lets print.css nest each recipe under its section in the PDF
    outline. It has to key off the same flag as the openers: with no opener to sit
    under, a demoted recipe would nest beneath the introduction instead. #}
-<body{% if book.section_openers %} class="sectioned"{% endif %}>
+<body{% if book.params.section_openers %} class="sectioned"{% endif %}>
 
 {# ---------- macros ---------- #}
 {# The folio prints `counter(page)` (see print.css) rather than a number baked in
@@ -232,9 +232,9 @@
 </section>
 
 {# A full-bleed divider before the first recipe of each section, echoing the
-   cover and endpapers. Opt-in (`section_openers: true`): a sheet per section is
-   worth spending in a long book and crowds a short one, where the dividers can
-   outnumber the recipes.
+   cover and endpapers. Opt-in (`params: {section_openers: true}` in book.yaml,
+   defaulted by this theme's manifest): a sheet per section is worth spending in a
+   long book and crowds a short one, where the dividers can outnumber the recipes.
 
    `recipes` is already ordered so each section is contiguous, so emitting one
    whenever the category changes puts exactly one before each group — no
@@ -257,7 +257,7 @@
    spreads and a plain one stops paying a blank sheet per recipe. #}
 {% set ns = namespace(section=None) %}
 {% for r in recipes %}
-{%- if book.section_openers and r.category != ns.section %}{% set ns.section = r.category %}
+{%- if book.params.section_openers and r.category != ns.section %}{% set ns.section = r.category %}
 {{ section_opener(book.labels.section_names.get(r.category, r.category)) }}
 {%- endif %}
 {% if r.has_story %}{{ story_page(r) }}{{ method(r) }}
