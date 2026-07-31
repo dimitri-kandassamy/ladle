@@ -61,10 +61,11 @@ The manifest is validated on load against `schema/theme.schema.json`
 entry fails with a clear error instead of being silently dropped. **`name` is
 the only required field;** everything else is optional.
 
-The metadata fields below (`version`, `ladle`, `author`, `license`, `tags`,
-`preview`, `fonts_meta`) are validated for shape but **not yet consumed** — they
-declare a theme's provenance for forthcoming tooling (a gallery, compatibility
-checks, a linter). In particular `ladle:` does *not* yet gate on core version.
+`fonts_meta` is consumed by `ladle theme lint`, which gates the gallery on every
+embedded family carrying a redistribution-friendly licence. The other metadata
+fields (`version`, `ladle`, `author`, `license`, `tags`, `preview`) are validated
+for shape but **not yet consumed** — they declare a theme's provenance for
+forthcoming tooling. In particular `ladle:` does *not* yet gate on core version.
 
 ```yaml
 name: mytheme                   # required — the theme's identifier
@@ -79,6 +80,30 @@ license: CC-BY-4.0              # license for the theme's design assets
 tags: [warm, rustic, serif]     # mood/style tags for gallery filtering
 preview: previews/cover.png     # generated preview image (path in this theme dir)
 
+# ---- theme-owned: a book changes these by supplying a file, not a value ----
+
+# The physical book. `ladle validate` checks the built PDF against this rather
+# than against a constant, so a theme that prints A5 is not reported as broken.
+# Must agree with what your print CSS sets in `@page { size }`.
+page:
+  trim: ["6.75in", "9.5in"]     # [width, height] as CSS lengths
+
+# What to load, per output target, in cascade order. Paths are relative to this
+# theme directory and may not leave it (see "Manifest paths" below).
+stylesheets:
+  print: [css/common.css, css/print.css]
+  epub: [css/epub.css]
+
+# Which template renders which output. Names are relative to templates/, so they
+# read the same way an `{% extends %}` inside a template does. `landing` is
+# optional — a theme that ships none simply produces no landing page.
+templates:
+  print: print.html.j2
+  epub: epub.html.j2
+  landing: landing.html.j2
+
+# ---- theme defaults, overridable per key from a book.yaml ------------------
+
 # Default design tokens. A book.yaml overrides any key, so these are the
 # fallback a minimal book (just a title) renders with.
 palette:
@@ -91,6 +116,24 @@ palette:
 fonts:
   display: "Playfair Display"   # headings
   body: "Bitter"                # body text
+
+# Strings this theme prints. ladle keeps English fallbacks for the strings it
+# knows, so omitting one warns rather than printing a blank heading — but these
+# words exist because *this* theme prints these pages, so declare them here.
+# `ingredients`/`directions`/`notes`/`no_method` are ladle's own: they name
+# recipe sections ladle parses, and a theme never declares them.
+labels:
+  contents: Contents
+  produced_by: Edited & produced by
+  dedication: Dedication        # a string only your theme prints — invent freely
+
+# Layout knobs a book.yaml may override. Free-form: the vocabulary is yours.
+# Every knob belongs here rather than as a new top-level book.yaml field.
+params:
+  section_openers: false
+  column_ratio: 1.8
+
+# ---- this bundle's own files -----------------------------------------------
 
 # Fonts embedded in the PDF (@font-face) and EPUB. family = CSS name,
 # file = a file under this theme's fonts/, style = normal | italic.
@@ -106,11 +149,53 @@ fonts_meta:
   - { family: "Bitter", license: "OFL-1.1", source: "https://fonts.google.com/specimen/Bitter" }
 ```
 
-### Token precedence
+### Precedence
 
-`theme.yaml` tokens are **defaults**; a book's `book.yaml` overrides them per
-key. So one theme can back many books that differ only in palette — e.g. a
-book overriding `palette.navy` while keeping everything else.
+Four namespaces are **defaults a book overrides per key**; three belong to the
+theme alone. The split is `OVERRIDABLE_NAMESPACES` / `THEME_OWNED_NAMESPACES` in
+`config.py` — one table, read by the merge and asserted against this one, because
+when it lived only in prose a documented palette override silently stopped
+reaching the PDF.
+
+| Namespace | Theme declares | Book overrides | Notes |
+| --- | --- | --- | --- |
+| `palette.*` | yes | per key | colour tokens; values are strings |
+| `fonts.*` | yes | per key | role → family; warns if no `font_faces` entry provides it |
+| `params.*` | yes | per key | free-form; the theme owns the vocabulary |
+| `labels.*` | yes | per key | ladle keeps English fallbacks for the strings it knows |
+| `page.*` | yes | **no** | trim is theme-owned |
+| `stylesheets` | yes | **no** | overridden by file, not by value |
+| `templates` | yes | **no** | overridden by file, not by value |
+
+So one theme can back many books that differ only in palette — e.g. a book
+overriding `palette.navy` while keeping everything else:
+
+```yaml
+# book.yaml
+palette: { navy: "#1a2a1a" }        # per-key override of a theme default
+params: { column_ratio: 2.4 }       # one line, no fork
+labels: { dedication: For Ma }      # translating a string the theme invented
+```
+
+An override for a key the theme never declared is a **warning, not an error** —
+a typo should be visible without stopping a build you can see is otherwise
+fine. Same for an override whose type contradicts the theme's default
+(`column_ratio: "wide"` over `1.8`). This is Zola's rule for `[extra]`, and it
+buys back the checking lost by letting a book set free-form keys.
+
+### Manifest paths
+
+Every path in `stylesheets` and `templates` is relative to the theme directory,
+uses forward slashes, and **may not leave it** — absolute paths, `..` segments
+and symlinks pointing outside are refused when the manifest loads, naming the key
+at fault. A theme is untrusted *data* (the reason templates render in a Jinja
+sandbox), and before the manifest named its own files there was nothing for it to
+escape with.
+
+A declared file that does not exist fails the build with the manifest key that
+asked for it, rather than becoming a `file://` link to nothing — which WeasyPrint
+skips without complaint, so the only symptom would be a book that prints
+unstyled. `ladle theme lint` reports the same thing.
 
 The templates expose tokens as CSS variables (`--navy`, `--cream`, `--ink`,
 `--ink-deep`, `--rule`, `--display`, `--body`), so most restyling is CSS + token

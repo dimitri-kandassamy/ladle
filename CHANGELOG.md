@@ -38,14 +38,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A theme declares its stylesheets, its templates and its trim.** `theme.yaml`
+  gains `page.trim`, `stylesheets` (`print`/`epub` lists, in cascade order) and
+  `templates` (`print`/`epub`/`landing`). The core used to know that the bundled
+  theme printed at 6.75 × 9.5 inches from two named stylesheets — so a theme could
+  not rename a file, add a stylesheet, or print another size. Every new key
+  defaults to the value the core hardcoded, so an existing theme is unaffected.
+
+  Paths are relative to the theme directory and may not leave it: a theme is
+  untrusted data, and absolute paths, `..` segments and symlinks pointing outside
+  are refused when the manifest loads, naming the key at fault. A declared file
+  that does not exist now fails the build with that key, instead of becoming a
+  `file://` link to nothing that WeasyPrint skips in silence.
+
+- **A theme can expose layout knobs: `params`.** A theme declares defaults, a book
+  overrides them per key, and templates read `book.params.*`. Overriding a key the
+  theme never declared warns rather than failing (Zola's `[extra]` rule), as does
+  an override whose type contradicts the default. `palette`, `fonts` and `params`
+  now go through one merge, so they cannot drift in how they layer.
+
+- **A theme can name the strings it prints: `labels`.** `theme.yaml` gains a
+  `labels` block, and `book.yaml`'s `labels` is no longer a fixed list — so a theme
+  that prints a dedication page can declare the word and a book can translate it.
+  ladle keeps English fallbacks for the strings it knows and warns when a theme
+  prints one it never declared; the four tied to recipe sections ladle parses
+  (`ingredients`, `directions`, `notes`, `no_method`) stay ladle's own.
+
+- **`ladle theme lint` checks what the manifest declares** — the declared
+  templates rather than two fixed filenames, that every declared stylesheet
+  exists, that each `fonts.*` role names a family some `font_faces` entry provides,
+  and that every string the templates print is declared.
+
+- **A build warns when a font role names an unembedded family.** Overriding
+  `fonts.display` with a family the theme ships no file for used to be silent, and
+  the PDF would set in whatever the rendering machine happened to have — right on
+  the machine that built it, different on the next one.
+
 - **An interior title page.** The bundled theme went cover → endpaper → contents;
   it now sets the title quietly on paper first, as a printed book does. Front
   matter, so it carries no folio. One page longer.
-- **`section_openers: true`** (`book.yaml`, default off) prints a full-page
-  divider before each section — the section name between two rules on the navy
-  ground — and nests each recipe under its section in the PDF outline. Off by
-  default because a divider earns its sheet in a long book and crowds a short
-  one: the bundled sample would spend three of them on three recipes.
+- **`params: {section_openers: true}`** (default off, declared by the theme) prints
+  a full-page divider before each section — the section name between two rules on
+  the navy ground — and nests each recipe under its section in the PDF outline. Off
+  by default because a divider earns its sheet in a long book and crowds a short
+  one: the bundled sample would spend three of them on three recipes. Briefly a
+  top-level `book.yaml` key on `main` before `params` existed; that spelling still
+  works and warns.
 - **Printed folios.** Every footer-bearing page (recipes and the introduction)
   now prints its page number above the running mark. The contents page has always
   resolved entries with `target-counter`, so until now it cited page numbers that
@@ -294,6 +332,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   carries on to the EPUB check.
 
 ### Removed
+
+- `config.hex_to_rgb` — it had no caller.
 
 - `cairosvg` and `numpy` are no longer runtime dependencies. Both existed only
   for `bake_assets.py`, which generated the theme's paper-grain rasters; that

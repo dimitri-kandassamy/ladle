@@ -89,10 +89,12 @@ presence + distribution come first — they _are_ the launch prerequisites.
      overrides one block via `{% extends %}` without copying the file; publish the
      block set as a stable contract, marking Safe vs internal blocks (the
      Docusaurus swizzle-tier idea).
-  3. **Theme `params` namespace** — generalize the palette/fonts token-merge to
-     arbitrary theme-declared knobs with defaults, book-overridable (MkDocs
-     `config.theme.*` / Hugo `.Site.Params` / Zola `[extra]`). The substrate for
-     parametric themes (§gallery).
+  3. ~~**Theme `params` namespace**~~ — **done.** The palette/fonts token-merge is
+     generalized to one merge over `palette`/`fonts`/`params`/`labels`, with
+     theme-declared defaults a book overrides per key and a warning for a key the
+     theme never declared (Zola's `[extra]` rule). The manifest also declares its
+     `page.trim`, `stylesheets` and `templates`, so the core no longer hardcodes
+     them. `section_openers` moved from the book schema to `params`.
   4. **Theme-local preview content** — `theme preview` prefers a theme's own
      `sample/` if present, else the canonical sample (Zola's "a theme is a site":
      the author frames it with flattering content).
