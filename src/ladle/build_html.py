@@ -3,8 +3,9 @@
 
 Single source of truth -> two renderers. Reads book.yaml + recipes/*.md, validates
 front matter, parses each body into structured ingredients/directions/notes, and
-renders the theme's print.html.j2 -> build/cookbook.html and epub.html.j2
--> build/epub.html.
+renders the templates the theme's manifest declares for each output target ->
+build/cookbook.html and build/epub.html. Which template and which stylesheets
+serve a target is the theme's to say; see `config.ThemeManifest`.
 
 The HTML stage of `ladle build` (not a standalone command).
 """
@@ -26,10 +27,6 @@ from . import config, ui
 
 ARTICLES = {"the", "a", "an"}
 
-# The theme's optional third template: a download page for the built book,
-# rendered to build/index.html only when the theme ships one (see write_landing).
-LANDING_TEMPLATE = "landing.html.j2"
-
 # Where a recipe goes when its `category:` is missing, blank, or null. The schema
 # requires the key, so `validate` fails such a book — but `build` still prints
 # one, and it has to file those recipes somewhere. Assigned, never authored: it
@@ -40,25 +37,26 @@ LANDING_TEMPLATE = "landing.html.j2"
 # in with the stews; this says only what is true, which is that nobody said.
 FALLBACK_CATEGORY = "Uncategorized"
 
-# Book chrome strings, overridable per-book via book.yaml's `labels:` block.
-# `section_names` maps the internal category key (the enum Savory/Desserts/
-# Beverages, plus FALLBACK_CATEGORY — front-matter matching keys, never
-# translated) to a displayed name.
-DEFAULT_LABELS = {
+# Printed strings, split by who owns them — which is the difference between a
+# string a theme is expected to declare and one it never should.
+#
+# CORE_LABELS name concepts the core itself parses: the recipe sections in
+# KNOWN_SECTIONS, plus the note standing in for a method nobody recorded. They are
+# ladle's words, ladle always supplies them, and a theme printing one is not asked
+# to declare it.
+CORE_LABELS = {
     "ingredients": "Ingredients",
     "directions": "Directions",
     "notes": "Notes",
-    "yields": "Yields",
-    "recipe_by": "Recipe by",
-    "recipe_from": "Recipe from",
-    "contents": "Contents",
-    "from": "From",
-    "volume": "Volume",
-    "produced_by": "Edited & produced by",
     # Printed where the steps would be on a recipe whose author recorded only the
     # ingredients — a real shape in a hand-written archive, and one that reads as
     # an unfinished page unless the book says otherwise.
     "no_method": "No method was recorded for this recipe.",
+    # The odd one out, and not really a label: it maps the internal category key
+    # (the Savory/Desserts/Beverages enum, plus FALLBACK_CATEGORY — front-matter
+    # matching keys, never translated) to a displayed name. That is the book's
+    # data rather than the theme's chrome; it stays here until author-defined
+    # sections replace it.
     "section_names": {
         "Savory": "Savory",
         "Desserts": "Desserts",
@@ -70,21 +68,223 @@ DEFAULT_LABELS = {
     },
 }
 
+# THEME_LABELS exist only because a theme prints those pages, so the theme owns
+# them and declares them in its own manifest. The values here are a safety net,
+# not a default a theme should lean on: `make_env` runs StrictUndefined for
+# bundled themes only, so without them a third-party theme that forgot one would
+# render a blank heading and say nothing at all. `warn_undeclared_labels` reports
+# the omission rather than letting the fallback hide it.
+THEME_LABELS = {
+    "contents": "Contents",
+    "from": "From",
+    "volume": "Volume",
+    "produced_by": "Edited & produced by",
+    "recipe_by": "Recipe by",
+    "recipe_from": "Recipe from",
+    "yields": "Yields",
+}
 
-def merged_labels(book: dict) -> dict:
-    """DEFAULT_LABELS with book.yaml's `labels:` block merged on top.
+# Every string ladle can resolve, whoever owns it — the base of the label merge.
+DEFAULT_LABELS = {**CORE_LABELS, **THEME_LABELS}
 
-    An un-edited book.yaml (no `labels:` key) yields DEFAULT_LABELS unchanged,
-    so this is backward compatible with every book that predates this feature.
+
+def merged_labels(book: dict, theme: config.ThemeManifest | None = None) -> dict:
+    """Printed strings: core defaults < theme.yaml `labels:` < book.yaml `labels:`.
+
+    Three levels, because a printed word has three possible owners — see
+    DEFAULT_LABELS for which strings the core keeps and why. The book has the last
+    word on all of them, which is how a non-English edition works.
+
+    An un-edited book.yaml with a theme that declares no labels yields
+    DEFAULT_LABELS unchanged, so this is backward compatible with every book and
+    every theme that predates the manifest's `labels:` block.
     """
     labels = dict(DEFAULT_LABELS)
     labels["section_names"] = dict(DEFAULT_LABELS["section_names"])
-    for key, value in (book.get("labels") or {}).items():
-        if key == "section_names" and isinstance(value, dict):
-            labels["section_names"].update(value)
-        else:
-            labels[key] = value
+    for layer in ((theme.labels if theme else {}), (book.get("labels") or {})):
+        for key, value in layer.items():
+            if key == "section_names" and isinstance(value, dict):
+                labels["section_names"].update(value)
+            else:
+                labels[key] = value
     return labels
+
+
+def _value_kind(value: object) -> str:
+    """Coarse type name, for comparing a book's override against a theme's default."""
+    if isinstance(value, bool):  # before int: bool is an int subclass
+        return "a boolean"
+    if isinstance(value, (int, float)):
+        return "a number"
+    if isinstance(value, str):
+        return "a string"
+    if isinstance(value, list):
+        return "a list"
+    if isinstance(value, dict):
+        return "a mapping"
+    return type(value).__name__
+
+
+def merge_namespace(ns: str, theme: config.ThemeManifest, book: dict) -> dict:
+    """A theme namespace's defaults, overlaid with the book's overrides key by key.
+
+    One merge for every overridable namespace (`config.OVERRIDABLE_NAMESPACES`), so
+    `palette`, `fonts` and `params` cannot drift in how they layer. The two
+    hand-written merges this replaces are why a documented per-key palette override
+    silently never reached the PDF.
+
+    An override for a key the theme never declared is a warning, not an error: a
+    typo should be visible, but it must not stop a build the author can see is
+    otherwise fine. This is Zola's rule for `[extra]`, and it buys back the type
+    checking lost by letting a book set free-form keys.
+    """
+    defaults = getattr(theme, ns)
+    overrides = book.get(ns) or {}
+    if not defaults:
+        # Nothing declared means there is no vocabulary to check a key against —
+        # and for a theme with no manifest at all, the book is the only source of
+        # these tokens, so every key would warn.
+        return dict(overrides)
+    for key, value in overrides.items():
+        if key not in defaults:
+            ui.warn(f"{ns}.{key} is not declared by theme {theme.name!r} — check the spelling")
+        elif _value_kind(value) != _value_kind(defaults[key]):
+            ui.warn(
+                f"{ns}.{key} is {_value_kind(value)}, but theme {theme.name!r} "
+                f"declares {_value_kind(defaults[key])} ({defaults[key]!r})"
+            )
+    return {**defaults, **overrides}
+
+
+def migrate_section_openers(book: dict) -> None:
+    """Read the superseded top-level `section_openers:` as `params.section_openers`.
+
+    A full-page section divider is one theme's layout decision; it became a field
+    in the core book contract only because there was nowhere else to put a theme
+    knob. `params` is that place now.
+
+    The old spelling never appeared in a release — only on `main` — so this exists
+    for anyone tracking the branch rather than as a compatibility promise. An
+    explicit `params:` entry wins over it.
+    """
+    if "section_openers" not in book:
+        return
+    ui.warn(
+        "book.yaml `section_openers:` has moved — write it as "
+        "`params: {section_openers: true}`, where a theme's own layout knobs live"
+    )
+    params = dict(book.get("params") or {})
+    params.setdefault("section_openers", book["section_openers"])
+    book["params"] = params
+
+
+def resolved_params(book: dict, theme: config.ThemeManifest) -> dict:
+    """The layout knobs a build resolves for *book*: theme defaults under the book's.
+
+    The one answer to "what are this book's params", shared by `render` and by
+    `validate`, so the build and the checker cannot disagree about whether a book
+    prints section openers — the way they came to disagree about how many pages a
+    book has.
+    """
+    migrate_section_openers(book)
+    return merge_namespace("params", theme, book)
+
+
+# A `labels.<key>` read in a theme template, in both spellings Jinja allows.
+_LABEL_READ_RE = re.compile(r"labels(?:\.([a-z_][a-z0-9_]*)|\[['\"]([a-z_][a-z0-9_]*)['\"]\])")
+
+
+def template_label_keys(templates_dir: Path) -> set[str]:
+    """Label keys the theme's templates read, found by scanning their source.
+
+    Static rather than hooked into rendering, so it reports before a build starts
+    and can only ever be wrong by *missing* a computed lookup — the safe direction,
+    since a false positive would warn about a key nobody reads.
+    """
+    keys: set[str] = set()
+    if not templates_dir.is_dir():
+        return keys
+    for path in sorted(templates_dir.rglob("*.j2")):
+        for dotted, indexed in _LABEL_READ_RE.findall(path.read_text(encoding="utf-8")):
+            keys.add(dotted or indexed)
+    return keys
+
+
+def undeclared_labels(theme: config.ThemeManifest) -> list[str]:
+    """Label keys *theme* prints but never declares in its manifest.
+
+    Core-owned strings are excluded: `ingredients` and its siblings name recipe
+    sections the core parses itself, so a theme printing one is not expected to
+    declare it. What is left is the words the theme prints on its own pages.
+    """
+    used = template_label_keys(theme.templates_dir)
+    return sorted(k for k in used if k not in theme.labels and k not in CORE_LABELS)
+
+
+def warn_undeclared_labels(theme: config.ThemeManifest) -> None:
+    """Report each string the theme prints without declaring, and what it will get."""
+    for key in undeclared_labels(theme):
+        if key in THEME_LABELS:
+            ui.warn(
+                f"theme {theme.name!r} prints labels.{key} but does not declare it "
+                f"— using ladle's default {THEME_LABELS[key]!r}"
+            )
+        else:
+            ui.warn(
+                f"theme {theme.name!r} prints labels.{key}, which neither it nor ladle declares — it will render empty"
+            )
+
+
+def warn_unembedded_fonts(fonts: dict, font_faces: list[dict], *, theme_name: str) -> None:
+    """Warn for a font role naming a family no embedded face provides.
+
+    `fonts:` roles are book-overridable, so a book can point `display` at a family
+    the theme ships no file for. Nothing fails — and that is the problem: the PDF
+    sets in whatever the rendering machine happens to have, which looks right on
+    the machine that built it and different on the next one. It is the same class
+    of failure as the theme's own fonts never reaching the PDF, arriving by another
+    route.
+    """
+    embedded = {str(f.get("family", "")) for f in font_faces}
+    if not embedded:
+        return  # a theme that embeds nothing has nothing to disagree with
+    for role, family in sorted(fonts.items()):
+        if family and family not in embedded:
+            ui.warn(
+                f"fonts.{role} is {family!r}, which no font_faces entry of theme "
+                f"{theme_name!r} provides — the PDF will set in whatever font the "
+                "rendering machine happens to have"
+            )
+
+
+def require_stylesheets(theme: config.ThemeManifest, target: str) -> list[Path]:
+    """The theme's stylesheets for *target*, checked to exist, in cascade order.
+
+    A missing stylesheet used to be impossible: the core named the two files it
+    loaded. Now that the manifest names them, a typo would otherwise become a
+    `file://` link to nothing — which WeasyPrint skips without complaint, so it
+    would surface only as a book that prints unstyled.
+    """
+    sheets = theme.stylesheets(target)
+    missing = [p for p in sheets if not p.exists()]
+    if missing:
+        names = ", ".join(config.rel(p) for p in missing)
+        what = "a file that does not exist" if len(missing) == 1 else "files that do not exist"
+        raise config.ConfigError(f"{config.rel(theme.manifest_path)}: stylesheets.{target} names {what}: {names}")
+    return sheets
+
+
+def require_template(theme: config.ThemeManifest, target: str) -> str:
+    """The theme's template name for *target*, checked to exist."""
+    name = theme.template(target)
+    if not name:
+        raise config.ConfigError(f"{config.rel(theme.manifest_path)}: templates.{target} names no template")
+    if not theme.template_path(target).exists():
+        raise config.ConfigError(
+            f"{config.rel(theme.manifest_path)}: templates.{target} names {name!r}, "
+            f"which is not in {config.rel(theme.templates_dir)}"
+        )
+    return name
 
 
 # ---- tiny, dependency-free inline markdown ---------------------------------
@@ -669,29 +869,27 @@ def render(book_path: str | None = None) -> int:
     if not book.get("title"):
         raise config.ConfigError(f"{config.rel(book_cfg.path)} is missing required field: title")
     book_root = book_cfg.root
-    theme = book_cfg.require_theme_dir()
-    theme_manifest = config.load_theme(theme)
-    templates_dir = theme / "templates"
-    fonts_dir = theme / "fonts"
-    css_dir = theme / "css"
+    theme_dir = book_cfg.require_theme_dir()
+    theme = config.load_theme(theme_dir)
     build = config.build_dir()
     # Theme tokens are defaults; book.yaml overrides any key. So a minimal book
     # (no palette/fonts) still renders with the theme's look.
-    book["palette"] = {**theme_manifest.get("palette", {}), **(book.get("palette") or {})}
-    book["fonts"] = {**theme_manifest.get("fonts", {}), **(book.get("fonts") or {})}
+    for ns in ("palette", "fonts"):
+        book[ns] = merge_namespace(ns, theme, book)
+    book["params"] = resolved_params(book, theme)
+    book["labels"] = merged_labels(book, theme)
+    # Mirror the resolved knob back onto the retired top-level key, so a theme
+    # written against `book.section_openers` keeps working for a minor version.
+    book["section_openers"] = bool(book["params"].get("section_openers", False))
     # Optional top-level book metadata defaults, so a minimal book.yaml (just a
     # title) builds without KeyErrors in the templates / landing page.
     for key in ("subtitle", "producer", "rights", "repo_url"):
         book.setdefault(key, "")
     book.setdefault("volume", "")
     book.setdefault("language", "en")
-    # Off unless asked for: a divider earns its sheet in a long book and crowds a
-    # short one, and only the author knows which they are writing.
-    book.setdefault("section_openers", False)
     book["title_article"], book["title_rest"] = split_title_article(book["title"])
-    book["labels"] = merged_labels(book)
 
-    env = make_env(templates_dir, strict=config.is_bundled_theme(theme))
+    env = make_env(theme.templates_dir, strict=config.is_bundled_theme(theme_dir))
     build.mkdir(parents=True, exist_ok=True)
     recipe_paths = sorted(book_cfg.recipes_dir.glob("*.md"))
 
@@ -707,6 +905,11 @@ def render(book_path: str | None = None) -> int:
     # instead of this one (epubcheck RSC-012), so name it here in the author's
     # own file while there is still a source line to point at.
     warn_unresolved_xrefs(book_cfg.recipes_dir)
+    # A string the theme prints but never declared, and a font role pointing at a
+    # family the theme ships no file for. Both render *something*, which is why
+    # neither fails the build and why neither is visible without being told.
+    warn_undeclared_labels(theme)
+    warn_unembedded_fonts(book["fonts"], theme.font_faces, theme_name=theme.name)
 
     # ---- print HTML (absolute file:// assets for WeasyPrint) ----
     print_recipes = order_recipes(
@@ -715,13 +918,13 @@ def render(book_path: str | None = None) -> int:
     print_recipes = [r for r in print_recipes if not r["draft"]]
     print_html = render_template(
         env,
-        "print.html.j2",
+        require_template(theme, config.PRINT),
         book=book,
         intro=load_intro(book, absolute_assets=True, book_root=book_root),
         recipes=print_recipes,
         toc=build_toc(print_recipes, book),
-        font_face_css=font_face_css(fonts_dir, theme_manifest["font_faces"]),
-        css_links=[(css_dir / "common.css").as_uri(), (css_dir / "print.css").as_uri()],
+        font_face_css=font_face_css(theme.fonts_dir, theme.font_faces),
+        css_links=[p.as_uri() for p in require_stylesheets(theme, config.PRINT)],
     )
     (build / "cookbook.html").write_text(print_html, encoding="utf-8")
 
@@ -732,7 +935,7 @@ def render(book_path: str | None = None) -> int:
     epub_recipes = [r for r in epub_recipes if not r["draft"]]
     epub_html = render_template(
         env,
-        "epub.html.j2",
+        require_template(theme, config.EPUB),
         book=book,
         intro=load_intro(book, absolute_assets=False, book_root=book_root),
         recipes=epub_recipes,
@@ -743,7 +946,7 @@ def render(book_path: str | None = None) -> int:
     )
     (build / "epub.html").write_text(epub_html, encoding="utf-8")
 
-    write_landing(env, templates_dir, book, build)
+    write_landing(env, theme, book, build)
 
     n = len(print_recipes)
     ui.success(
@@ -753,12 +956,17 @@ def render(book_path: str | None = None) -> int:
     return 0
 
 
-def write_landing(env: SandboxedEnvironment, templates_dir: Path, book: dict, build: Path) -> None:
+def write_landing(env: SandboxedEnvironment, theme: config.ThemeManifest, book: dict, build: Path) -> None:
     """Render the theme's optional landing page to build/index.html.
 
     A download page for publishing the built book to GitHub Pages. It is the
-    theme's to design and the theme's to opt into: a theme that ships no
-    `landing.html.j2` simply gets no landing page, and that is not an error.
+    theme's to design and the theme's to opt into: a theme that ships no landing
+    template simply gets no landing page, and that is not an error.
+
+    File existence stays the opt-in even though the manifest now names the
+    template, so that a theme uninterested in a landing page needs to say nothing.
+    But a theme that *declares* one and does not ship it has made a typo, and gets
+    told — the same distinction `ThemeManifest.declared` exists for.
 
     The core used to build this page from an f-string that indexed the palette
     by name — `navy`, `cream`, `rule` — which are the bundled theme's token
@@ -767,9 +975,17 @@ def write_landing(env: SandboxedEnvironment, templates_dir: Path, book: dict, bu
     A page whose design is a palette away from the book belongs with the rest of
     the design.
     """
-    if not (templates_dir / LANDING_TEMPLATE).exists():
+    name = theme.template(config.LANDING)
+    if not name:
         return
-    html_doc = render_template(env, LANDING_TEMPLATE, book=book)
+    if not theme.template_path(config.LANDING).exists():
+        if theme.declared(f"templates.{config.LANDING}"):
+            ui.warn(
+                f"templates.landing names {name!r}, which is not in "
+                f"{config.rel(theme.templates_dir)} — no landing page was written"
+            )
+        return
+    html_doc = render_template(env, name, book=book)
     # Jinja drops one trailing newline from a template's source; this file is
     # published as-is rather than fed to another tool, so it keeps the one a text
     # file should end with.

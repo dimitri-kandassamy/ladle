@@ -29,9 +29,12 @@ def render(book_path: str | None = None) -> int:
     if not epub_html.exists():
         return ui.die(f"missing {config.rel(epub_html)}", ui.ERROR, hint="run `ladle build`")
 
-    theme = book_cfg.require_theme_dir()
-    css = theme / "css" / "epub.css"
-    font_files = list(dict.fromkeys(f["file"] for f in config.load_theme(theme)["font_faces"]))
+    theme = config.load_theme(book_cfg.require_theme_dir())
+    # Both the stylesheets and the font files come from the manifest, so the EPUB
+    # loads the same design the theme declares for the PDF rather than a filename
+    # the core happened to know.
+    css_args = [f"--css={sheet}" for sheet in theme.stylesheets(config.EPUB)]
+    font_files = list(dict.fromkeys(f["file"] for f in theme.font_faces))
 
     title = str(book.get("title", "Cookbook"))
     rights = str(book.get("rights", ""))
@@ -50,7 +53,7 @@ def render(book_path: str | None = None) -> int:
     if cover_png.exists():
         cover_args = [f"--epub-cover-image={cover_png}"]
 
-    font_args = [f"--epub-embed-font={theme / 'fonts' / f}" for f in font_files]
+    font_args = [f"--epub-embed-font={theme.fonts_dir / f}" for f in font_files]
 
     # pandoc resolves relative resource paths (per-recipe illustrations in the
     # epub HTML) against these dirs; "." is the cwd, where those paths were
@@ -76,8 +79,7 @@ def render(book_path: str | None = None) -> int:
         "--to",
         "epub3",
         *meta_args,
-        "--css",
-        str(css),
+        *css_args,
         "--split-level=1",
         "--resource-path",
         resource_path,
